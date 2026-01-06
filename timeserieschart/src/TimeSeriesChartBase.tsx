@@ -12,7 +12,7 @@
 // limitations under the License.
 
 import { forwardRef, MouseEvent, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, Portal } from '@mui/material';
 import merge from 'lodash/merge';
 import isEqual from 'lodash/isEqual';
 import { toZonedTime } from 'date-fns-tz';
@@ -77,9 +77,41 @@ use([
   CanvasRenderer,
 ]);
 
+export interface Annotation {
+  start: number;
+  end?: number;
+  title?: string;
+  legend?: string;
+  color?: string;
+  opacity?: number;
+  keys?: string[];
+  tags?: Record<string, string>;
+}
+
+// Dummy annotation for testing: current time with 10 minute range
+const DUMMY_ANNOTATIONS: Annotation[] = [
+  {
+    start: Date.now() - 10 * 60 * 1000, // 10 minutes ago
+    end: Date.now(),
+    title: 'Test Annotation',
+    legend: 'Deployment v1.2.3',
+    color: '#FF6B6B',
+    opacity: 0.3,
+    tags: { environment: 'production', team: 'platform' },
+  },
+  {
+    start: Date.now() - 30 * 60 * 1000, // 30 minutes ago (point annotation)
+    title: 'Single Event',
+    legend: 'Config Change',
+    color: '#4ECDC4',
+    tags: { type: 'config', user: 'admin' },
+  },
+];
+
 export interface TimeChartProps {
   height: number;
   data: TimeSeries[];
+  annotations?: Annotation[];
   seriesMapping: TimeChartSeriesMapping;
   timeScale?: TimeScale;
   yAxis?: YAXisComponentOption;
@@ -122,6 +154,8 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
   const [pinnedCrosshair, setPinnedCrosshair] = useState<LineSeriesOption | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
+  const [hoveredAnnotation, setHoveredAnnotation] = useState<Annotation | null>(null);
+  const [annotationTooltipPos, setAnnotationTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const { timeZone } = useTimeZone();
   let timeScale: TimeScale;
   if (timeScaleProp === undefined) {
@@ -186,10 +220,156 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
           enableDataZoom(chartRef.current);
         }
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mouseover: (params: any): void => {
+        // Handle annotation hover for markPoint (triangle markers under X-axis)
+        if (params.componentType === 'markPoint' && params.data?.annotationIndex !== undefined) {
+          const annotations = DUMMY_ANNOTATIONS;
+          const annotationIndex = params.data.annotationIndex;
+          const matchedAnnotation = annotations[annotationIndex] || null;
+          if (matchedAnnotation) {
+            setHoveredAnnotation(matchedAnnotation);
+            setAnnotationTooltipPos({ x: params.event?.offsetX || 0, y: params.event?.offsetY || 0 });
+          }
+        }
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mouseout: (params: any): void => {
+        if (params.componentType === 'markPoint' && params.data?.annotationIndex !== undefined) {
+          setHoveredAnnotation(null);
+          setAnnotationTooltipPos(null);
+        }
+      },
     };
   }, [onDataZoom, setTooltipPinnedCoords]);
 
   const { noDataOption } = chartsTheme;
+
+  // Generate annotation series for ECharts markArea (range), markLine (point), and markPoint (markers under X-axis)
+  const annotationSeries = useMemo(() => {
+    const annotations = DUMMY_ANNOTATIONS; // Using dummy annotations for testing
+    if (!annotations || annotations.length === 0) return [];
+
+    const markAreaData: Array<[{ xAxis: number; itemStyle?: { color: string; opacity: number } }, { xAxis: number }]> =
+      [];
+    const markLineData: Array<{
+      xAxis: number;
+      lineStyle?: { color: string; width: number; type: 'dashed' | 'solid' | 'dotted' };
+      label?: { show: boolean };
+    }> = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const markPointData: any[] = [];
+
+    annotations.forEach((annotation, index) => {
+      const color = annotation.color || '#FF6B6B';
+      const opacity = annotation.opacity ?? 0.3;
+
+      if (annotation.end !== undefined) {
+        // Range annotation - use markArea and markLine (silent) + markers at start/end
+        markLineData.push({
+          xAxis: annotation.start,
+          lineStyle: { color, width: 2, type: 'dashed' as const },
+          label: { show: false },
+        });
+
+        markLineData.push({
+          xAxis: annotation.end,
+          lineStyle: { color, width: 2, type: 'dashed' as const },
+          label: { show: false },
+        });
+
+        markAreaData.push([
+          {
+            xAxis: annotation.start,
+            itemStyle: { color, opacity },
+          },
+          { xAxis: annotation.end },
+        ]);
+
+        // Add start marker
+        markPointData.push({
+          coord: [annotation.start, 0],
+          symbol: 'triangle',
+          symbolSize: [12, 10],
+          symbolRotate: 0,
+          symbolOffset: [0, '120%'], // Position below X-axis
+          itemStyle: { color },
+          annotationIndex: index,
+          isStart: true,
+        });
+
+        // Add end marker
+        markPointData.push({
+          coord: [annotation.end, 0],
+          symbol: 'triangle',
+          symbolSize: [12, 10],
+          symbolRotate: 0,
+          symbolOffset: [0, '120%'], // Position below X-axis
+          itemStyle: { color },
+          annotationIndex: index,
+          isEnd: true,
+        });
+      } else {
+        // Point annotation - use markLine (silent) + single marker
+        markLineData.push({
+          xAxis: annotation.start,
+          lineStyle: { color, width: 2, type: 'dashed' as const },
+          label: { show: false },
+        });
+
+        // Add point marker
+        markPointData.push({
+          coord: [annotation.start, 0],
+          symbol: 'triangle',
+          symbolSize: [12, 10],
+          symbolRotate: 0,
+          symbolOffset: [0, '120%'], // Position below X-axis
+          itemStyle: { color },
+          annotationIndex: index,
+          isPoint: true,
+        });
+      }
+    });
+
+    const series: LineSeriesOption = {
+      type: 'line',
+      data: [],
+      silent: false,
+      markArea:
+        markAreaData.length > 0
+          ? {
+              silent: true, // Make area silent, only markers are interactive
+              data: markAreaData,
+              label: {
+                show: false,
+              },
+            }
+          : undefined,
+      markLine:
+        markLineData.length > 0
+          ? {
+              silent: true, // Make line silent, only markers are interactive
+              symbol: ['none', 'none'],
+              data: markLineData,
+              lineStyle: {
+                type: 'dashed',
+              },
+            }
+          : undefined,
+      markPoint:
+        markPointData.length > 0
+          ? {
+              silent: false, // Markers are interactive
+              data: markPointData,
+              label: {
+                show: false,
+              },
+            }
+          : undefined,
+    };
+
+    return [series];
+  }, []);
 
   const option: EChartsCoreOption = useMemo(() => {
     // The "chart" `noDataVariant` is only used when the `timeSeries` is an
@@ -209,7 +389,9 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
     });
 
     const updatedSeriesMapping =
-      enablePinning && pinnedCrosshair !== null ? [...seriesMapping, pinnedCrosshair] : seriesMapping;
+      enablePinning && pinnedCrosshair !== null
+        ? [...seriesMapping, pinnedCrosshair, ...annotationSeries]
+        : [...seriesMapping, ...annotationSeries];
 
     const option: EChartsCoreOption = {
       dataset: dataset,
@@ -274,6 +456,7 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
     isStackedBar,
     enablePinning,
     pinnedCrosshair,
+    annotationSeries,
   ]);
 
   // Update adjacent charts so tooltip is unpinned when current chart is clicked.
@@ -443,6 +626,65 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
             }}
           />
         )}
+      {/* Annotation tooltip */}
+      {hoveredAnnotation && annotationTooltipPos && (
+        <Portal
+          container={
+            chartsTheme.tooltipPortalContainerId
+              ? document.querySelector(chartsTheme.tooltipPortalContainerId)
+              : undefined
+          }
+        >
+          <Box
+            sx={{
+              position: 'absolute',
+              left: annotationTooltipPos.x + 10,
+              top: annotationTooltipPos.y + 10,
+              backgroundColor: 'background.paper',
+              border: '1px solid',
+              borderColor: hoveredAnnotation.color || 'divider',
+              borderRadius: 1,
+              padding: 1.5,
+              boxShadow: 3,
+              zIndex: 1000,
+              pointerEvents: 'none',
+              minWidth: 180,
+              maxWidth: 300,
+            }}
+          >
+            {hoveredAnnotation.title && (
+              <Box sx={{ fontWeight: 'bold', marginBottom: 0.5, color: hoveredAnnotation.color }}>
+                {hoveredAnnotation.title}
+              </Box>
+            )}
+            {hoveredAnnotation.legend && (
+              <Box sx={{ marginBottom: 0.5, fontSize: '0.875rem' }}>{hoveredAnnotation.legend}</Box>
+            )}
+            <Box sx={{ fontSize: '0.75rem', color: 'text.secondary', marginBottom: 0.5 }}>
+              {new Date(hoveredAnnotation.start).toLocaleString()}
+              {hoveredAnnotation.end && ` - ${new Date(hoveredAnnotation.end).toLocaleString()}`}
+            </Box>
+            {hoveredAnnotation.tags && Object.keys(hoveredAnnotation.tags).length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, marginTop: 0.5 }}>
+                {Object.entries(hoveredAnnotation.tags).map(([key, value]) => (
+                  <Box
+                    key={key}
+                    sx={{
+                      backgroundColor: 'action.hover',
+                      borderRadius: 0.5,
+                      padding: '2px 6px',
+                      fontSize: '0.7rem',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {key}: {value}
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
+        </Portal>
+      )}
       <EChart
         sx={{
           width: '100%',
