@@ -14,8 +14,10 @@
 import { DatasourceClient } from '@perses-dev/plugin-system';
 import { RequestHeaders } from '@perses-dev/client';
 import {
-  SearchProfilesParameters,
-  SearchProfilesResponse,
+  SelectMergeStacktracesParameters,
+  SelectMergeStacktracesResponse,
+  SelectSeriesParameters,
+  SelectSeriesResponse,
   SearchProfileTypesParameters,
   SearchProfileTypesResponse,
   SearchLabelNamesParameters,
@@ -31,7 +33,11 @@ interface PyroscopeClientOptions {
 
 export interface PyroscopeClient extends DatasourceClient {
   options: PyroscopeClientOptions;
-  searchProfiles(params: SearchProfilesParameters, headers?: RequestHeaders): Promise<SearchProfilesResponse>;
+  selectMergeStacktraces(
+    params: SelectMergeStacktracesParameters,
+    headers?: RequestHeaders
+  ): Promise<SelectMergeStacktracesResponse>;
+  selectSeries(params: SelectSeriesParameters, headers?: RequestHeaders): Promise<SelectSeriesResponse>;
   searchProfileTypes(
     params: SearchProfileTypesParameters,
     headers: RequestHeaders,
@@ -69,26 +75,11 @@ export const executeRequest = async <T>(...args: Parameters<typeof global.fetch>
   }
 };
 
-function fetchWithGet<T, TResponse>(apiURI: string, params: T | null, queryOptions: QueryOptions): Promise<TResponse> {
-  const { datasourceUrl, headers = {} } = queryOptions;
-
-  let url = `${datasourceUrl}${apiURI}`;
-  if (params) {
-    url += '?' + new URLSearchParams(params);
-  }
-  const init = {
-    method: 'GET',
-    headers,
-  };
-
-  return executeRequest<TResponse>(url, init);
-}
-
-function fetchWithPost<T, TResponse>(
+function fetchWithPost<T, TResponse, TBody = Record<string, unknown>>(
   apiURI: string,
   params: T | null,
   queryOptions: QueryOptions,
-  body: Record<string, string | number>
+  body: TBody
 ): Promise<TResponse> {
   const { datasourceUrl, headers = {} } = queryOptions;
 
@@ -98,7 +89,8 @@ function fetchWithPost<T, TResponse>(
   }
   const init = {
     method: 'POST',
-    headers,
+    // The Connect API expects a JSON body. Callers may still override the content-type if needed.
+    headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(body),
   };
 
@@ -106,13 +98,35 @@ function fetchWithPost<T, TResponse>(
 }
 
 /**
- * Returns profiling data.
+ * Returns matching profiles aggregated in a flame graph format.
+ * Connect API: POST /querier.v1.QuerierService/SelectMergeStacktraces
  */
-export function searchProfiles(
-  params: SearchProfilesParameters,
+export function selectMergeStacktraces(
+  params: SelectMergeStacktracesParameters,
   queryOptions: QueryOptions
-): Promise<SearchProfilesResponse> {
-  return fetchWithGet<SearchProfilesParameters, SearchProfilesResponse>('/pyroscope/render', params, queryOptions);
+): Promise<SelectMergeStacktracesResponse> {
+  return fetchWithPost<null, SelectMergeStacktracesResponse, SelectMergeStacktracesParameters>(
+    '/querier.v1.QuerierService/SelectMergeStacktraces',
+    null,
+    queryOptions,
+    params
+  );
+}
+
+/**
+ * Returns a time series for the total sum of the requested profiles.
+ * Connect API: POST /querier.v1.QuerierService/SelectSeries
+ */
+export function selectSeries(
+  params: SelectSeriesParameters,
+  queryOptions: QueryOptions
+): Promise<SelectSeriesResponse> {
+  return fetchWithPost<null, SelectSeriesResponse, SelectSeriesParameters>(
+    '/querier.v1.QuerierService/SelectSeries',
+    null,
+    queryOptions,
+    params
+  );
 }
 
 /**

@@ -19,10 +19,21 @@ import {
   PYROSCOPE_DATASOURCE_KIND,
   PyroscopeDatasourceSelector,
   PyroscopeClient,
-  SearchProfilesParameters,
-  SearchProfilesResponse,
+  SelectMergeStacktracesParameters,
+  SelectMergeStacktracesResponse,
+  SelectSeriesParameters,
+  SelectSeriesResponse,
 } from '../../model';
 import { computeFilterExpr } from '../../utils/types';
+
+// Pyroscope's Connect API expects timestamps in milliseconds, but the time range from Perses is in seconds.
+const MILLISECONDS = 1_000;
+// The default time range used when none is provided (last hour).
+const DEFAULT_RANGE_MS = 60 * 60 * MILLISECONDS;
+// The Pyroscope render endpoint used a minimum timeline resolution of 10 seconds.
+const MIN_STEP_SECONDS = 10;
+// Target number of points for the timeline series, used to derive the query step.
+const TARGET_TIMELINE_POINTS = 300;
 
 export function getUnixTimeRange(timeRange: AbsoluteTimeRange): { start: number; end: number } {
   const { start, end } = timeRange;
@@ -30,6 +41,15 @@ export function getUnixTimeRange(timeRange: AbsoluteTimeRange): { start: number;
     start: Math.ceil(getUnixTime(start)),
     end: Math.ceil(getUnixTime(end)),
   };
+}
+
+/**
+ * Derives the query resolution step (in seconds) from the time range, keeping at least
+ * the 10 second minimum resolution that the legacy render endpoint enforced.
+ */
+function computeStep(startMs: number, endMs: number): number {
+  const durationSeconds = (endMs - startMs) / MILLISECONDS;
+  return Math.max(MIN_STEP_SECONDS, Math.floor(durationSeconds / TARGET_TIMELINE_POINTS));
 }
 
 export const getProfileData: ProfileQueryPlugin<PyroscopeProfileQuerySpec>['getProfileData'] = async (
@@ -44,56 +64,83 @@ export const getProfileData: ProfileQueryPlugin<PyroscopeProfileQuerySpec>['getP
     spec.datasource ?? defaultPyroscopeDatasource
   );
 
-  const buildQueryString = (): string => {
-    let query: string = '';
+  // The Connect API splits the profile type and the label selectors, unlike the legacy
+  // render endpoint that expected a single PromQL-like query string.
+  const buildLabelSelector = (): string => {
+    const parts: string[] = [];
     if (spec.service) {
-      query = `service_name="${spec.service}"`;
+      parts.push(`service_name="${spec.service}"`);
     }
     if (spec.filters && spec.filters.length > 0) {
       const filterExpr = computeFilterExpr(spec.filters);
-      if (query === '') {
-        query = filterExpr;
-      } else {
-        query += ',' + filterExpr;
+      if (filterExpr !== '') {
+        parts.push(filterExpr);
       }
     }
-    query = spec.profileType + (query === '' ? '' : '{' + query + '}');
-    return query;
+    return `{${parts.join(',')}}`;
   };
 
-  const getParams = (): SearchProfilesParameters => {
-    const params: SearchProfilesParameters = {
-      // example of query
-      // query: `process_cpu:cpu:nanoseconds:cpu:nanoseconds{service_name="pyroscope"}`,
-      query: buildQueryString(),
-      // the default value is now-1h
-      from: 'now-1h',
-    };
+  // Resolve the time range (in milliseconds) from the UI selection, defaulting to the last hour.
+  let startMs: number;
+  let endMs: number;
+  if (context.absoluteTimeRange) {
+    const { start, end } = getUnixTimeRange(context.absoluteTimeRange);
+    startMs = start * MILLISECONDS;
+    endMs = end * MILLISECONDS;
+  } else {
+    endMs = Date.now();
+    startMs = endMs - DEFAULT_RANGE_MS;
+  }
 
-    // handle time range selection from UI drop down (e.g. last 5 minutes, last 1 hour )
-    if (context.absoluteTimeRange) {
-      const { start, end } = getUnixTimeRange(context.absoluteTimeRange);
-      params.from = start;
-      params.until = end;
-    }
+  const labelSelector = buildLabelSelector();
+  const step = computeStep(startMs, endMs);
 
-    if (spec.maxNodes) {
-      params.maxNodes = spec.maxNodes;
-    }
+  const stacktracesParams: SelectMergeStacktracesParameters = {
+    profileTypeID: spec.profileType,
+    labelSelector,
+    start: startMs,
+    end: endMs,
+  };
+  if (spec.maxNodes) {
+    stacktracesParams.maxNodes = spec.maxNodes;
+  }
 
-    return params;
+  const seriesParams: SelectSeriesParameters = {
+    profileTypeID: spec.profileType,
+    labelSelector,
+    start: startMs,
+    end: endMs,
+    step,
   };
 
-  const response = await client.searchProfiles(getParams());
+  // The flame graph and the timeline come from two distinct Connect endpoints. Both are
+  // required to reconstruct the ProfileData that the legacy render endpoint returned in one call.
+  const [stacktracesResponse, seriesResponse] = await Promise.all([
+    client.selectMergeStacktraces(stacktracesParams),
+    client.selectSeries(seriesParams),
+  ]);
 
-  // return a profile data
-  return transformProfileResponse(response);
+  return transformProfileResponse(stacktracesResponse, seriesResponse, spec.profileType, step);
 };
 
 /**
- * This function transform the Pyroscope response into the Perses profile format
+ * Extracts the display unit from a profile type ID of the form
+ * <name>:<sample_type>:<sample_unit>:<period_type>:<period_unit>.
+ * The sample unit (third segment) is what the flame graph uses for value formatting.
  */
-function transformProfileResponse(response: SearchProfilesResponse): ProfileData {
+function extractUnits(profileTypeID: string): string {
+  return profileTypeID.split(':')[2] ?? '';
+}
+
+/**
+ * Transforms the Connect API responses (flame graph + time series) into the Perses profile format.
+ */
+function transformProfileResponse(
+  stacktracesResponse: SelectMergeStacktracesResponse,
+  seriesResponse: SelectSeriesResponse,
+  profileTypeID: string,
+  step: number
+): ProfileData {
   const newResponse: ProfileData = {
     profile: {
       stackTrace: {} as StackTrace,
@@ -103,8 +150,8 @@ function transformProfileResponse(response: SearchProfilesResponse): ProfileData
     metadata: {
       spyName: '',
       sampleRate: 0,
-      units: '',
-      name: '',
+      units: extractUnits(profileTypeID),
+      name: profileTypeID,
     },
     timeline: {
       startTime: 0,
@@ -113,7 +160,8 @@ function transformProfileResponse(response: SearchProfilesResponse): ProfileData
     },
   };
 
-  if (!response) {
+  const flamegraph = stacktracesResponse?.flamegraph;
+  if (!flamegraph) {
     return newResponse;
   }
 
@@ -122,23 +170,25 @@ function transformProfileResponse(response: SearchProfilesResponse): ProfileData
   // stackTraces id from 1
   let id = 1;
   // Set the profile stackTrace property
-  for (let i = 0; i < response.flamebearer.levels.length; i++) {
+  for (let i = 0; i < flamegraph.levels.length; i++) {
     let current = 0;
     const row: StackTrace[] = [];
 
-    const level = response.flamebearer.levels[i];
+    const level = flamegraph.levels[i];
 
     if (!level) {
       continue;
     }
 
-    for (let j = 0; j < level.length; j += 4) {
+    const values = level.values;
+
+    for (let j = 0; j < values.length; j += 4) {
       const temp: StackTrace = {} as StackTrace;
       temp.id = id;
       id += 1;
-      const indexInNamesArray = level[j + 3]; // index in names array
+      const indexInNamesArray = values[j + 3]; // index in names array
       if (indexInNamesArray !== undefined) {
-        const name = response.flamebearer.names[indexInNamesArray];
+        const name = flamegraph.names[Number(indexInNamesArray)];
 
         if (name) {
           temp.name = name;
@@ -146,25 +196,25 @@ function transformProfileResponse(response: SearchProfilesResponse): ProfileData
       }
       temp.level = i;
 
-      const total = level[j + 1];
+      const total = values[j + 1];
       if (total !== undefined) {
-        temp.total = total;
+        temp.total = Number(total);
       }
 
-      const self = level[j + 2];
+      const self = values[j + 2];
 
       if (self !== undefined) {
-        temp.self = self;
+        temp.self = Number(self);
       }
 
       // start and end
-      const offset = level[j];
+      const offset = values[j];
       if (offset !== undefined) {
-        current += offset; // current += offset
+        current += Number(offset); // current += offset
       }
       temp.start = current;
       if (total !== undefined) {
-        current += total; // current += total
+        current += Number(total); // current += total
       }
       temp.end = current;
 
@@ -182,21 +232,27 @@ function transformProfileResponse(response: SearchProfilesResponse): ProfileData
   }
 
   // Set other properties
-  newResponse.numTicks = response.flamebearer.numTicks;
-  newResponse.maxSelf = response.flamebearer.maxSelf;
+  newResponse.numTicks = Number(flamegraph.total);
+  newResponse.maxSelf = Number(flamegraph.maxSelf);
 
-  newResponse.metadata = {
-    spyName: response.metadata.spyName,
-    sampleRate: response.metadata.sampleRate,
-    units: response.metadata.units,
-    name: response.metadata.name,
-  };
+  // Build the timeline from the SelectSeries response. The legacy render endpoint returned a
+  // single aggregated timeline, so we use the first (aggregated) series here.
+  const points = seriesResponse?.series?.[0]?.points ?? [];
+  if (points.length > 0 && points[0] !== undefined) {
+    const startTimeMs = Number(points[0].timestamp);
+    // Prefer the actual spacing between points when available, falling back to the requested step.
+    let durationDelta = step;
+    if (points.length >= 2 && points[1] !== undefined) {
+      durationDelta = Math.round((Number(points[1].timestamp) - startTimeMs) / MILLISECONDS);
+    }
 
-  newResponse.timeline = {
-    startTime: response.timeline.startTime,
-    samples: response.timeline.samples,
-    durationDelta: response.timeline.durationDelta,
-  };
+    newResponse.timeline = {
+      // The series chart works in seconds and multiplies by 1000 when rendering.
+      startTime: Math.floor(startTimeMs / MILLISECONDS),
+      samples: points.map((point) => point.value),
+      durationDelta,
+    };
+  }
 
   return newResponse;
 }

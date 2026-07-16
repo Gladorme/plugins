@@ -14,7 +14,8 @@
 import { DatasourcePlugin } from '@perses-dev/plugin-system';
 import {
   PyroscopeClient,
-  searchProfiles,
+  selectMergeStacktraces,
+  selectSeries,
   searchProfileTypes,
   searchLabelNames,
   searchLabelValues,
@@ -42,7 +43,9 @@ const createClient: DatasourcePlugin<PyroscopeDatasourceSpec, PyroscopeClient>['
     options: {
       datasourceUrl,
     },
-    searchProfiles: (params, headers) => searchProfiles(params, { datasourceUrl, headers: headers ?? specHeaders }),
+    selectMergeStacktraces: (params, headers) =>
+      selectMergeStacktraces(params, { datasourceUrl, headers: headers ?? specHeaders }),
+    selectSeries: (params, headers) => selectSeries(params, { datasourceUrl, headers: headers ?? specHeaders }),
     searchProfileTypes: (params, headers, body) =>
       searchProfileTypes(params, { datasourceUrl, headers: headers ?? specHeaders }, body),
     searchLabelNames: (params, headers, body) =>

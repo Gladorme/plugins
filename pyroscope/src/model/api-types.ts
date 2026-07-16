@@ -12,51 +12,99 @@
 // limitations under the License.
 
 /**
- * Request parameters of Pyroscope HTTP API endpoint GET /pyroscope/render
- * https://grafana.com/docs/pyroscope/latest/reference-server-api/#querying-profile-data
+ * Profile format specifying the format of the profile to be returned.
+ * https://grafana.com/docs/pyroscope/latest/reference-server-api/#querying-profiling-data
  */
-export interface SearchProfilesParameters {
-  query: string;
-  /** the start time can be an absolute value (number) or a relative value (string). Ex of relative value : now-15m*/
-  from: string | number;
-  /** end of the search window, default : now */
-  until?: string | number;
-  /** format of the returned profiling data, default: json */
-  format?: 'json' | 'dot';
-  /** maximum number of nodes the resulting flame graph will contain, default: 50 */
+export type ProfileFormat =
+  | 'PROFILE_FORMAT_UNSPECIFIED'
+  | 'PROFILE_FORMAT_FLAMEGRAPH'
+  | 'PROFILE_FORMAT_TREE'
+  | 'PROFILE_FORMAT_DOT';
+
+/**
+ * Request body of Pyroscope Connect API endpoint
+ * POST /querier.v1.QuerierService/SelectMergeStacktraces
+ * https://grafana.com/docs/pyroscope/latest/reference-server-api/#querierv1querierserviceselectmergestacktraces
+ */
+export interface SelectMergeStacktracesParameters {
+  /** Profile Type ID string in the form <name>:<type>:<unit>:<period_type>:<period_unit>. */
+  profileTypeID: string;
+  /** Label selector string. Ex: {service_name="my_service"} */
+  labelSelector: string;
+  /** Query from this point in time, given in milliseconds since epoch. */
+  start: number;
+  /** Query to this point in time, given in milliseconds since epoch. */
+  end: number;
+  /** Limit the nodes returned to only show the node with the max_node's biggest total. */
   maxNodes?: number;
-  groupeBy?: string;
+  /** Format of the profile to be returned, default: PROFILE_FORMAT_FLAMEGRAPH. */
+  format?: ProfileFormat;
 }
 
 /**
- * Response of Pyroscope HTTP API endpoint GET /pyroscope/render
- * https://grafana.com/docs/pyroscope/latest/reference-server-api/#query-output
+ * Response of Pyroscope Connect API endpoint
+ * POST /querier.v1.QuerierService/SelectMergeStacktraces
  */
-export interface SearchProfilesResponse {
-  flamebearer: Flamebearer;
-  metadata: Metadata;
-  timeline: Timeline;
+export interface SelectMergeStacktracesResponse {
+  flamegraph: FlameGraph;
 }
 
-export interface Flamebearer {
+export interface FlameGraph {
   names: string[];
-  levels: number[][];
-  numTicks: number;
-  maxSelf: number;
+  levels: Level[];
+  /** int64, serialized as string in the Connect JSON encoding. */
+  total: number | string;
+  /** int64, serialized as string in the Connect JSON encoding. */
+  maxSelf: number | string;
 }
 
-export interface Metadata {
-  format: 'single' | 'double';
-  spyName: string;
-  sampleRate: number;
-  units: string;
+export interface Level {
+  /** Flat array of [offset, total, self, nameIndex] tuples. int64, serialized as strings. */
+  values: Array<number | string>;
+}
+
+/**
+ * Request body of Pyroscope Connect API endpoint
+ * POST /querier.v1.QuerierService/SelectSeries
+ * https://grafana.com/docs/pyroscope/latest/reference-server-api/#querierv1querierserviceselectseries
+ */
+export interface SelectSeriesParameters {
+  /** Profile Type ID string in the form <name>:<type>:<unit>:<period_type>:<period_unit>. */
+  profileTypeID: string;
+  /** Label selector string. Ex: {service_name="my_service"} */
+  labelSelector: string;
+  /** Query from this point in time, given in milliseconds since epoch. */
+  start: number;
+  /** Query to this point in time, given in milliseconds since epoch. */
+  end: number;
+  /** Query resolution step width in seconds. */
+  step: number;
+  /** One or more label names to group the time series by. */
+  groupBy?: string[];
+}
+
+/**
+ * Response of Pyroscope Connect API endpoint
+ * POST /querier.v1.QuerierService/SelectSeries
+ */
+export interface SelectSeriesResponse {
+  series: Series[];
+}
+
+export interface Series {
+  labels: LabelPair[];
+  points: Point[];
+}
+
+export interface LabelPair {
   name: string;
+  value: string;
 }
 
-export interface Timeline {
-  startTime: number;
-  samples: number[];
-  durationDelta: number;
+export interface Point {
+  value: number;
+  /** Milliseconds unix timestamp. int64, serialized as string in the Connect JSON encoding. */
+  timestamp: number | string;
 }
 
 /**
