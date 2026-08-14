@@ -12,9 +12,9 @@
 // limitations under the License.
 
 import { Button, Divider, Stack, Typography, Grid2 as Grid } from '@mui/material';
-
 import AddIcon from 'mdi-material-ui/Plus';
 import { ReactElement } from 'react';
+
 import { CellSettings } from '../table-model';
 import { CellEditor } from './CellEditor';
 

@@ -14,6 +14,7 @@
 // Forked from https://github.com/prometheus/prometheus/blob/65f610353919b1c7b42d3776c3a95b68046a6bba/web/ui/mantine-ui/src/promql/serialize.ts
 
 import { formatDuration, msToPrometheusDuration } from '@perses-dev/core';
+
 import ASTNode, {
   VectorSelector,
   matchType,
@@ -24,14 +25,23 @@ import ASTNode, {
 } from './ast';
 import { aggregatorsWithParam, maybeParenthesizeBinopChild, escapeString } from './utils';
 
-const serializeAtAndOffset = (timestamp: number | null, startOrEnd: StartOrEnd, offset: number): string =>
-  `${timestamp !== null ? ` @ ${(timestamp / 1000).toFixed(3)}` : startOrEnd !== null ? ` @ ${startOrEnd}()` : ''}${
-    offset === 0
-      ? ''
-      : offset > 0
-        ? ` offset ${formatDuration(msToPrometheusDuration(offset))}`
-        : ` offset -${formatDuration(msToPrometheusDuration(-offset))}`
-  }`;
+const serializeAtAndOffset = (timestamp: number | null, startOrEnd: StartOrEnd, offset: number): string => {
+  let at = '';
+  if (timestamp !== null) {
+    at = ` @ ${(timestamp / 1000).toFixed(3)}`;
+  } else if (startOrEnd !== null) {
+    at = ` @ ${startOrEnd}()`;
+  }
+
+  let serializedOffset = '';
+  if (offset > 0) {
+    serializedOffset = ` offset ${formatDuration(msToPrometheusDuration(offset))}`;
+  } else if (offset < 0) {
+    serializedOffset = ` offset -${formatDuration(msToPrometheusDuration(-offset))}`;
+  }
+
+  return `${at}${serializedOffset}`;
+};
 
 const serializeSelector = (node: VectorSelector | MatrixSelector): string => {
   const matchers = node.matchers
@@ -53,18 +63,20 @@ const serializeNode = (node: ASTNode, indent = 0, pretty = false, initialIndent 
   const initialInd = initialIndent ? ind : '';
 
   switch (node.type) {
-    case nodeType.aggregation:
-      return `${initialInd}${node.op}${
-        node.without
-          ? ` without(${node.grouping.join(', ')}) `
-          : node.grouping.length > 0
-            ? ` by(${node.grouping.join(', ')}) `
-            : ''
-      }(${childListSeparator}${
+    case nodeType.aggregation: {
+      let grouping = '';
+      if (node.without) {
+        grouping = ` without(${node.grouping.join(', ')}) `;
+      } else if (node.grouping.length > 0) {
+        grouping = ` by(${node.grouping.join(', ')}) `;
+      }
+
+      return `${initialInd}${node.op}${grouping}(${childListSeparator}${
         aggregatorsWithParam.includes(node.op) && node.param !== null
           ? `${serializeNode(node.param, childIndent, pretty)},${childSeparator}`
           : ''
       }${serializeNode(node.expr, childIndent, pretty)}${childListSeparator}${ind})`;
+    }
 
     case nodeType.subquery:
       return `${initialInd}${serializeNode(node.expr, indent, pretty)}[${formatDuration(msToPrometheusDuration(node.range))}:${

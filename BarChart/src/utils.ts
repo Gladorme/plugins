@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { BarChartData, SortOption } from '@perses-dev/components';
+
 import { DEFAULT_SORT } from './bar-chart-model';
 
 export function calculatePercentages(data: BarChartData[]): Array<{ label: string; value: number }> {

@@ -12,8 +12,9 @@
 // limitations under the License.
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { TableColumnsEditor } from './TableColumnsEditor';
+
 import { TableOptions } from './table-model';
+import { TableColumnsEditor } from './TableColumnsEditor';
 
 describe('TableColumnsEditor', () => {
   function renderTableColumnsEditor(value: TableOptions, onChange = jest.fn()): void {

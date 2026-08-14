@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { TraceQueryPlugin } from '@perses-dev/plugin-system';
 import {
   TraceSearchResult,
   AbsoluteTimeRange,
@@ -21,10 +20,11 @@ import {
   TraceResource,
   SpanEvent,
 } from '@perses-dev/core';
+import { TraceQueryPlugin } from '@perses-dev/plugin-system';
 import { getUnixTime } from 'date-fns';
 import { sortedIndexBy } from 'lodash';
+
 import { TempoTraceQuerySpec, TEMPO_DATASOURCE_KIND, TempoDatasourceSelector } from '../../model';
-import { TempoClient } from '../../model/tempo-client';
 import {
   SearchRequestParameters,
   QueryResponse,
@@ -33,6 +33,7 @@ import {
   Span as TempoSpan,
   SpanEvent as TempoSpanEvent,
 } from '../../model/api-types';
+import { TempoClient } from '../../model/tempo-client';
 
 export function getUnixTimeRange(timeRange: AbsoluteTimeRange): { start: number; end: number } {
   const { start, end } = timeRange;

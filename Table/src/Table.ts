@@ -12,11 +12,12 @@
 // limitations under the License.
 
 import { PanelPlugin } from '@perses-dev/plugin-system';
+
 import { createInitialTableOptions, TableOptions } from './table-model';
-import { TablePanel } from './TablePanel';
-import { TableColumnsEditor } from './TableColumnsEditor';
-import { TableSettingsEditor } from './TableSettingsEditor';
 import { TableCellsEditor } from './TableCellsEditor';
+import { TableColumnsEditor } from './TableColumnsEditor';
+import { TablePanel } from './TablePanel';
+import { TableSettingsEditor } from './TableSettingsEditor';
 import { TableTransformsEditor } from './TableTransformsEditor';
 
 /**

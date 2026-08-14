@@ -11,9 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { EditorState } from '@uiw/react-codemirror';
-import { parser } from '@grafana/lezer-traceql';
 import { LRLanguage, ensureSyntaxTree } from '@codemirror/language';
+import { parser } from '@grafana/lezer-traceql';
+import { EditorState } from '@uiw/react-codemirror';
+
 import { Completions, identifyCompletions } from './complete';
 
 const traceQLExtension = LRLanguage.define({ parser: parser });

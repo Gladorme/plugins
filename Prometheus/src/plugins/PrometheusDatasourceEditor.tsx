@@ -11,14 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { Grid, IconButton, MenuItem, TextField, Typography } from '@mui/material';
 import { DurationString, RequestHeaders } from '@perses-dev/core';
 import { OptionsEditorRadios } from '@perses-dev/plugin-system';
-import { Grid, IconButton, MenuItem, TextField, Typography } from '@mui/material';
-import React, { Fragment, ReactElement, useState } from 'react';
 import { produce } from 'immer';
-import { Controller } from 'react-hook-form';
 import MinusIcon from 'mdi-material-ui/Minus';
 import PlusIcon from 'mdi-material-ui/Plus';
+import React, { Fragment, ReactElement, useState } from 'react';
+import { Controller } from 'react-hook-form';
+
 import { DEFAULT_SCRAPE_INTERVAL, PrometheusDatasourceSpec } from './types';
 
 export interface PrometheusDatasourceEditorProps {

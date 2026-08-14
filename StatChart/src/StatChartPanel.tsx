@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { TitleComponentOption } from 'echarts';
+import { Stack, Typography, SxProps } from '@mui/material';
 import {
   StatChart,
   StatChartData,
@@ -20,13 +20,14 @@ import {
   LoadingOverlay,
   PersesChartsTheme,
 } from '@perses-dev/components';
-import { Stack, Typography, SxProps } from '@mui/material';
-import { FC, useMemo } from 'react';
 import { applyValueMapping, Labels, createRegexFromString, TimeSeriesData, ValueMapping } from '@perses-dev/core';
 import { useDataQueries, UseDataQueryResults, PanelProps } from '@perses-dev/plugin-system';
+import { TitleComponentOption } from 'echarts';
+import { FC, useMemo } from 'react';
+
 import { StatChartOptions } from './stat-chart-model';
-import { convertSparkline } from './utils/data-transform';
 import { calculateValue } from './utils/calculate-value';
+import { convertSparkline } from './utils/data-transform';
 import { getStatChartColor } from './utils/get-color';
 
 const MIN_WIDTH = 100;
@@ -37,7 +38,7 @@ export type StatChartPanelProps = PanelProps<StatChartOptions>;
 export const StatChartPanel: FC<StatChartPanelProps> = (props) => {
   const { spec, contentDimensions } = props;
 
-  const { format, sparkline, valueFontSize: valueFontSize } = spec;
+  const { format, sparkline, valueFontSize } = spec;
   const chartsTheme = useChartsTheme();
   const { queryResults, isLoading, isFetching } = useDataQueries('TimeSeriesQuery');
   const statChartData = useStatChartData(queryResults, spec, chartsTheme);

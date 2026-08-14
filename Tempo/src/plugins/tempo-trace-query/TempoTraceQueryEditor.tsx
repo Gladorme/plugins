@@ -11,18 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { FormControl, InputLabel, Stack, TextField } from '@mui/material';
 import { DatasourceSelect, DatasourceSelectProps, useDatasourceClient } from '@perses-dev/plugin-system';
 import { produce } from 'immer';
-import { FormControl, InputLabel, Stack, TextField } from '@mui/material';
 import { ReactElement } from 'react';
+
+import { TraceQLEditor } from '../../components';
+import { TempoClient } from '../../model/tempo-client';
 import {
   DEFAULT_TEMPO,
   isDefaultTempoSelector,
   isTempoDatasourceSelector,
   TEMPO_DATASOURCE_KIND,
 } from '../../model/tempo-selectors';
-import { TempoClient } from '../../model/tempo-client';
-import { TraceQLEditor } from '../../components';
 import { TraceQueryEditorProps, useLimitState, useQueryState } from './query-editor-model';
 
 export function TempoTraceQueryEditor(props: TraceQueryEditorProps): ReactElement {

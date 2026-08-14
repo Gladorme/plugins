@@ -13,8 +13,9 @@
 
 import { OptionsEditorProps } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
-import { ColumnSettings, TableOptions } from './table-model';
+
 import { ColumnsEditor } from './ColumnsEditor';
+import { ColumnSettings, TableOptions } from './table-model';
 
 export type TableColumnsEditorProps = OptionsEditorProps<TableOptions>;
 

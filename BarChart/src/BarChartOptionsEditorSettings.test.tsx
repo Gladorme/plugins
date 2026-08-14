@@ -14,6 +14,7 @@
 import { ChartsProvider, testChartsTheme } from '@perses-dev/components';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
 import { BarChartOptions } from './bar-chart-model';
 import { BarChartOptionsEditorSettings } from './BarChartOptionsEditorSettings';
 
@@ -131,7 +132,7 @@ describe('BarChartOptionsEditorSettings', () => {
       mode: 'percentage',
     });
     const unitSelector = screen.getByRole('combobox', { name: 'Unit' });
-    expect(unitSelector).toBeDisabled;
+    expect(unitSelector).toBeDisabled();
   });
 
   it('should reset settings to defaults', () => {

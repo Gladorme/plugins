@@ -15,8 +15,9 @@ import { Accordion, AccordionDetails, AccordionSummary, Typography } from '@mui/
 import { Span, SpanEvent } from '@perses-dev/core';
 import ExpandMoreIcon from 'mdi-material-ui/ChevronDown';
 import { ReactElement } from 'react';
-import { formatDuration } from '../utils';
+
 import { GanttTrace } from '../trace';
+import { formatDuration } from '../utils';
 import { AttributeList } from './Attributes';
 
 export interface SpanEventListProps {

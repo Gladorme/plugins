@@ -12,6 +12,8 @@
 // limitations under the License.
 
 import { Avatar, Box, Chip, Link, Tooltip, Typography, useTheme } from '@mui/material';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { useChartsTheme } from '@perses-dev/components';
 import {
   QueryDefinition,
   ServiceStats,
@@ -21,13 +23,12 @@ import {
   msToPrometheusDuration,
 } from '@perses-dev/core';
 import { QueryData } from '@perses-dev/plugin-system';
-import { Link as RouterLink } from 'react-router-dom';
 import InformationIcon from 'mdi-material-ui/Information';
-import { useChartsTheme } from '@perses-dev/components';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { ReactElement, useCallback, useMemo } from 'react';
-import { getServiceColor } from './utils/utils';
+import { Link as RouterLink } from 'react-router-dom';
+
 import { TraceTableOptions } from './trace-table-model';
+import { getServiceColor } from './utils/utils';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'long',
@@ -107,7 +108,8 @@ export function DataTable(props: DataTableProps): ReactElement {
         flex: 2,
         minWidth: 145,
         display: 'flex',
-        valueGetter: (_, trace) => Object.values(trace.serviceStats).reduce((acc, val) => acc + val.spanCount, 0),
+        valueGetter: (_, trace): number =>
+          Object.values(trace.serviceStats).reduce((acc, val) => acc + val.spanCount, 0),
         renderCell: ({ row }): ReactElement => {
           let totalSpanCount = 0;
           let totalErrorCount = 0;
@@ -141,7 +143,7 @@ export function DataTable(props: DataTableProps): ReactElement {
         flex: 1,
         minWidth: 70,
         display: 'flex',
-        renderCell: ({ row }) => (
+        renderCell: ({ row }): ReactElement => (
           <Typography display="inline">
             {row.durationMs < 1 ? '<1ms' : formatDuration(msToPrometheusDuration(row.durationMs))}
           </Typography>
@@ -156,7 +158,7 @@ export function DataTable(props: DataTableProps): ReactElement {
         flex: 3,
         minWidth: 240,
         display: 'flex',
-        renderCell: ({ row }) => (
+        renderCell: ({ row }): ReactElement => (
           <Tooltip title={UTC_DATE_FORMATTER(new Date(row.startTimeUnixMs))} placement="top" arrow>
             <Typography display="inline" key={`st-${row.traceId}`}>
               {DATE_FORMATTER(new Date(row.startTimeUnixMs))}

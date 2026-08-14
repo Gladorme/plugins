@@ -13,6 +13,7 @@
 
 import { PersesChartsTheme } from '@perses-dev/components';
 import { applyValueMapping, ThresholdOptions, ValueMapping } from '@perses-dev/core';
+
 import { StatChartOptions } from '../stat-chart-model';
 
 type StatChartValue = number | string | null;

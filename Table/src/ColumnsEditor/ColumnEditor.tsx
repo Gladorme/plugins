@@ -12,8 +12,9 @@
 // limitations under the License.
 
 import { Divider, FormControlLabel, Stack, StackProps, Switch, TextField } from '@mui/material';
-import { ReactElement, useState } from 'react';
 import { AlignSelector, SortSelectorButtons } from '@perses-dev/components';
+import { ReactElement, useState } from 'react';
+
 import { ColumnSettings } from '../table-model';
 
 type OmittedMuiProps = 'children' | 'value' | 'onChange';

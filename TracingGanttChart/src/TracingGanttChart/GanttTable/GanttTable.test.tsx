@@ -15,6 +15,7 @@ import { ChartsProvider, testChartsTheme } from '@perses-dev/components';
 import { fireEvent, screen } from '@testing-library/dom';
 import { render, RenderResult } from '@testing-library/react';
 import { VirtuosoMockContext } from 'react-virtuoso';
+
 import { MOCK_GANTT_TRACE } from '../../test/mock-trace-data';
 import { GanttTable, GanttTableProps } from './GanttTable';
 import { GanttTableProvider } from './GanttTableProvider';

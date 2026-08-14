@@ -11,11 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { PanelProps, QueryData, useDataQueries } from '@perses-dev/plugin-system';
 import { LoadingOverlay, Table, TableCellConfig, TableCellConfigs, TableColumnConfig } from '@perses-dev/components';
-import { ReactElement, useMemo, useState } from 'react';
 import { Labels, TimeSeries, TimeSeriesData, useTransformData } from '@perses-dev/core';
+import { PanelProps, QueryData, useDataQueries } from '@perses-dev/plugin-system';
 import { SortingState } from '@tanstack/react-table';
+import { ReactElement, useMemo, useState } from 'react';
+
 import { CellSettings, ColumnSettings, TableOptions } from './table-model';
 
 /*

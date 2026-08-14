@@ -13,6 +13,7 @@
 
 import { OptionsEditorProps } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
+
 import { CellsEditor } from './CellsEditor';
 import { CellSettings, TableOptions } from './table-model';
 

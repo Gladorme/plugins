@@ -11,18 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement, useMemo, useRef, useState } from 'react';
 import { Box, Stack, useTheme } from '@mui/material';
 import { Span, Trace } from '@perses-dev/core';
+import { ReactElement, useMemo, useRef, useState } from 'react';
+
 import { TracingGanttChartOptions } from '../gantt-chart-model';
-import { MiniGanttChart } from './MiniGanttChart/MiniGanttChart';
+import { AttributeLinks } from './DetailPane/Attributes';
 import { DetailPane } from './DetailPane/DetailPane';
-import { Viewport } from './utils';
 import { GanttTable } from './GanttTable/GanttTable';
 import { GanttTableProvider } from './GanttTable/GanttTableProvider';
 import { ResizableDivider } from './GanttTable/ResizableDivider';
-import { AttributeLinks } from './DetailPane/Attributes';
+import { MiniGanttChart } from './MiniGanttChart/MiniGanttChart';
 import { getTraceModel } from './trace';
+import { Viewport } from './utils';
 
 export interface TracingGanttChartProps {
   options: TracingGanttChartOptions;

@@ -13,6 +13,7 @@
 
 import { screen } from '@testing-library/dom';
 import { render, RenderResult } from '@testing-library/react';
+
 import { MOCK_GANTT_TRACE } from '../../test/mock-trace-data';
 import { SpanEventList, SpanEventListProps } from './SpanEvents';
 

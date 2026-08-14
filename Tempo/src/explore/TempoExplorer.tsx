@@ -111,7 +111,7 @@ export function TempoExplorer(): ReactElement {
     queries.length === 1 &&
     queries[0]?.kind === 'TraceQuery' &&
     queries[0]?.spec.plugin.kind === 'TempoTraceQuery' &&
-    isValidTraceId((queries[0]?.spec.plugin.spec as any).query ?? ''); // eslint-disable-line @typescript-eslint/no-explicit-any
+    isValidTraceId((queries[0]?.spec.plugin.spec as any)?.query ?? ''); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   return (
     <Stack gap={2} sx={{ width: '100%' }}>

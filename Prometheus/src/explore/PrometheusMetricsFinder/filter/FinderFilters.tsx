@@ -16,6 +16,7 @@ import { DatasourceSelector } from '@perses-dev/core';
 import { DatasourceSelect } from '@perses-dev/plugin-system';
 import PlusIcon from 'mdi-material-ui/Plus';
 import { ReactElement } from 'react';
+
 import { PROM_DATASOURCE_KIND } from '../../../model/prometheus-selectors';
 import { LabelFilter } from '../types';
 import { LabelFilterInput } from './FilterInputs';

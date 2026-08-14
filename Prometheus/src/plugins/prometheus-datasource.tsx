@@ -13,6 +13,7 @@
 
 import { BuiltinVariableDefinition } from '@perses-dev/core';
 import { DatasourcePlugin } from '@perses-dev/plugin-system';
+
 import {
   healthCheck,
   instantQuery,
@@ -24,8 +25,8 @@ import {
   series,
   parseQuery,
 } from '../model';
-import { PrometheusDatasourceSpec } from './types';
 import { PrometheusDatasourceEditor } from './PrometheusDatasourceEditor';
+import { PrometheusDatasourceSpec } from './types';
 
 /**
  * Creates a PrometheusClient for a specific datasource spec.

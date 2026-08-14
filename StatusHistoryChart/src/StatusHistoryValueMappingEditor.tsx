@@ -11,10 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { OptionsEditorProps } from '@perses-dev/plugin-system';
-import { ValueMapping } from '@perses-dev/core';
 import { ValueMappingsEditor } from '@perses-dev/components';
+import { ValueMapping } from '@perses-dev/core';
+import { OptionsEditorProps } from '@perses-dev/plugin-system';
 import { FC } from 'react';
+
 import { StatusHistoryChartOptions } from './status-history-model';
 
 export type StatusHistoryValueMappingEditorProps = OptionsEditorProps<StatusHistoryChartOptions>;

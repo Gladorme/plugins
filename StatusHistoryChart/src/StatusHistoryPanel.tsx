@@ -16,8 +16,9 @@ import { ContentWithLegend, LoadingOverlay, StatusHistoryChart, useChartsTheme }
 import { PanelProps, useDataQueries, validateLegendSpec } from '@perses-dev/plugin-system';
 import { merge } from 'lodash';
 import { ReactElement, useMemo } from 'react';
-import { useStatusHistoryDataModel } from './utils/data-transform';
+
 import { StatusHistoryChartOptions } from './status-history-model.js';
+import { useStatusHistoryDataModel } from './utils/data-transform';
 
 export type StatusHistoryChartPanelProps = PanelProps<StatusHistoryChartOptions>;
 

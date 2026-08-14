@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { Span, TraceData } from '@perses-dev/core';
+
 import { QueryResponse, SearchResponse } from '../model/api-types';
 
 function addParentReferences(span: Span): void {

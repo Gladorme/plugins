@@ -1,4 +1,5 @@
 import { VariablePlugin, GetVariableOptionsContext, replaceVariables, parseVariables } from '@perses-dev/plugin-system';
+
 import { PrometheusClient, DEFAULT_PROM } from '../model';
 import {
   capturingMatrix,

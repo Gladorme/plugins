@@ -15,6 +15,7 @@ import { Box, Stack } from '@mui/material';
 import { Span } from '@perses-dev/core';
 import AlertIcon from 'mdi-material-ui/AlertCircleOutline';
 import { ReactElement } from 'react';
+
 import { spanHasError } from '../utils';
 import { SpanIndents } from './SpanIndents';
 

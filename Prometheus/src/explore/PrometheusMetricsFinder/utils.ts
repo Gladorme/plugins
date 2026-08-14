@@ -15,6 +15,7 @@ import { DatasourceSelector, StatusError } from '@perses-dev/core';
 import { useDatasourceClient, useTimeRange } from '@perses-dev/plugin-system';
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
+
 import {
   LabelNamesRequestParameters,
   LabelValuesRequestParameters,

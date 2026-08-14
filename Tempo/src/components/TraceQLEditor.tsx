@@ -11,10 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement, useMemo } from 'react';
 import { InputLabel, Stack, useTheme } from '@mui/material';
-import CodeMirror, { EditorView, ReactCodeMirrorProps } from '@uiw/react-codemirror';
 import { isValidTraceId } from '@perses-dev/core';
+import CodeMirror, { EditorView, ReactCodeMirrorProps } from '@uiw/react-codemirror';
+import { ReactElement, useMemo } from 'react';
+
 import { CompletionConfig, TraceQLExtension } from './TraceQLExtension';
 
 export interface TraceQLEditorProps extends Omit<ReactCodeMirrorProps, 'theme' | 'extensions'> {

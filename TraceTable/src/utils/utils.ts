@@ -11,9 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Span, SpanStatusError } from '@perses-dev/core';
-import { PersesChartsTheme } from '@perses-dev/components';
 import { Theme } from '@mui/material';
+import { PersesChartsTheme } from '@perses-dev/components';
+import { Span, SpanStatusError } from '@perses-dev/core';
+
 import { getConsistentCategoricalColor, getConsistentColor } from './palette';
 
 /**

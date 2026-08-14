@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { Span, Trace, TraceData } from '@perses-dev/core';
+
 import { GanttTrace } from '../model';
 import { JaegerTrace, parseJaegerTrace } from './get-trace-data-jaeger';
 

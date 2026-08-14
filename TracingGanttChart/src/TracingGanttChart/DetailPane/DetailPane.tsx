@@ -13,8 +13,9 @@
 
 import { Box, Divider, IconButton, Tab, Tabs, Typography } from '@mui/material';
 import { Span } from '@perses-dev/core';
-import { ReactElement, useState } from 'react';
 import CloseIcon from 'mdi-material-ui/Close';
+import { ReactElement, useState } from 'react';
+
 import { GanttTrace } from '../trace';
 import { AttributeLinks, AttributeList } from './Attributes';
 import { SpanEventList } from './SpanEvents';

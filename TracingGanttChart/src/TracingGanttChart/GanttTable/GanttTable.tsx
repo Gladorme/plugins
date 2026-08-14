@@ -11,16 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Virtuoso, ListRange } from 'react-virtuoso';
+import { Box, useTheme } from '@mui/material';
 import { Span } from '@perses-dev/core';
 import { ReactElement, useMemo, useRef, useState } from 'react';
-import { Box, useTheme } from '@mui/material';
-import { Viewport } from '../utils';
+import { Virtuoso, ListRange } from 'react-virtuoso';
+
 import { TracingGanttChartOptions } from '../../gantt-chart-model';
 import { GanttTrace } from '../trace';
+import { Viewport } from '../utils';
+import { GanttTableHeader } from './GanttTableHeader';
 import { useGanttTableContext } from './GanttTableProvider';
 import { GanttTableRow } from './GanttTableRow';
-import { GanttTableHeader } from './GanttTableHeader';
 import { ResizableDivider } from './ResizableDivider';
 
 export interface GanttTableProps {

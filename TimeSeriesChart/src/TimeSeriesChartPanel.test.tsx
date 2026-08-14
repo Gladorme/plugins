@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { screen, render } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { ChartsProvider, testChartsTheme } from '@perses-dev/components';
 import { TimeRangeValue, toAbsoluteTimeRange, UnknownSpec } from '@perses-dev/core';
 import {
@@ -23,7 +21,10 @@ import {
   mockPluginRegistry,
   MockPlugin,
 } from '@perses-dev/plugin-system';
+import { screen, render } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { VirtuosoMockContext } from 'react-virtuoso';
+
 import { MOCK_TIME_SERIES_QUERY_RESULT_MULTIVALUE, MOCK_TIME_SERIES_DATA_MULTIVALUE } from './test/mock-query-results';
 import { TimeSeriesChartPanel, TimeSeriesChartProps } from './TimeSeriesChartPanel';
 

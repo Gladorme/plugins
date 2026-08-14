@@ -30,6 +30,7 @@ import { CalculationSelector, CalculationSelectorProps } from '@perses-dev/plugi
 import { produce } from 'immer';
 import merge from 'lodash/merge';
 import { MouseEventHandler, ReactElement } from 'react';
+
 import {
   BarChartOptions,
   BarChartOptionsEditorProps,

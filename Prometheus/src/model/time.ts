@@ -13,6 +13,7 @@
 
 import { AbsoluteTimeRange, DurationString, parseDurationString } from '@perses-dev/core';
 import { milliseconds, getUnixTime } from 'date-fns';
+
 import { UnixTimestampSeconds } from './api-types';
 
 export interface PrometheusTimeRange {

@@ -13,6 +13,7 @@
 
 import { screen } from '@testing-library/dom';
 import { render, RenderResult } from '@testing-library/react';
+
 import { MOCK_GANTT_TRACE } from '../test/mock-trace-data';
 import { TicksHeader, TicksHeaderProps } from './Ticks';
 

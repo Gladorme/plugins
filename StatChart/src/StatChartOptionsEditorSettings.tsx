@@ -35,6 +35,7 @@ import {
 import { produce } from 'immer';
 import merge from 'lodash/merge';
 import { ReactElement } from 'react';
+
 import { StatChartOptions, StatChartOptionsEditorProps } from './stat-chart-model';
 
 const DEFAULT_FORMAT: FormatOptions = { unit: 'percent-decimal' };

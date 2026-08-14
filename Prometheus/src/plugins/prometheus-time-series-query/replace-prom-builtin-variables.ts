@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { replaceVariable } from '@perses-dev/plugin-system';
 import { formatDuration, msToPrometheusDuration } from '@perses-dev/core';
+import { replaceVariable } from '@perses-dev/plugin-system';
 
 /*
  * Replace variable placeholders in a PromQL query

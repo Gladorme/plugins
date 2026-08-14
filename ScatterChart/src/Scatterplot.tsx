@@ -11,9 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement, useMemo } from 'react';
 import { EChart, OnEventsType, useChartsTheme } from '@perses-dev/components';
-import { use, EChartsCoreOption } from 'echarts/core';
+import { formatValue } from '@perses-dev/core';
+import { EChartsOption, ScatterSeriesOption } from 'echarts';
 import { ScatterChart as EChartsScatterChart } from 'echarts/charts';
 import {
   DatasetComponent,
@@ -23,12 +23,13 @@ import {
   TitleComponent,
   TooltipComponent,
 } from 'echarts/components';
+import { use as registerEChartsModules, EChartsCoreOption } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { EChartsOption, ScatterSeriesOption } from 'echarts';
-import { formatValue } from '@perses-dev/core';
+import { ReactElement, useMemo } from 'react';
+
 import { EChartTraceValue } from './ScatterChartPanel';
 
-use([
+registerEChartsModules([
   DatasetComponent,
   DataZoomComponent,
   LegendComponent,

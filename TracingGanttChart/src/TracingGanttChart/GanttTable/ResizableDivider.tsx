@@ -11,9 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { MouseEvent as ReactMouseEvent, ReactElement, useEffect, useState } from 'react';
 import { Box, styled } from '@mui/material';
 import { useEvent } from '@perses-dev/core';
+import { MouseEvent as ReactMouseEvent, ReactElement, useEffect, useState } from 'react';
 
 interface ResizableDividerProps {
   parentRef: React.RefObject<Element>;

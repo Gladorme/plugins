@@ -1,8 +1,8 @@
 {
-    "kind": "StatusHistoryChart",
-    "spec": {
-        "legend": {
-            "position": "bottom"
-        }
+  "kind": "StatusHistoryChart",
+  "spec": {
+    "legend": {
+      "position": "bottom"
     }
+  }
 }

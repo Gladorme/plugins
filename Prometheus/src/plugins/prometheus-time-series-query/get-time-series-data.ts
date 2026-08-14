@@ -21,6 +21,7 @@ import {
 } from '@perses-dev/core';
 import { TimeSeriesQueryPlugin, replaceVariables } from '@perses-dev/plugin-system';
 import { fromUnixTime, milliseconds } from 'date-fns';
+
 import {
   parseValueTuple,
   PrometheusClient,
@@ -35,8 +36,8 @@ import {
 } from '../../model';
 import { getFormattedPrometheusSeriesName } from '../../utils';
 import { DEFAULT_SCRAPE_INTERVAL, PrometheusDatasourceSpec } from '../types';
-import { PrometheusTimeSeriesQuerySpec } from './time-series-query-model';
 import { replacePromBuiltinVariables } from './replace-prom-builtin-variables';
+import { PrometheusTimeSeriesQuerySpec } from './time-series-query-model';
 
 export const getTimeSeriesData: TimeSeriesQueryPlugin<PrometheusTimeSeriesQuerySpec>['getTimeSeriesData'] = async (
   spec,

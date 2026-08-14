@@ -24,6 +24,7 @@ import {
 import { render, screen } from '@testing-library/react';
 import { ReactElement } from 'react';
 import { VirtuosoMockContext } from 'react-virtuoso';
+
 import { TimeSeriesTableProps } from './model';
 import {
   MOCK_TIME_SERIES_DATA_MULTIVALUE,

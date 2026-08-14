@@ -24,6 +24,7 @@ import {
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { VirtuosoMockContext } from 'react-virtuoso';
+
 import { MOCK_TRACE_SEARCH_RESULT_QUERY_RESULT } from './test/mock-trace-data';
 import { TraceTablePanel, TraceTablePanelProps } from './TraceTablePanel';
 

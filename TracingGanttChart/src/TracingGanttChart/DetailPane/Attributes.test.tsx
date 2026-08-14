@@ -11,10 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { render, RenderResult } from '@testing-library/react';
-import { screen } from '@testing-library/dom';
-import { MemoryRouter } from 'react-router-dom';
 import { TraceAttributeValue } from '@perses-dev/core';
+import { screen } from '@testing-library/dom';
+import { render, RenderResult } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+
 import { AttributeLinks, AttributeList, AttributeListProps } from './Attributes';
 
 describe('Attributes', () => {

@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { getConsistentColor } from './palette';
 import { QuerySettingsOptions, ChartVisualOptions } from './options-model';
+import { getConsistentColor } from './palette';
 
 export interface SeriesColorProps {
   categoricalPalette: string[];

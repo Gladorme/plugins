@@ -34,6 +34,7 @@ import CogIcon from 'mdi-material-ui/Cog';
 import Magnify from 'mdi-material-ui/Magnify';
 import { MouseEvent, ReactElement, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+
 import { DEFAULT_PROM } from '../../model';
 import { MetricList } from './display/list/MetricList';
 import { FinderFilters } from './filter/FinderFilters';

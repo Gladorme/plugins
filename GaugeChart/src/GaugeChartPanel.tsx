@@ -18,6 +18,7 @@ import { PanelProps, useDataQueries } from '@perses-dev/plugin-system';
 import type { GaugeSeriesOption } from 'echarts';
 import merge from 'lodash/merge';
 import { ReactElement, useMemo } from 'react';
+
 import {
   DEFAULT_FORMAT,
   DEFAULT_MAX_PERCENT,

@@ -20,6 +20,7 @@ import {
 } from '@perses-dev/plugin-system';
 import { produce } from 'immer';
 import { ReactElement } from 'react';
+
 import { PromQLEditor } from '../components';
 import {
   DEFAULT_PROM,

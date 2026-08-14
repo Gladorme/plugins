@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { DurationString, HTTPProxy } from '@perses-dev/core';
+
 import { PrometheusDatasourceSelector } from '../model';
 
 export const DEFAULT_SCRAPE_INTERVAL: DurationString = '1m';

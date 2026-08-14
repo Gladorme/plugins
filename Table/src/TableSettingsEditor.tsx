@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { Switch, TextField } from '@mui/material';
 import {
   DensitySelector,
   OptionsEditorColumn,
@@ -21,8 +22,8 @@ import {
   DEFAULT_COLUMN_WIDTH,
 } from '@perses-dev/components';
 import { OptionsEditorProps } from '@perses-dev/plugin-system';
-import { Switch, TextField } from '@mui/material';
 import { ChangeEvent, ReactElement } from 'react';
+
 import { TableOptions } from './table-model';
 
 function DefaultColumnsWidthControl({

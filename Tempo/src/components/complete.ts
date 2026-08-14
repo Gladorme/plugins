@@ -14,7 +14,6 @@
 import { Completion, CompletionContext, CompletionResult, insertCompletionText } from '@codemirror/autocomplete';
 import { syntaxTree } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
-import { Tree } from '@lezer/common';
 import {
   String as StringType,
   FieldExpression,
@@ -25,7 +24,9 @@ import {
   SpansetFilter,
   FieldOp,
 } from '@grafana/lezer-traceql';
+import { Tree } from '@lezer/common';
 import { EditorView } from '@uiw/react-codemirror';
+
 import { TempoClient } from '../model/tempo-client';
 
 /** CompletionScope specifies the completion kind, e.g. whether to complete tag names or values etc. */

@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { PanelPlugin } from '@perses-dev/plugin-system';
+
 import { createInitialTracingGanttChartOptions, TracingGanttChartOptions } from './gantt-chart-model';
 import { TracingGanttChartPanel, TracingGanttChartPanelProps } from './TracingGanttChartPanel';
 

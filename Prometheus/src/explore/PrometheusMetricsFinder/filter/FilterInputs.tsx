@@ -11,6 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { Autocomplete, CircularProgress, IconButton, InputAdornment, TextField } from '@mui/material';
+import { DatasourceSelector } from '@perses-dev/core';
+import CheckIcon from 'mdi-material-ui/Check';
+import DeleteIcon from 'mdi-material-ui/Delete';
 import {
   cloneElement,
   forwardRef,
@@ -21,11 +25,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Autocomplete, CircularProgress, IconButton, InputAdornment, TextField } from '@mui/material';
-import CheckIcon from 'mdi-material-ui/Check';
-import DeleteIcon from 'mdi-material-ui/Delete';
-import { DatasourceSelector } from '@perses-dev/core';
 import { Virtuoso } from 'react-virtuoso';
+
 import { LabelFilter } from '../types';
 import { useLabels, useLabelValues } from '../utils';
 

@@ -12,7 +12,6 @@
 // limitations under the License.
 
 import { Button } from '@mui/material';
-import { produce } from 'immer';
 import {
   OptionsEditorGroup,
   OptionsEditorGrid,
@@ -21,7 +20,10 @@ import {
   ThresholdsEditorProps,
 } from '@perses-dev/components';
 import { LegendOptionsEditor, LegendOptionsEditorProps } from '@perses-dev/plugin-system';
+import { produce } from 'immer';
 import { ReactElement } from 'react';
+
+import { QuerySettingsEditor, QuerySettingsEditorProps } from './QuerySettingsEditor';
 import {
   TimeSeriesChartOptions,
   DEFAULT_VISUAL,
@@ -30,7 +32,6 @@ import {
 } from './time-series-chart-model';
 import { VisualOptionsEditor, VisualOptionsEditorProps } from './VisualOptionsEditor';
 import { YAxisOptionsEditor, YAxisOptionsEditorProps } from './YAxisOptionsEditor';
-import { QuerySettingsEditor, QuerySettingsEditorProps } from './QuerySettingsEditor';
 
 export function TimeSeriesChartOptionsEditorSettings(props: TimeSeriesChartOptionsEditorProps): ReactElement {
   const { onChange, value } = props;

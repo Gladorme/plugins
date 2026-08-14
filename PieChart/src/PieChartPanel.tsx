@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { Box, useTheme } from '@mui/material';
 import {
   PieChart,
   PieChartData,
@@ -23,13 +24,13 @@ import {
   useId,
   LegendItem,
 } from '@perses-dev/components';
-import { Box, useTheme } from '@mui/material';
-import { useMemo, useState, useRef, ReactElement } from 'react';
 import { CalculationType, CalculationsMap, DEFAULT_LEGEND } from '@perses-dev/core';
 import { validateLegendSpec, useDataQueries, PanelProps } from '@perses-dev/plugin-system';
 import merge from 'lodash/merge';
-import { getSeriesColor } from './palette-gen';
+import { useMemo, useState, useRef, ReactElement } from 'react';
+
 import { DEFAULT_VISUAL, QuerySettingsOptions } from './model';
+import { getSeriesColor } from './palette-gen';
 import { PieChartOptions } from './pie-chart-model';
 import { calculatePercentages, sortSeriesData } from './utils';
 

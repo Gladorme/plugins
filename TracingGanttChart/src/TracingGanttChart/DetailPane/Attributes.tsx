@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement, useMemo } from 'react';
 import { Link, List, ListItem, ListItemText } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
 import { TraceAttribute, TraceAttributeValue } from '@perses-dev/core';
+import { ReactElement, useMemo } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 
 export type AttributeLinks = Record<string, (attributes: Record<string, TraceAttributeValue>) => string>;
 

@@ -69,7 +69,8 @@ jobs:
         with:
           enable_npm: true
       - run: npm ci
-      - run: npm run lint
+      - run: npm run lint:ci
+      - run: npm run format:check
 
   test:
     name: 'test'

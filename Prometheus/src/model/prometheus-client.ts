@@ -13,6 +13,7 @@
 
 import { fetch, fetchJson, RequestHeaders } from '@perses-dev/core';
 import { DatasourceClient } from '@perses-dev/plugin-system';
+
 import {
   InstantQueryRequestParameters,
   InstantQueryResponse,

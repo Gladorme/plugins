@@ -22,10 +22,11 @@ import {
   Typography,
   Grid2 as Grid,
 } from '@mui/material';
-import DeleteIcon from 'mdi-material-ui/DeleteOutline';
 import { OptionsColorPicker } from '@perses-dev/components';
+import DeleteIcon from 'mdi-material-ui/DeleteOutline';
 import PlusIcon from 'mdi-material-ui/Plus';
 import { ReactElement } from 'react';
+
 import { CellSettings, Condition } from '../table-model';
 
 interface ConditionEditorProps extends Omit<StackProps, 'onChange'> {

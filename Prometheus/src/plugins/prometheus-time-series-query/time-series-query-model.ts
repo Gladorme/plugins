@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { DurationString } from '@perses-dev/core';
+
 import { PrometheusDatasourceSelector } from '../../model';
 
 /**

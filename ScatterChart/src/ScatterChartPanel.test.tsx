@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { ChartsProvider, testChartsTheme } from '@perses-dev/components';
+import { UnknownSpec, TimeRangeValue, toAbsoluteTimeRange } from '@perses-dev/core';
 import {
   TraceQueryPlugin,
   MockPlugin,
@@ -19,10 +21,9 @@ import {
   TimeRangeContext,
   mockPluginRegistry,
 } from '@perses-dev/plugin-system';
-import { UnknownSpec, TimeRangeValue, toAbsoluteTimeRange } from '@perses-dev/core';
 import { screen, render } from '@testing-library/react';
 import { VirtuosoMockContext } from 'react-virtuoso';
-import { ChartsProvider, testChartsTheme } from '@perses-dev/components';
+
 import {
   MOCK_TRACE_SEARCH_RESULT,
   MOCK_TRACE_SEARCH_RESULT_QUERY_RESULT,
@@ -64,9 +65,9 @@ describe('ScatterChartPanel', (): void => {
   const renderPanel = (): void => {
     const mockTimeRangeContext = {
       refreshIntervalInMs: 0,
-      setRefreshInterval: () => ({}),
+      setRefreshInterval: (): Record<string, unknown> => ({}),
       timeRange: TEST_TIME_RANGE,
-      setTimeRange: () => ({}),
+      setTimeRange: (): Record<string, unknown> => ({}),
       absoluteTimeRange: toAbsoluteTimeRange(TEST_TIME_RANGE),
       refresh: jest.fn(),
       refreshKey: `${TEST_TIME_RANGE.pastDuration}:0`,

@@ -11,13 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { PanelProps, useDataQueries } from '@perses-dev/plugin-system';
-import { ReactElement, useMemo } from 'react';
-import { QueryDefinition, TraceSearchResult } from '@perses-dev/core';
-import { EChartsOption, SeriesOption } from 'echarts';
 import { LoadingOverlay, NoDataOverlay, useChartsTheme } from '@perses-dev/components';
-import { Scatterplot } from './Scatterplot';
+import { QueryDefinition, TraceSearchResult } from '@perses-dev/core';
+import { PanelProps, useDataQueries } from '@perses-dev/plugin-system';
+import { EChartsOption, SeriesOption } from 'echarts';
+import { ReactElement, useMemo } from 'react';
+
 import { ScatterChartOptions } from './scatter-chart-model';
+import { Scatterplot } from './Scatterplot';
 
 export interface EChartTraceValue extends Omit<TraceSearchResult, 'startTimeUnixMs' | 'serviceStats'> {
   name: string;

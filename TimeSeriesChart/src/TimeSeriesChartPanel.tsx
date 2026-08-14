@@ -11,27 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement, useMemo, useRef, useState } from 'react';
 import { Box, useTheme } from '@mui/material';
-import type { GridComponentOption } from 'echarts';
-import merge from 'lodash/merge';
-import {
-  getTimeSeriesValues,
-  DEFAULT_LEGEND,
-  getCalculations,
-  formatValue,
-  StepOptions,
-  TimeSeries,
-  TimeSeriesValueTuple,
-} from '@perses-dev/core';
-import {
-  LEGEND_VALUE_CONFIG,
-  PanelProps,
-  useDataQueries,
-  useTimeRange,
-  validateLegendSpec,
-  legendValues,
-} from '@perses-dev/plugin-system';
 import {
   ChartInstance,
   YAxisLabel,
@@ -49,6 +29,27 @@ import {
   DEFAULT_TOOLTIP_CONFIG,
   LoadingOverlay,
 } from '@perses-dev/components';
+import {
+  getTimeSeriesValues,
+  DEFAULT_LEGEND,
+  getCalculations,
+  formatValue,
+  StepOptions,
+  TimeSeries,
+  TimeSeriesValueTuple,
+} from '@perses-dev/core';
+import {
+  LEGEND_VALUE_CONFIG,
+  PanelProps,
+  useDataQueries,
+  useTimeRange,
+  validateLegendSpec,
+  legendValues,
+} from '@perses-dev/plugin-system';
+import type { GridComponentOption } from 'echarts';
+import merge from 'lodash/merge';
+import { ReactElement, useMemo, useRef, useState } from 'react';
+
 import {
   TimeSeriesChartOptions,
   DEFAULT_FORMAT,

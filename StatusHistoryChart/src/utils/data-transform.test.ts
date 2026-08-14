@@ -14,6 +14,7 @@
 import { TimeSeriesData } from '@perses-dev/core';
 import { QueryData } from '@perses-dev/plugin-system';
 import { renderHook } from '@testing-library/react';
+
 import { useStatusHistoryDataModel } from './data-transform';
 
 describe('useStatusHistoryDataModel', () => {

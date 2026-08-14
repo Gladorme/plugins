@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { PanelPlugin, PanelProps } from '@perses-dev/plugin-system';
+
 import { TimeSeriesTablePanel } from './TimeSeriesTablePanel';
 
 interface TimeSeriesTableOptions {}

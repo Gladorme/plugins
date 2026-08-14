@@ -11,14 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import merge from 'lodash/merge';
-import {
-  CalculationSelector,
-  CalculationSelectorProps,
-  LegendOptionsEditor,
-  LegendOptionsEditorProps,
-} from '@perses-dev/plugin-system';
-import { produce } from 'immer';
+import { Button } from '@mui/material';
 import {
   FormatControls,
   FormatControlsProps,
@@ -33,8 +26,16 @@ import {
   SortOption,
 } from '@perses-dev/components';
 import { CalculationType, isPercentUnit, FormatOptions } from '@perses-dev/core';
-import { Button } from '@mui/material';
+import {
+  CalculationSelector,
+  CalculationSelectorProps,
+  LegendOptionsEditor,
+  LegendOptionsEditorProps,
+} from '@perses-dev/plugin-system';
+import { produce } from 'immer';
+import merge from 'lodash/merge';
 import { ReactElement } from 'react';
+
 import { PieChartOptions, PieChartOptionsEditorProps, DEFAULT_FORMAT } from './pie-chart-model';
 
 export function PieChartOptionsEditorSettings(props: PieChartOptionsEditorProps): ReactElement {

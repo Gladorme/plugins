@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { PieChartData, SortOption } from '@perses-dev/components';
+
 import { DEFAULT_SORT } from './pie-chart-model';
 
 export function calculatePercentages(data: PieChartData[]): Array<{ name: string; value: number }> {

@@ -14,10 +14,11 @@
 import { Stack, styled, useTheme } from '@mui/material';
 import { Span } from '@perses-dev/core';
 import { memo } from 'react';
-import { Viewport, rowHeight } from '../utils';
+
 import { TracingGanttChartOptions } from '../../gantt-chart-model';
-import { SpanName } from './SpanName';
+import { Viewport, rowHeight } from '../utils';
 import { SpanDuration } from './SpanDuration';
+import { SpanName } from './SpanName';
 
 interface GanttTableRowProps {
   options: TracingGanttChartOptions;

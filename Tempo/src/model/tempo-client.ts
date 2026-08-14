@@ -13,6 +13,7 @@
 
 import { fetch, RequestHeaders } from '@perses-dev/core';
 import { DatasourceClient } from '@perses-dev/plugin-system';
+
 import {
   QueryRequestParameters,
   SearchRequestParameters,

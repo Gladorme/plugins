@@ -15,6 +15,7 @@ import { FALLBACK_COLOR, getColorsForValues, LegendItem, StatusHistoryDataItem }
 import { applyValueMapping, TimeScale, TimeSeriesData } from '@perses-dev/core';
 import { QueryData } from '@perses-dev/plugin-system';
 import { useMemo } from 'react';
+
 import { StatusHistoryChartOptions } from '../status-history-model';
 import { getCommonTimeScaleForQueries } from './get-timescale';
 

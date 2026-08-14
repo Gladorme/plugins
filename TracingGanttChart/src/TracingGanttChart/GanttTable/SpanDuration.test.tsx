@@ -14,6 +14,7 @@
 import { ChartsProvider, testChartsTheme } from '@perses-dev/components';
 import { screen } from '@testing-library/dom';
 import { render, RenderResult } from '@testing-library/react';
+
 import { MOCK_GANTT_TRACE } from '../../test/mock-trace-data';
 import { GanttTableProvider } from './GanttTableProvider';
 import { SpanDuration, SpanDurationProps } from './SpanDuration';

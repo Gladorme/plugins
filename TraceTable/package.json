@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "rsbuild dev",
     "build": "rsbuild build",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src",
     "test": "cross-env LC_ALL=C TZ=UTC jest",
     "type-check": "tsc --noEmit"
   },

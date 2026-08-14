@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { Span } from '@perses-dev/core';
+
 import { GanttTrace } from '../trace';
 import { minSpanWidthPx } from '../utils';
 

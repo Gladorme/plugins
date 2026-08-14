@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { CalculationType, Definition, ThresholdOptions, FormatOptions, ValueMapping } from '@perses-dev/core';
 import { FontSizeOption } from '@perses-dev/components';
+import { CalculationType, Definition, ThresholdOptions, FormatOptions, ValueMapping } from '@perses-dev/core';
 import { OptionsEditorProps } from '@perses-dev/plugin-system';
 
 /**

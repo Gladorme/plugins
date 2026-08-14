@@ -14,6 +14,7 @@
 import { Switch, TextField } from '@mui/material';
 import { OptionsEditorControl, OptionsEditorGroup, FormatControls } from '@perses-dev/components';
 import { ReactElement } from 'react';
+
 import { DEFAULT_FORMAT, DEFAULT_Y_AXIS, TimeSeriesChartYAxisOptions, Y_AXIS_CONFIG } from './time-series-chart-model';
 
 export interface YAxisOptionsEditorProps {

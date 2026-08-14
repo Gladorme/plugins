@@ -13,11 +13,12 @@
 
 import { IconButton, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { InfoTooltip, OptionsEditorGroup, OptionsColorPicker } from '@perses-dev/components';
-import { ReactElement, RefObject, useEffect, useMemo, useRef } from 'react';
+import { useQueryCountContext } from '@perses-dev/plugin-system';
+import produce from 'immer';
 import DeleteIcon from 'mdi-material-ui/DeleteOutline';
 import PlusIcon from 'mdi-material-ui/Plus';
-import produce from 'immer';
-import { useQueryCountContext } from '@perses-dev/plugin-system';
+import { ReactElement, RefObject, useEffect, useMemo, useRef } from 'react';
+
 import { QuerySettingsOptions } from './time-series-chart-model';
 
 const DEFAULT_COLOR_MODE = 'fixed';

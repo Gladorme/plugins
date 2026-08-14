@@ -11,8 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { YAXisComponentOption } from 'echarts';
-import { LineSeriesOption, BarSeriesOption } from 'echarts/charts';
+import {
+  OPTIMIZED_MODE_SERIES_LIMIT,
+  LegacyTimeSeries,
+  EChartsDataFormat,
+  EChartsValues,
+  TimeSeriesOption,
+} from '@perses-dev/components';
 import {
   StepOptions,
   TimeScale,
@@ -21,14 +26,10 @@ import {
   getCommonTimeScale,
   TimeSeriesData,
 } from '@perses-dev/core';
-import {
-  OPTIMIZED_MODE_SERIES_LIMIT,
-  LegacyTimeSeries,
-  EChartsDataFormat,
-  EChartsValues,
-  TimeSeriesOption,
-} from '@perses-dev/components';
 import { useTimeSeriesQueries, UseDataQueryResults } from '@perses-dev/plugin-system';
+import type { YAXisComponentOption } from 'echarts';
+import { LineSeriesOption, BarSeriesOption } from 'echarts/charts';
+
 import {
   DEFAULT_AREA_OPACITY,
   DEFAULT_CONNECT_NULLS,
