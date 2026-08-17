@@ -14,7 +14,6 @@
 import { Box, Skeleton, Stack } from '@mui/material';
 import { FormatOptions, formatValue, useChartsTheme } from '@perses-dev/components';
 import { CalculationsMap, DEFAULT_CALCULATION, PanelProps } from '@perses-dev/plugin-system';
-import type { GaugeSeriesOption } from 'echarts';
 import merge from 'lodash/merge';
 import { ReactElement, useMemo } from 'react';
 import { TimeSeriesData } from '@perses-dev/spec';
@@ -140,7 +139,7 @@ export function GaugeChartPanel(props: GaugeChartPanelProps): ReactElement | nul
   const axisLineWidth = Math.round(progressWidth * 0.2); // Axis line width is 20% of progress width
   const titleFontSize = getResponsiveTitleFontSize(chartWidth, contentDimensions.height);
 
-  const axisLine: GaugeSeriesOption['axisLine'] = {
+  const axisLine = {
     show: true,
     lineStyle: {
       width: axisLineWidth,

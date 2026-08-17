@@ -51,7 +51,7 @@ describe('convertPercentThreshold', () => {
 });
 
 describe('convertPanelYAxis', () => {
-  it('should convert a Perses yAxis spec to the ECharts equivalent', () => {
+  it('should convert a Perses yAxis spec to TanStack scale options', () => {
     const persesAxis: TimeSeriesChartYAxisOptions = {
       show: true,
       label: 'Axis Label',
@@ -62,15 +62,15 @@ describe('convertPanelYAxis', () => {
       min: 0.1,
       max: 1,
     };
-    const echartsAxis = convertPanelYAxis(persesAxis);
-    // Axis label is handled outside of echarts since it is built with a custom React component.
-    expect(echartsAxis).toEqual({
+    const chartAxis = convertPanelYAxis(persesAxis);
+    // Axis labels are rendered by the surrounding React panel.
+    expect(chartAxis).toEqual({
       show: true,
       max: 1,
       min: 0.1,
     });
   });
-  it('should convert a Perses yAxis spec of type log to the ECharts equivalent', () => {
+  it('should convert a logarithmic Perses yAxis spec to TanStack scale options', () => {
     const persesAxis: TimeSeriesChartYAxisOptions = {
       show: true,
       label: 'Axis Label',
@@ -83,7 +83,7 @@ describe('convertPanelYAxis', () => {
       logBase: 2,
     };
     const actualAxisLog2 = convertPanelYAxis(persesAxis);
-    // Axis label is handled outside of echarts since it is built with a custom React component.
+    // Axis labels are rendered by the surrounding React panel.
     expect(actualAxisLog2).toEqual({
       show: true,
       max: 1,
@@ -93,7 +93,7 @@ describe('convertPanelYAxis', () => {
     });
     persesAxis.logBase = 10;
     const actualAxisLog10 = convertPanelYAxis(persesAxis);
-    // Axis label is handled outside of echarts since it is built with a custom React component.
+    // Axis labels are rendered by the surrounding React panel.
     expect(actualAxisLog10).toEqual({
       show: true,
       max: 1,

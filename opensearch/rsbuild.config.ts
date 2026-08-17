@@ -29,7 +29,6 @@ export default createConfigForPlugin({
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
       'react-dom': { requiredVersion: '18.2.0', singleton: true },
-      echarts: { requiredVersion: '5.5.0', singleton: true },
       'date-fns': { singleton: true },
       'date-fns-tz': { requiredVersion: '^3.2.0', version: '3.2.0', singleton: true },
       lodash: { requiredVersion: '^4.17.21', singleton: true },

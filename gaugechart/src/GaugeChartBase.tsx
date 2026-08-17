@@ -1,185 +1,152 @@
 // Copyright The Perses Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-import { EChart, FormatOptions, formatValue, useChartsTheme, useDeepMemo } from '@perses-dev/components';
-import { use, EChartsCoreOption } from 'echarts/core';
-import { GaugeChart as EChartsGaugeChart, GaugeSeriesOption } from 'echarts/charts';
-import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
-import { ReactElement } from 'react';
+import { Box, Typography } from '@mui/material';
+import { FormatOptions, formatValue, useChartsTheme } from '@perses-dev/components';
+import { defineChart } from '@tanstack/charts';
+import { pie, polar, radialArc, radialRule } from '@tanstack/charts/polar';
+import { scaleLinear } from '@tanstack/charts/scales/linear';
+import { ReactElement, useMemo } from 'react';
+import { GaugeColorStop } from './thresholds';
+import { TanStackChart } from './TanStackChart';
 
-use([EChartsGaugeChart, GridComponent, TitleComponent, TooltipComponent, CanvasRenderer]);
-
-// adjusts when to show pointer icon
 const GAUGE_SMALL_BREAKPOINT = 170;
+const START_ANGLE = -Math.PI * 0.75;
+const END_ANGLE = Math.PI * 0.75;
 
 export type GaugeChartValue = number | null | undefined;
-
-export type GaugeSeries = {
-  value: GaugeChartValue;
-  label: string;
-};
+export type GaugeSeries = { value: GaugeChartValue; label: string };
 
 export interface GaugeChartBaseProps {
   width: number;
   height: number;
   data: GaugeSeries;
   format: FormatOptions;
-  axisLine: GaugeSeriesOption['axisLine'];
+  axisLine: { lineStyle?: { color?: GaugeColorStop[]; width?: number } };
   max?: number;
   valueFontSize: string;
   progressWidth: number;
   titleFontSize: number;
 }
 
-export function GaugeChartBase(props: GaugeChartBaseProps): ReactElement {
-  const { width, height, data, format, axisLine, max, valueFontSize, progressWidth, titleFontSize } = props;
+interface GaugePart {
+  id: string;
+  value: number;
+  color: string;
+}
+
+export function GaugeChartBase({
+  width,
+  height,
+  data,
+  format,
+  axisLine,
+  max = 100,
+  valueFontSize,
+  progressWidth,
+  titleFontSize,
+}: GaugeChartBaseProps): ReactElement {
   const chartsTheme = useChartsTheme();
+  const boundedValue = Math.max(0, Math.min(max, data.value ?? 0));
+  const fraction = max > 0 ? boundedValue / max : 0;
+  const stops = useMemo<GaugeColorStop[]>(
+    () => axisLine.lineStyle?.color ?? [[1, chartsTheme.thresholds.defaultColor]],
+    [axisLine.lineStyle?.color, chartsTheme.thresholds.defaultColor]
+  );
+  const activeColor = stops.find(([stop]) => fraction <= stop)?.[1] ?? stops.at(-1)?.[1] ?? '#1976d2';
 
-  // useDeepMemo ensures value size util does not rerun everytime you hover on the chart
-  const option: EChartsCoreOption = useDeepMemo(() => {
-    if (data.value === undefined) return chartsTheme.noDataOption;
+  const definition = useMemo(() => {
+    const progress: GaugePart[] = [
+      { id: 'value', value: fraction, color: activeColor },
+      { id: 'remaining', value: Math.max(0, 1 - fraction), color: 'rgba(127,127,127,0.25)' },
+    ];
+    const thresholdParts: GaugePart[] = [];
+    let previous = 0;
+    stops.forEach(([stop, color], index) => {
+      const boundedStop = Math.max(previous, Math.min(1, stop));
+      thresholdParts.push({ id: `threshold-${index}`, value: boundedStop - previous, color });
+      previous = boundedStop;
+    });
+    const progressSlices = pie(progress, { value: 'value', startAngle: START_ANGLE, endAngle: END_ANGLE });
+    const thresholdSlices = pie(thresholdParts, { value: 'value', startAngle: START_ANGLE, endAngle: END_ANGLE });
 
-    // Base configuration shared by both series (= progress & scale)
-    const baseGaugeConfig = {
-      type: 'gauge' as const,
-      center: ['50%', '65%'] as [string, string],
-      startAngle: 200,
-      endAngle: -20,
-      min: 0,
-      max: max,
-      axisTick: {
-        show: false,
-      },
-      splitLine: {
-        show: false,
-      },
-      axisLabel: {
-        show: false,
-      },
-      data: [
-        {
-          value: data.value,
-        },
-      ],
-    };
-
-    return {
-      title: {
-        show: false,
-      },
-      tooltip: {
-        show: false,
-      },
-      series: [
-        // Inner gauge (progress)
-        {
-          ...baseGaugeConfig,
-          radius: '90%',
-          silent: true,
-          progress: {
-            show: true,
-            width: progressWidth,
-            itemStyle: {
-              color: 'auto',
-            },
-          },
-          axisLine: {
-            lineStyle: {
-              color: [[1, 'rgba(127,127,127,0.35)']], // TODO (sjcobb): use future chart theme colors
-              width: progressWidth,
-            },
-          },
-          pointer: {
-            show: false,
-          },
-          anchor: {
-            show: false,
-          },
-          title: {
-            show: false,
-          },
-          detail: {
-            show: false,
-          },
-        },
-        // Outer gauge (scale & display)
-        {
-          ...baseGaugeConfig,
-          radius: '100%',
-          pointer: {
-            show: true,
-            // pointer hidden for small panels, path taken from ex: https://echarts.apache.org/examples/en/editor.html?c=gauge-grade
-            icon: width > GAUGE_SMALL_BREAKPOINT ? 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z' : 'none',
-            length: 10,
-            width: 5,
-            offsetCenter: [0, '-49%'],
-            itemStyle: {
-              color: 'auto',
-            },
-          },
-          axisLine: axisLine,
-          // `detail` is the text displayed in the middle
-          detail: {
-            show: true,
-            width: '60%',
-            borderRadius: 8,
-            offsetCenter: [0, '-9%'],
-            color: 'inherit', // allows value color to match active threshold color
-            fontSize: valueFontSize,
-            formatter:
-              data.value === null
-                ? // We use a different function when we *know* the value is null
-                  // at this level because the `formatter` function argument is `NaN`
-                  // when the value is `null`, making it difficult to differentiate
-                  // `null` from a true `NaN` case.
-                  (): string => 'null'
-                : (value: number): string | undefined => {
-                    return formatValue(value, format);
-                  },
-          },
-          data: [
-            {
-              value: data.value,
-              name: data.label,
-              // TODO: new UX for series names, create separate React component or reuse ListLegendItem
-              // https://echarts.apache.org/en/option.html#series-gauge.data.title
-              title: {
-                show: true,
-                color: chartsTheme.echartsTheme.textStyle?.color ?? 'inherit', // series name font color
-                offsetCenter: [0, '55%'],
-                overflow: 'truncate',
-                fontSize: titleFontSize,
-                width: width * 0.8,
-              },
-            },
+    return defineChart({
+      marks: [
+        polar({
+          inset: Math.max(6, chartsTheme.container.padding.default),
+          radiusRatio: 0.95,
+          startAngle: START_ANGLE,
+          endAngle: END_ANGLE,
+          angle: { scale: scaleLinear().domain([0, 1]) },
+          radius: { scale: scaleLinear().domain([0, 1]) },
+          marks: [
+            radialArc(progressSlices, {
+              key: 'id',
+              innerRadius: ({ radius }) => Math.max(0, radius - progressWidth),
+              fill: (part) => part.color,
+              cornerRadius: progressWidth / 2,
+            }),
+            radialArc(thresholdSlices, {
+              key: 'id',
+              innerRadius: ({ radius }) => Math.max(0, radius - (axisLine.lineStyle?.width ?? 2)),
+              fill: (part) => part.color,
+            }),
+            ...(width > GAUGE_SMALL_BREAKPOINT
+              ? [
+                  radialRule([fraction], {
+                    angle: (value) => value,
+                    radius1: 0.78,
+                    radius2: 1,
+                    stroke: activeColor,
+                    strokeWidth: 3,
+                  }),
+                ]
+              : []),
           ],
-        },
+        }),
       ],
-    };
-  }, [data, width, height, chartsTheme, format, axisLine, max, valueFontSize, progressWidth, titleFontSize]);
+      guides: false,
+      theme: {
+        foreground: String(chartsTheme.echartsTheme.textStyle?.color ?? 'currentColor'),
+      },
+      pointer: false,
+      keyboard: false,
+    });
+  }, [activeColor, axisLine.lineStyle?.width, chartsTheme, fraction, progressWidth, stops, width]);
+
+  if (data.value === undefined) {
+    return <Box sx={{ alignItems: 'center', display: 'flex', height, justifyContent: 'center', width }}>No data</Box>;
+  }
 
   return (
-    <EChart
-      style={{
-        width: width,
-        height: height,
-      }}
-      sx={{
-        padding: `${chartsTheme.container.padding.default}px`,
-      }}
-      option={option}
-      theme={chartsTheme.echartsTheme}
-    />
+    <Box sx={{ height, position: 'relative', width }}>
+      <TanStackChart
+        definition={definition}
+        width={width}
+        height={height}
+        ariaLabel={`${data.label || 'Gauge'} value`}
+      />
+      <Box
+        sx={{
+          alignItems: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          left: '10%',
+          pointerEvents: 'none',
+          position: 'absolute',
+          top: '43%',
+          width: '80%',
+        }}
+      >
+        <Typography sx={{ color: activeColor, fontSize: valueFontSize, fontWeight: 700, lineHeight: 1.1 }}>
+          {data.value === null ? 'null' : formatValue(data.value, format)}
+        </Typography>
+        {data.label && (
+          <Typography noWrap sx={{ fontSize: titleFontSize, marginTop: 1, maxWidth: '100%' }}>
+            {data.label}
+          </Typography>
+        )}
+      </Box>
+    </Box>
   );
 }

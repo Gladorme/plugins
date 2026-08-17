@@ -23,6 +23,10 @@ const config: Config.InitialOptions = {
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src'],
   moduleNameMapper: {
+    '^@tanstack/charts(?:/.*)?$': '<rootDir>/../tanstackChartsMock.js',
+    '^d3-scale$': '<rootDir>/../tanstackChartsMock.js',
+
+    // Perses' shared components still expose their legacy EChart wrapper.
     '^echarts/(.*)$': 'echarts',
 
     // Use polyfill for jsdom environment

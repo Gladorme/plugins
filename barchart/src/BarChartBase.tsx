@@ -1,44 +1,18 @@
 // Copyright The Perses Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-import { ReactElement, useMemo } from 'react';
-import {
-  EChart,
-  FormatOptions,
-  ModeOption,
-  formatValue,
-  getFormattedAxis,
-  useChartsTheme,
-} from '@perses-dev/components';
-import { use, EChartsCoreOption } from 'echarts/core';
-import { BarChart as EChartsBarChart } from 'echarts/charts';
-import { GridComponent, DatasetComponent, TitleComponent, TooltipComponent, LegendComponent } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
 import { Box } from '@mui/material';
+import { FormatOptions, ModeOption, formatValue, useChartsTheme } from '@perses-dev/components';
+import { barX, barY, colorLegend, defineChart, group, stack, text } from '@tanstack/charts';
+import { scaleBand } from '@tanstack/charts/scales/band';
+import { scaleLinear } from '@tanstack/charts/scales/linear';
+import { tooltip } from '@tanstack/charts/tooltip';
+import { ReactElement, useMemo } from 'react';
+import { TanStackChart } from './TanStackChart';
 
-use([
-  EChartsBarChart,
-  GridComponent,
-  DatasetComponent,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  CanvasRenderer,
-]);
-
-const BAR_WIN_WIDTH = 14;
+const BAR_MIN_WIDTH = 14;
 const BAR_GAP = 6;
-const LEGEND_HEIGHT = 20;
+const LEGEND_HEIGHT = 40;
 
 export interface BarChartData {
   label: string;
@@ -66,172 +40,141 @@ export interface BarChartBaseProps {
   orientation?: 'horizontal' | 'vertical';
 }
 
-export function BarChartBase(props: BarChartBaseProps): ReactElement {
-  const {
-    width,
-    height,
-    data,
-    format = { unit: 'decimal' },
-    mode = 'value',
-    groupedData,
-    isStacked = false,
-    orientation = 'horizontal',
-  } = props;
+interface BarRow {
+  key: string;
+  category: string;
+  series: string;
+  value: number;
+}
+
+export function BarChartBase({
+  width,
+  height,
+  data,
+  format = { unit: 'decimal' },
+  mode = 'value',
+  groupedData,
+  isStacked = false,
+  orientation = 'horizontal',
+}: BarChartBaseProps): ReactElement {
   const chartsTheme = useChartsTheme();
   const isHorizontal = orientation === 'horizontal';
+  const palette = useMemo(() => (chartsTheme.echartsTheme.color ?? []) as string[], [chartsTheme.echartsTheme.color]);
 
-  const option: EChartsCoreOption = useMemo(() => {
+  const rows = useMemo<BarRow[]>(() => {
     if (groupedData) {
-      if (!groupedData.series.length || !groupedData.categories.length) return chartsTheme.noDataOption;
-      const { categories, series } = groupedData;
-      return {
-        title: { show: false },
-        legend: { type: 'scroll', show: true, bottom: 0 },
-        xAxis: isHorizontal
-          ? getFormattedAxis({}, format)
-          : {
-              type: 'category',
-              data: categories,
-              splitLine: { show: false },
-              axisLabel: { overflow: 'truncate', width: width / 3 },
-            },
-        yAxis: isHorizontal
-          ? {
-              type: 'category',
-              data: categories,
-              splitLine: { show: false },
-              axisLabel: { overflow: 'truncate', width: width / 3 },
-            }
-          : getFormattedAxis({}, format),
-        series: series.map((s) => ({
-          name: s.name,
-          type: 'bar',
-          stack: isStacked ? 'total' : undefined,
-          data: s.values,
-          label: { show: false },
-          itemStyle: { borderRadius: isStacked ? 0 : 4 },
-        })),
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          appendToBody: true,
-          confine: true,
-          formatter: (
-            params: Array<{ seriesName: string; data: number | null; name: string; color: string }>
-          ): string => {
-            if (!params.length) return '';
-            const header = `<b>${params[0]?.name}</b><br/>`;
-            const rows = params
-              .filter((p): p is typeof p & { data: number } => p.data !== null)
-              .map(
-                (p) =>
-                  `<span style="display:inline-block;margin-right:5px;border-radius:50%;width:10px;height:10px;background-color:${p.color}"></span>` +
-                  `${p.seriesName}: <b>${formatValue(p.data, format)}</b>`
-              )
-              .join('<br/>');
-            return header + rows;
-          },
-        },
-        grid: { left: '5%', right: '5%', bottom: LEGEND_HEIGHT * 2 },
-      };
+      return groupedData.series.flatMap((series) =>
+        groupedData.categories.flatMap((category, index) => {
+          const value = series.values[index];
+          return typeof value === 'number'
+            ? [{ key: `${category}-${series.name}`, category, series: series.name, value }]
+            : [];
+        })
+      );
     }
+    return (data ?? []).flatMap(({ label, value }) =>
+      typeof value === 'number' ? [{ key: label, category: label, series: '', value }] : []
+    );
+  }, [data, groupedData]);
 
-    if (!data || !data.length) return chartsTheme.noDataOption;
+  const chartHeight = groupedData
+    ? isHorizontal
+      ? Math.max(height, groupedData.categories.length * (BAR_MIN_WIDTH + BAR_GAP) + LEGEND_HEIGHT)
+      : height
+    : Math.max(height, (data?.length ?? 0) * (BAR_MIN_WIDTH + BAR_GAP));
 
-    const source: Array<Array<BarChartData['label'] | BarChartData['value']>> = [];
-    data.map((d) => {
-      source.push([d.label, d.value]);
-    });
-
-    return {
-      title: {
-        show: false,
-      },
-      dataset: [
-        {
-          dimensions: ['label', 'value'],
-          source: source,
-        },
-      ],
-      xAxis: isHorizontal
-        ? getFormattedAxis({}, format)
-        : { type: 'category', splitLine: { show: false }, axisLabel: { overflow: 'truncate', width: width / 3 } },
-      yAxis: isHorizontal
-        ? { type: 'category', splitLine: { show: false }, axisLabel: { overflow: 'truncate', width: width / 3 } }
-        : getFormattedAxis({}, format),
-      series: {
-        type: 'bar',
-        barMinWidth: BAR_WIN_WIDTH,
-        barCategoryGap: BAR_GAP,
-        label: {
-          show: true,
-          position: isHorizontal ? 'right' : 'top',
-          formatter: (params: { data: number[] }): string | undefined => {
-            if (!params.data[1]) {
-              return undefined;
-            }
-
-            if (mode === 'percentage') {
-              return formatValue(params.data[1]!, {
-                unit: 'percent',
-                decimalPlaces: format.decimalPlaces,
-              });
-            }
-            return formatValue(params.data[1], format);
-          },
-        },
-        itemStyle: {
-          borderRadius: 4,
-          color: chartsTheme.echartsTheme[0],
-        },
-      },
-      tooltip: {
-        appendToBody: true,
-        confine: true,
-        formatter: (params: { name: string; data: number[] }) =>
-          params.data[1] && `<b>${params.name}</b> &emsp; ${formatValue(params.data[1], format)}`,
-      },
-      // increase distance between grid and container to prevent y axis labels from getting cut off
-      grid: {
-        left: '5%',
-        right: '5%',
-      },
+  const definition = useMemo(() => {
+    const quantitativeAxis = {
+      scale: scaleLinear,
+      nice: true,
+      grid: true,
+      axis: { ticks: { format: (value: number) => formatValue(value, format) } },
+    } as const;
+    const categoricalAxis = {
+      scale: () => scaleBand<string>().padding(0.18),
+      axis: { tickLabels: { thin: true } },
+    } as const;
+    const layout = groupedData ? (isStacked ? stack() : group({ padding: 0.12 })) : undefined;
+    const common = {
+      key: 'key' as const,
+      z: groupedData ? ('series' as const) : undefined,
+      color: groupedData ? ('series' as const) : undefined,
+      fill: groupedData ? undefined : palette[0],
+      layout,
+      radius: isStacked ? 0 : 4,
+      maxThickness: groupedData ? undefined : BAR_MIN_WIDTH,
     };
-  }, [data, groupedData, isStacked, chartsTheme, width, mode, format, isHorizontal]);
+    const marks = isHorizontal
+      ? [
+          barX(rows, { ...common, x: 'value', y: 'category' }),
+          ...(groupedData
+            ? []
+            : [
+                text(rows, {
+                  x: 'value',
+                  y: 'category',
+                  text: (row) =>
+                    mode === 'percentage'
+                      ? formatValue(row.value, { unit: 'percent', decimalPlaces: format.decimalPlaces })
+                      : formatValue(row.value, format),
+                  anchor: 'start',
+                  dx: 6,
+                }),
+              ]),
+        ]
+      : [
+          barY(rows, { ...common, x: 'category', y: 'value' }),
+          ...(groupedData
+            ? []
+            : [
+                text(rows, {
+                  x: 'category',
+                  y: 'value',
+                  text: (row) =>
+                    mode === 'percentage'
+                      ? formatValue(row.value, { unit: 'percent', decimalPlaces: format.decimalPlaces })
+                      : formatValue(row.value, format),
+                  dy: -6,
+                }),
+              ]),
+        ];
 
-  const numGroupedRows = groupedData
-    ? isStacked
-      ? groupedData.categories.length
-      : groupedData.categories.length * groupedData.series.length
-    : 0;
-
-  function getChartHeight(): number | string {
-    if (groupedData) {
-      if (!isHorizontal) return height;
-      return Math.max(height, numGroupedRows * (BAR_WIN_WIDTH + BAR_GAP) + LEGEND_HEIGHT * 2 + 20);
-    }
-    if (data) {
-      return data.length * (BAR_WIN_WIDTH + BAR_GAP);
-    }
-    return '100%';
-  }
+    return defineChart({
+      marks,
+      x: isHorizontal ? quantitativeAxis : categoricalAxis,
+      y: isHorizontal ? categoricalAxis : quantitativeAxis,
+      color: groupedData
+        ? {
+            domain: groupedData.series.map((series) => series.name),
+            range: palette,
+            legend: colorLegend({ label: 'Series', placement: 'bottom' }),
+          }
+        : undefined,
+      margin: { top: 8, right: 16, bottom: groupedData ? LEGEND_HEIGHT : 8, left: 8 },
+      theme: {
+        foreground: String(chartsTheme.echartsTheme.textStyle?.color ?? 'currentColor'),
+        palette,
+      },
+      focus: groupedData ? (isHorizontal ? 'group-y' : 'group-x') : 'nearest',
+      tooltip: {
+        use: tooltip,
+        format: (point) => `${point.datum.category}: ${formatValue(point.datum.value, format)}`,
+        formatGroup: (points) =>
+          [
+            points[0]?.datum.category ?? '',
+            ...points.map((point) => `${point.datum.series}: ${formatValue(point.datum.value, format)}`),
+          ].join('\n'),
+      },
+    });
+  }, [chartsTheme.echartsTheme.textStyle?.color, format, groupedData, isHorizontal, isStacked, mode, palette, rows]);
 
   return (
-    <Box
-      style={{
-        width: width,
-        height: height,
-      }}
-      sx={{ overflow: 'auto' }}
-    >
-      <EChart
-        style={{
-          minHeight: height,
-          height: getChartHeight(),
-        }}
-        option={option}
-        theme={chartsTheme.echartsTheme}
-      />
+    <Box style={{ width, height }} sx={{ overflow: 'auto' }}>
+      {rows.length > 0 ? (
+        <TanStackChart definition={definition} width={width} height={chartHeight} ariaLabel="Bar chart" />
+      ) : (
+        <Box sx={{ alignItems: 'center', display: 'flex', height: '100%', justifyContent: 'center' }}>No data</Box>
+      )}
     </Box>
   );
 }

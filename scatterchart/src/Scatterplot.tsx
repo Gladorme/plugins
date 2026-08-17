@@ -1,49 +1,20 @@
 // Copyright The Perses Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-import { ReactElement, useCallback, useMemo } from 'react';
-import { EChart, formatValue, OnEventsType, useChartsTheme, useTimeZone } from '@perses-dev/components';
-import { use, EChartsCoreOption } from 'echarts/core';
-import { ScatterChart as EChartsScatterChart } from 'echarts/charts';
-import {
-  DatasetComponent,
-  DataZoomComponent,
-  LegendComponent,
-  GridComponent,
-  TitleComponent,
-  TooltipComponent,
-} from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
-import { EChartsOption, ScatterSeriesOption } from 'echarts';
+import { formatValue, useChartsTheme, useTimeZone } from '@perses-dev/components';
 import {
   replaceVariablesInString,
   useAllVariableValues,
   useRouterContext,
   useTimeRange,
 } from '@perses-dev/plugin-system';
-import { EChartTraceValue } from './ScatterChartPanel';
+import { crosshair, defineChart, dot } from '@tanstack/charts';
+import { scaleLinear } from '@tanstack/charts/scales/linear';
+import { tooltip } from '@tanstack/charts/tooltip';
+import { ReactElement, useCallback, useMemo } from 'react';
+import { ScatterTraceValue } from './ScatterChartPanel';
+import { TanStackChart } from './TanStackChart';
 import { createTimezoneAwareAxisFormatter } from './utils/timezone-formatter';
-
-use([
-  DatasetComponent,
-  DataZoomComponent,
-  LegendComponent,
-  EChartsScatterChart,
-  GridComponent,
-  TitleComponent,
-  TooltipComponent,
-  CanvasRenderer,
-]);
 
 const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   year: 'numeric',
@@ -58,105 +29,92 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
 export interface ScatterplotProps {
   width: number;
   height: number;
-  options: EChartsOption;
+  data: ScatterTraceValue[];
   link?: string;
 }
 
-export function Scatterplot(props: ScatterplotProps): ReactElement {
-  const { width, height, options, link: linkTemplate } = props;
+export function Scatterplot({ width, height, data, link: linkTemplate }: ScatterplotProps): ReactElement {
   const chartsTheme = useChartsTheme();
   const { absoluteTimeRange } = useTimeRange();
   const { timeZone, dateFormatOptionsWithUserTimeZone } = useTimeZone();
-
-  const dateFormatter = useMemo(() => {
-    const dateFormatOptions = dateFormatOptionsWithUserTimeZone(DATE_FORMAT_OPTIONS);
-    return new Intl.DateTimeFormat(undefined, dateFormatOptions).format;
-  }, [dateFormatOptionsWithUserTimeZone]);
   const variableValues = useAllVariableValues();
   const { navigate } = useRouterContext();
-
   const rangeMs = absoluteTimeRange.end.valueOf() - absoluteTimeRange.start.valueOf();
-  const getAxisFormatter = useCallback(() => createTimezoneAwareAxisFormatter(rangeMs, timeZone), [rangeMs, timeZone]);
+  const axisFormatter = useMemo(() => createTimezoneAwareAxisFormatter(rangeMs, timeZone), [rangeMs, timeZone]);
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(undefined, dateFormatOptionsWithUserTimeZone(DATE_FORMAT_OPTIONS)).format,
+    [dateFormatOptionsWithUserTimeZone]
+  );
+  const palette = useMemo(() => (chartsTheme.echartsTheme.color ?? []) as string[], [chartsTheme.echartsTheme.color]);
 
-  // Apache EChart Options Docs: https://echarts.apache.org/en/option.html
-  const eChartOptions: EChartsCoreOption = {
-    dataset: options.dataset,
-    series: options.series,
-    dataZoom: options.dataZoom,
-    grid: {
-      top: 45,
-      bottom: 20,
-      left: 30,
-      right: 20,
-    },
-    xAxis: {
-      type: 'time',
-      min: absoluteTimeRange.start,
-      max: absoluteTimeRange.end,
-      axisLabel: {
-        hideOverlap: true,
-        formatter: getAxisFormatter(),
-      },
-    },
-    yAxis: {
-      scale: true,
-      type: 'value',
-      name: 'Duration',
-      splitNumber: 4,
-      axisLabel: {
-        formatter: (durationMs: number) => formatValue(durationMs, { unit: 'milliseconds' }),
-      },
-    },
-    animation: false,
-    tooltip: {
-      padding: 5,
-      borderWidth: 1,
-      trigger: 'axis',
-      axisPointer: {
-        type: 'cross',
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      formatter: function (params: any) {
-        // TODO: import type from ECharts instead of using any
-        const data = params[0].data as EChartTraceValue;
-        return [
-          `<b>Service name</b>: ${data.rootServiceName}<br/>`,
-          `<b>Span name</b>: ${data.rootTraceName}<br/>`,
-          `<b>Time</b>: ${dateFormatter(data.startTime)}<br/>`,
-          `<b>Duration</b>: ${formatValue(data.durationMs, { unit: 'milliseconds' })}<br/>`,
-          `<b>Span count</b>: ${data.spanCount} (${data.errorCount} errors)<br/>`,
-        ].join('');
-      },
-    },
-    legend: {
-      show: true,
-      type: 'scroll',
-      orient: 'horizontal',
-      bottom: 0,
-    },
-  };
+  const definition = useMemo(
+    () =>
+      defineChart({
+        marks: [
+          dot(data, {
+            x: 'startTimeMs',
+            y: 'durationMs',
+            r: 'pointRadius',
+            color: 'color',
+            key: 'traceId',
+            stroke: chartsTheme.echartsTheme.backgroundColor as string | undefined,
+            strokeWidth: 1,
+          }),
+          crosshair({ x: { label: false }, y: { label: false } }),
+        ],
+        x: {
+          scale: scaleLinear().domain([absoluteTimeRange.start.valueOf(), absoluteTimeRange.end.valueOf()]),
+          axis: { ticks: { format: axisFormatter }, tickLabels: { thin: true } },
+        },
+        y: {
+          scale: scaleLinear,
+          nice: true,
+          grid: true,
+          axis: {
+            label: 'Duration',
+            ticks: { count: 4, format: (value) => formatValue(value, { unit: 'milliseconds' }) },
+          },
+        },
+        color: {
+          domain: [...new Set(data.map((row) => row.color))],
+          range: [...new Set(data.map((row) => row.color))],
+        },
+        margin: { top: 20, right: 20, bottom: 20, left: 16 },
+        theme: { foreground: String(chartsTheme.echartsTheme.textStyle?.color ?? 'currentColor'), palette },
+        focus: 'nearest-x',
+        tooltip: {
+          use: tooltip,
+          format: (point) => {
+            const row = point.datum;
+            return [
+              `Service name: ${row.rootServiceName}`,
+              `Span name: ${row.rootTraceName}`,
+              `Time: ${dateFormatter(row.startTime)}`,
+              `Duration: ${formatValue(row.durationMs, { unit: 'milliseconds' })}`,
+              `Span count: ${row.spanCount} (${row.errorCount} errors)`,
+            ].join('\n');
+          },
+        },
+      }),
+    [absoluteTimeRange, axisFormatter, chartsTheme.echartsTheme, data, dateFormatter, palette]
+  );
 
-  const handleEvents: OnEventsType<ScatterSeriesOption['data'] | unknown> = useMemo(() => {
-    const handlers: OnEventsType<ScatterSeriesOption['data'] | unknown> = {};
-    if (navigate && linkTemplate) {
-      handlers.click = (params): void => {
-        const linkVariables = params.data.linkVariables as Record<string, string> | undefined;
-        const link = replaceVariablesInString(linkTemplate, variableValues, linkVariables);
-        navigate(link);
-      };
-    }
-    return handlers;
-  }, [linkTemplate, navigate, variableValues]);
+  const handleSelect = useCallback(
+    (point: { datum: ScatterTraceValue } | null): void => {
+      if (!point || !navigate || !linkTemplate) return;
+      const link = replaceVariablesInString(linkTemplate, variableValues, point.datum.linkVariables);
+      navigate(link);
+    },
+    [linkTemplate, navigate, variableValues]
+  );
 
   return (
-    <EChart
-      style={{
-        width: width,
-        height: height,
-      }}
-      option={eChartOptions}
-      theme={chartsTheme.echartsTheme}
-      onEvents={handleEvents}
+    <TanStackChart
+      definition={definition}
+      width={width}
+      height={height}
+      ariaLabel="Trace duration scatter chart"
+      onSelect={handleSelect}
     />
   );
 }

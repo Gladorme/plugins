@@ -13,18 +13,20 @@
 
 import { PanelProps } from '@perses-dev/plugin-system';
 import { ReactElement, useMemo } from 'react';
-import { EChartsOption, SeriesOption } from 'echarts';
 import { NoDataOverlay, useChartsTheme } from '@perses-dev/components';
 import { TraceData, TraceSearchResult } from '@perses-dev/spec';
 import { Scatterplot } from './Scatterplot';
 import { ScatterChartOptions } from './scatter-chart-model';
 
-export interface EChartTraceValue extends Omit<TraceSearchResult, 'startTimeUnixMs' | 'serviceStats'> {
+export interface ScatterTraceValue extends Omit<TraceSearchResult, 'startTimeUnixMs' | 'serviceStats'> {
   name: string;
   linkVariables: Record<string, string>;
   startTime: Date;
+  startTimeMs: number;
   spanCount: number;
   errorCount: number;
+  pointRadius: number;
+  color: string;
 }
 
 export type ScatterChartPanelProps = PanelProps<ScatterChartOptions, TraceData>;
@@ -33,19 +35,10 @@ export type ScatterChartPanelProps = PanelProps<ScatterChartOptions, TraceData>;
 const DEFAULT_SIZE_RANGE: [number, number] = [6, 20];
 
 /**
- * ScatterChartPanel receives data from the DataQueriesProvider and transforms it
- * into a `dataset` object that Apache ECharts can consume. Additionally,
- * data formatting is also dictated in this component. Formatting includes
- * datapoint size and color.
+ * ScatterChartPanel transforms trace query results into tidy rows for the
+ * TanStack scatter mark, including each point's size and color.
  *
- * Documentation for data structures accepted by Apache ECharts:
- *  https://echarts.apache.org/handbook/en/concepts/dataset
- *
- * Examples for scatter chart formatting in Apache ECharts:
- *  https://echarts.apache.org/examples/en/index.html#chart-type-scatter
- *
- * @returns a `ScatterPlot` component that contains an EChart which will handle
- * visualization of the data.
+ * @returns a `Scatterplot` component that visualizes the trace data.
  */
 export function ScatterChartPanel(props: ScatterChartPanelProps): ReactElement | null {
   const { spec, contentDimensions, queryResults: traceResults } = props;
@@ -53,11 +46,9 @@ export function ScatterChartPanel(props: ScatterChartPanelProps): ReactElement |
   const defaultColor = chartsTheme.thresholds.defaultColor || 'blue';
   const sizeRange = spec.sizeRange || DEFAULT_SIZE_RANGE;
 
-  // Generate dataset
-  // Transform Tempo API response to fit 'dataset' structure from Apache ECharts
-  // https://echarts.apache.org/handbook/en/concepts/dataset
-  const { dataset, minSpanCount, maxSpanCount } = useMemo(() => {
-    const dataset = [];
+  // Transform the Tempo API response into one tidy row per trace.
+  const traces = useMemo(() => {
+    const traces: Array<Omit<ScatterTraceValue, 'pointRadius' | 'color'>> = [];
     let minSpanCount: number | undefined;
     let maxSpanCount: number | undefined;
     for (const result of traceResults) {
@@ -78,7 +69,7 @@ export function ScatterChartPanel(props: ScatterChartPanelProps): ReactElement |
         }
 
         const pluginSpec = result.definition.spec.plugin.spec as { datasource?: { name?: string } } | undefined;
-        const newTraceValue: EChartTraceValue = {
+        const newTraceValue: Omit<ScatterTraceValue, 'pointRadius' | 'color'> = {
           ...trace,
           linkVariables: {
             datasourceName: pluginSpec?.datasource?.name ?? '',
@@ -86,76 +77,32 @@ export function ScatterChartPanel(props: ScatterChartPanelProps): ReactElement |
           },
           name: `${trace.rootServiceName}: ${trace.rootTraceName}`,
           startTime: new Date(trace.startTimeUnixMs), // convert unix epoch time to Date
+          startTimeMs: trace.startTimeUnixMs,
           spanCount,
           errorCount,
         };
         return newTraceValue;
       });
-      dataset.push({
-        source: dataSeries,
-      });
+      traces.push(...dataSeries);
     }
-    return { dataset, minSpanCount: minSpanCount ?? 0, maxSpanCount: maxSpanCount ?? 0 };
-  }, [traceResults]);
-
-  // Formatting for the dataset
-  // 1. Map x,y coordinates
-  // 2. Datapoint size corresponds to the number of spans in a trace
-  // 3. Color datapoint red if the trace contains an error
-  const series = useMemo(() => {
-    const seriesTemplate2: SeriesOption = {
-      type: 'scatter',
-      encode: {
-        // Map to x-axis.
-        x: 'startTime',
-        // Map to y-axis.
-        y: 'durationMs',
-      },
-      symbolSize: function (data) {
-        // returns the diameter of the circles
-        return getSymbolSize(data.spanCount, [minSpanCount, maxSpanCount], sizeRange);
-      },
-      itemStyle: {
-        color: function (params) {
-          const traceData: EChartTraceValue = params.data as EChartTraceValue;
-          // If the trace contains an error, color the datapoint in red
-          if (traceData.errorCount > 0) {
-            return 'red';
-          }
-          // Else return default color
-          return defaultColor;
-        },
-      },
-    };
-
-    // Each data set needs to have a corresponding series formatting object
-    const series = [];
-    for (let i = 0; i < dataset.length; i++) {
-      series.push({ ...seriesTemplate2, datasetIndex: i });
-    }
-    return series;
-  }, [dataset, defaultColor, minSpanCount, maxSpanCount, sizeRange]);
+    const range: [number, number] = [minSpanCount ?? 0, maxSpanCount ?? 0];
+    return traces.map((trace): ScatterTraceValue => ({
+      ...trace,
+      pointRadius: getSymbolSize(trace.spanCount, range, sizeRange) / 2,
+      color: trace.errorCount > 0 ? 'red' : defaultColor,
+    }));
+  }, [defaultColor, sizeRange, traceResults]);
 
   const tracesFound = traceResults.some((traceData) => (traceData.data?.searchResult ?? []).length > 0);
   if (!tracesFound) {
     return <NoDataOverlay resource="traces" />;
   }
 
-  const options: EChartsOption = {
-    dataset: dataset,
-    series: series,
-  };
-
   if (contentDimensions === undefined) return null;
 
   return (
     <div data-testid="ScatterChartPanel_ScatterPlot">
-      <Scatterplot
-        width={contentDimensions.width}
-        height={contentDimensions.height}
-        options={options}
-        link={spec.link}
-      />
+      <Scatterplot width={contentDimensions.width} height={contentDimensions.height} data={traces} link={spec.link} />
     </div>
   );
 }

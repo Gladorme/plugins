@@ -33,7 +33,6 @@ export default createConfigForPlugin({
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
       'react-dom': { requiredVersion: '18.2.0', singleton: true },
-      echarts: { singleton: true },
       'date-fns': { singleton: true },
       'date-fns-tz': { singleton: true },
       lodash: { singleton: true },

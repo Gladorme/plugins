@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { TooltipComponentOption } from 'echarts';
+interface TooltipSize {
+  contentSize: [number, number];
+  viewSize: [number, number];
+}
 
-export const getTooltipPosition: TooltipComponentOption['position'] = (...data) => {
-  const point = data[0];
-  const size = data[4];
-
+export const getTooltipPosition = (point: [number, number], size: TooltipSize): [number, number] => {
   // calculate the position to avoid overflow
   const [x, y] = point;
   const { contentSize, viewSize } = size;

@@ -56,7 +56,7 @@ This will allow you to use the updates from perses core in your plugin so you ca
 -   "@perses-dev/plugin-system": "^0.51.0-rc.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "echarts": "5.5.0",
+    "@tanstack/charts": "0.14.0",
     "lodash": "^4.17.21",
     "react": "^17.0.2 || ^18.0.0",
     "react-dom": "^17.0.2 || ^18.0.0",

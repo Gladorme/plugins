@@ -12,7 +12,6 @@
 // limitations under the License.
 
 import { testChartsTheme, ThresholdOptions } from '@perses-dev/components';
-import { LineSeriesOption } from 'echarts';
 import { StatChartOptions, StatChartSparklineOptions } from '../stat-chart-model';
 import { convertSparkline } from './data-transform';
 import { getStatChartColor } from './get-color';
@@ -70,21 +69,21 @@ describe('convertSparkline', () => {
 
   it('should render charts theme default threshold color', () => {
     testChartsTheme.thresholds.defaultColor = 'green';
-    const options = convertSparkline(testChartsTheme, 'green', sparkline) as LineSeriesOption;
+    const options = convertSparkline(testChartsTheme, 'green', sparkline)!;
     expect(options.lineStyle?.color).toEqual('green');
     expect(options.areaStyle?.color).toEqual('green');
   });
 
   it('should render threshold default color if threshold is not met ', () => {
     const defaultColor = 'purple';
-    const options = convertSparkline(testChartsTheme, defaultColor, sparkline) as LineSeriesOption;
+    const options = convertSparkline(testChartsTheme, defaultColor, sparkline)!;
     expect(options.lineStyle?.color).toEqual(defaultColor);
     expect(options.areaStyle?.color).toEqual(defaultColor);
   });
 
   it('should render orange if value meets the threshold', () => {
     const defaultColor = 'orange';
-    const options = convertSparkline(testChartsTheme, defaultColor, sparkline) as LineSeriesOption;
+    const options = convertSparkline(testChartsTheme, defaultColor, sparkline)!;
     expect(options.lineStyle?.color).toEqual(defaultColor);
     expect(options.areaStyle?.color).toEqual(defaultColor);
   });

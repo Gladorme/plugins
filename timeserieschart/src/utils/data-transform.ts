@@ -11,17 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { YAXisComponentOption } from 'echarts';
-import { LineSeriesOption, BarSeriesOption } from 'echarts/charts';
-import {
-  OPTIMIZED_MODE_SERIES_LIMIT,
-  LegacyTimeSeries,
-  EChartsDataFormat,
-  EChartsValues,
-  TimeSeriesOption,
-  StepOptions,
-  getCommonTimeScale,
-} from '@perses-dev/components';
+import { LegacyTimeSeries, StepOptions, getCommonTimeScale } from '@perses-dev/components';
 import { useTimeSeriesQueries, PanelData } from '@perses-dev/plugin-system';
 import { TimeScale, TimeSeries, TimeSeriesData, TimeSeriesValueTuple } from '@perses-dev/spec';
 import {
@@ -39,11 +29,35 @@ import {
 
 export type RunningQueriesState = ReturnType<typeof useTimeSeriesQueries>;
 
-export const EMPTY_GRAPH_DATA: EChartsDataFormat = {
+export const EMPTY_GRAPH_DATA = {
   timeSeries: [],
   xAxis: [],
   legendItems: [],
 };
+
+export interface TimeSeriesStyle {
+  type: 'line' | 'bar';
+  id: string;
+  datasetIndex: number;
+  datasetId?: string;
+  name: string;
+  connectNulls?: boolean;
+  color?: string;
+  stack?: 'all';
+  yAxisIndex?: number;
+  showSymbol?: boolean;
+  symbolSize?: number;
+  lineStyle?: { width?: number; type?: LineStyleType | 'dashed'; opacity?: number };
+  areaStyle?: { opacity?: number };
+}
+
+export interface TanStackYAxisOptions {
+  show: boolean;
+  min?: number | ((value: { min: number; max: number }) => number);
+  max?: number;
+  type?: 'log';
+  logBase?: number;
+}
 
 export const HIDE_DATAPOINTS_LIMIT = 70;
 
@@ -60,7 +74,7 @@ export function getCommonTimeScaleForQueries(queries: Array<PanelData<TimeSeries
 }
 
 /**
- * Gets ECharts line series option properties for regular trends
+ * Gets mark style metadata for regular time-series trends.
  */
 export function getTimeSeries(
   id: string,
@@ -71,7 +85,7 @@ export function getTimeSeries(
   paletteColor: string,
   querySettings?: { lineStyle?: LineStyleType; areaOpacity?: number; stack?: boolean },
   yAxisIndex?: number
-): TimeSeriesOption {
+): TimeSeriesStyle {
   const lineWidth = visual.lineWidth ?? DEFAULT_LINE_WIDTH;
   const pointRadius = visual.pointRadius ?? DEFAULT_POINT_RADIUS;
   const shouldStack = querySettings?.stack !== undefined ? querySettings.stack : visual.stack === 'all';
@@ -85,7 +99,7 @@ export function getTimeSeries(
   }
 
   if (visual.display === 'bar') {
-    const series: BarSeriesOption = {
+    const series: TimeSeriesStyle = {
       type: 'bar',
       id: id,
       datasetIndex,
@@ -93,14 +107,11 @@ export function getTimeSeries(
       color: paletteColor,
       stack: shouldStack ? 'all' : undefined,
       yAxisIndex: yAxisIndex,
-      label: {
-        show: false,
-      },
     };
     return series;
   }
 
-  const series: LineSeriesOption = {
+  const series: TimeSeriesStyle = {
     type: 'line',
     id: id,
     datasetIndex,
@@ -109,10 +120,7 @@ export function getTimeSeries(
     color: paletteColor,
     stack: shouldStack ? 'all' : undefined,
     yAxisIndex: yAxisIndex,
-    sampling: 'lttb',
-    progressiveThreshold: OPTIMIZED_MODE_SERIES_LIMIT, // https://echarts.apache.org/en/option.html#series-lines.progressiveThreshold
     showSymbol: showPoints,
-    showAllSymbol: true,
     symbolSize: pointRadius,
     lineStyle: {
       width: lineWidth,
@@ -120,23 +128,6 @@ export function getTimeSeries(
     },
     areaStyle: {
       opacity: querySettings?.areaOpacity ?? visual.areaOpacity ?? DEFAULT_AREA_OPACITY,
-    },
-    // https://echarts.apache.org/en/option.html#series-line.emphasis
-    emphasis: {
-      focus: 'series',
-      disabled: visual.areaOpacity !== undefined && visual.areaOpacity > 0, // prevents flicker when moving cursor between shaded regions
-      lineStyle: {
-        width: lineWidth + 1,
-        opacity: 1,
-        type: visual.lineStyle,
-      },
-    },
-    blur: {
-      lineStyle: {
-        width: lineWidth,
-        opacity: BLUR_FADEOUT_OPACITY,
-        type: visual.lineStyle,
-      },
     },
   };
   return series;
@@ -147,7 +138,7 @@ export function getTimeSeries(
  * markLine cannot be used since it does not update yAxis max / min
  * and threshold data needs to show in the tooltip
  */
-export function getThresholdSeries(name: string, threshold: StepOptions, seriesIndex: number): LineSeriesOption {
+export function getThresholdSeries(name: string, threshold: StepOptions, seriesIndex: number): TimeSeriesStyle {
   return {
     type: 'line',
     name: name,
@@ -155,23 +146,9 @@ export function getThresholdSeries(name: string, threshold: StepOptions, seriesI
     datasetId: name,
     datasetIndex: seriesIndex,
     color: threshold.color,
-    label: {
-      show: false,
-    },
     lineStyle: {
       type: 'dashed',
       width: 2,
-    },
-    emphasis: {
-      focus: 'series',
-      lineStyle: {
-        width: 2.5,
-      },
-    },
-    blur: {
-      lineStyle: {
-        opacity: BLUR_FADEOUT_OPACITY,
-      },
     },
   };
 }
@@ -210,7 +187,7 @@ function findMax(data: LegacyTimeSeries[] | TimeSeries[]): number {
   } else {
     (data as LegacyTimeSeries[]).forEach((series) => {
       if (series.data !== undefined) {
-        series.data.forEach((value: EChartsValues) => {
+        series.data.forEach((value: unknown) => {
           if (typeof value === 'number' && Math.abs(value) > max) {
             max = Math.abs(value);
           }
@@ -222,15 +199,15 @@ function findMax(data: LegacyTimeSeries[] | TimeSeries[]): number {
 }
 
 /**
- * Converts Perses panel yAxis from dashboard spec to ECharts supported yAxis options.
+ * Converts a Perses panel y-axis specification to TanStack scale options.
  * Handles both linear and logarithmic scales with appropriate min/max calculations.
  */
-export function convertPanelYAxis(inputAxis: TimeSeriesChartYAxisOptions = {}): YAXisComponentOption {
+export function convertPanelYAxis(inputAxis: TimeSeriesChartYAxisOptions = {}): TanStackYAxisOptions {
   // Determine the appropriate min value based on scale type and user input
-  let minValue: YAXisComponentOption['min'];
+  let minValue: TanStackYAxisOptions['min'];
   if (inputAxis.logBase !== undefined) {
     // For logarithmic scales without explicit min:
-    // Let ECharts auto-calculate the range based on data to avoid issues with
+    // Let the logarithmic scale infer its range from data to avoid issues with
     // function-based calculations which can result in improper ranges (e.g., 1-10)
     minValue = undefined;
   } else if (inputAxis?.min !== undefined) {
@@ -239,7 +216,6 @@ export function convertPanelYAxis(inputAxis: TimeSeriesChartYAxisOptions = {}): 
   } else {
     // For linear scales without explicit min:
     // Use dynamic calculation with padding for better visualization
-    // https://echarts.apache.org/en/option.html#yAxis.min
     minValue = (value): number => {
       if (value.min >= 0 && value.min <= 1) {
         // Helps with PercentDecimal units, or datasets that return 0 or 1 booleans
@@ -257,8 +233,8 @@ export function convertPanelYAxis(inputAxis: TimeSeriesChartYAxisOptions = {}): 
   }
 
   // Build the yAxis configuration
-  const yAxis: YAXisComponentOption = {
-    show: inputAxis?.show ?? DEFAULT_Y_AXIS.show,
+  const yAxis: TanStackYAxisOptions = {
+    show: inputAxis?.show ?? DEFAULT_Y_AXIS.show ?? true,
     min: minValue,
     max: inputAxis?.max,
   };
@@ -284,7 +260,8 @@ export function convertPanelYAxis(inputAxis: TimeSeriesChartYAxisOptions = {}): 
  * 3. -12 --> -20
  */
 export function roundDown(num: number): number {
+  if (num === 0) return 0;
   const magnitude = Math.floor(Math.log10(Math.abs(num)));
   const firstDigit = Math.floor(num / Math.pow(10, magnitude));
-  return firstDigit * Math.pow(10, magnitude);
+  return Number(`${firstDigit}e${magnitude}`);
 }

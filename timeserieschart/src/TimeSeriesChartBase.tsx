@@ -1,558 +1,283 @@
 // Copyright The Perses Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-import { forwardRef, MouseEvent, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Box } from '@mui/material';
-import merge from 'lodash/merge';
-import isEqual from 'lodash/isEqual';
-
-import type {
-  EChartsCoreOption,
-  GridComponentOption,
-  LineSeriesOption,
-  YAXisComponentOption,
-  TooltipComponentOption,
-} from 'echarts';
-import { ECharts as EChartsInstance, use } from 'echarts/core';
-import { LineChart as EChartsLineChart, BarChart as EChartsBarChart } from 'echarts/charts';
-import {
-  GridComponent,
-  DatasetComponent,
-  DataZoomComponent,
-  MarkAreaComponent,
-  MarkLineComponent,
-  MarkPointComponent,
-  TitleComponent,
-  ToolboxComponent,
-  TooltipComponent,
-} from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
 import {
   ChartInstance,
   ChartInstanceFocusOpts,
-  clearHighlightedSeries,
-  CursorCoordinates,
-  DEFAULT_PINNED_CROSSHAIR,
   DEFAULT_TOOLTIP_CONFIG,
-  EChart,
-  enableDataZoom,
   FormatOptions,
-  getClosestTimestamp,
-  getCommonTimeScale,
-  getFormattedAxis,
-  getPointInGrid,
-  OnEventsType,
-  restoreChart,
-  TimeChartSeriesMapping,
-  TimeChartTooltip,
   TooltipConfig,
+  ZoomEventData,
+  formatValue,
+  getCommonTimeScale,
   useChartsContext,
   useTimeZone,
-  ZoomEventData,
 } from '@perses-dev/components';
-import { DatasetOption } from 'echarts/types/dist/shared';
 import { TimeScale, TimeSeries } from '@perses-dev/spec';
+import { areaY, barY, crosshair, defineChart, group, lineY, ruleX, stack } from '@tanstack/charts';
+import { controlledSignal } from '@tanstack/charts/interaction/signal';
+import { ZoomXChange, ZoomXWindow, zoomX } from '@tanstack/charts/interaction/zoom';
+import { scaleLinear } from '@tanstack/charts/scales/linear';
+import { tooltip } from '@tanstack/charts/tooltip';
+import { scaleLog } from 'd3-scale';
+import { forwardRef, MouseEvent, useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import { TanStackChart } from './TanStackChart';
 import { createTimezoneAwareAxisFormatter } from './utils/timezone-formatter';
 import { TimeSeriesAnnotation } from './utils/annotation';
-import { AnnotationTooltip, buildAnnotationSeries } from './annotations/AnnotationTooltip';
-
-use([
-  EChartsLineChart,
-  EChartsBarChart,
-  GridComponent,
-  DatasetComponent,
-  DataZoomComponent,
-  MarkAreaComponent,
-  MarkLineComponent,
-  MarkPointComponent,
-  TitleComponent,
-  ToolboxComponent,
-  TooltipComponent,
-  CanvasRenderer,
-]);
+import { TanStackYAxisOptions, TimeSeriesStyle } from './utils/data-transform';
 
 export interface TimeChartProps {
   height: number;
   data: TimeSeries[];
-  seriesMapping: TimeChartSeriesMapping;
+  seriesMapping: TimeSeriesStyle[];
   annotations?: TimeSeriesAnnotation[];
   timeScale?: TimeScale;
-  yAxis?: YAXisComponentOption | YAXisComponentOption[];
+  yAxis?: TanStackYAxisOptions;
   format?: FormatOptions;
-  /**
-   * Map of series ID to format options, used for tooltip formatting when series have different units
-   */
   seriesFormatMap?: Map<string, FormatOptions>;
-  grid?: GridComponentOption;
   tooltipConfig?: TooltipConfig;
   noDataVariant?: 'chart' | 'message';
   syncGroup?: string;
   isStackedBar?: boolean;
-  onDataZoom?: (e: ZoomEventData) => void;
-  onDoubleClick?: (e: MouseEvent) => void;
-  __experimentalEChartsOptionsOverride?: (options: EChartsCoreOption) => EChartsCoreOption;
+  onDataZoom?: (event: ZoomEventData) => void;
+  onDoubleClick?: (event: MouseEvent) => void;
 }
 
-export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(function TimeChart(
+interface SeriesRow {
+  key: string;
+  seriesId: string;
+  seriesName: string;
+  time: number;
+  value: number | null;
+  color: string;
+  type: 'line' | 'bar';
+}
+interface AnnotationRule {
+  time: number;
+  color: string;
+}
+
+export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(function TimeSeriesChartBase(
   {
     height,
     data,
     seriesMapping,
     annotations,
     timeScale: timeScaleProp,
-    yAxis,
+    yAxis = { show: true },
     format,
     seriesFormatMap,
-    grid,
     isStackedBar = false,
     tooltipConfig = DEFAULT_TOOLTIP_CONFIG,
     noDataVariant = 'message',
-    syncGroup,
     onDataZoom,
     onDoubleClick,
-    __experimentalEChartsOptionsOverride,
   },
   ref
 ) {
-  const { chartsTheme, enablePinning, enableSyncGrouping, lastTooltipPinnedCoords, setLastTooltipPinnedCoords } =
-    useChartsContext();
-  const isPinningEnabled = tooltipConfig.enablePinning && enablePinning;
-  const chartRef = useRef<EChartsInstance>();
-  const [showTooltip, setShowTooltip] = useState<boolean>(true);
-  const [tooltipPinnedCoords, setTooltipPinnedCoords] = useState<CursorCoordinates | null>(null);
-  const [pinnedCrosshair, setPinnedCrosshair] = useState<LineSeriesOption | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [hoveredAnnotation, setHoveredAnnotation] = useState<TimeSeriesAnnotation | null>(null);
-  const [pinnedAnnotation, setPinnedAnnotation] = useState<TimeSeriesAnnotation | null>(null);
-  const [pinnedAnnotationPos, setPinnedAnnotationPos] = useState<CursorCoordinates | null>(null);
-  const { timeZone, formatWithUserTimeZone } = useTimeZone();
+  const { chartsTheme, enablePinning } = useChartsContext();
+  const { timeZone } = useTimeZone();
+  const timeScale = useMemo<TimeScale>(() => {
+    if (timeScaleProp) return timeScaleProp;
+    const common = getCommonTimeScale(data);
+    if (common) return common;
+    const endMs = Date.now();
+    const startMs = endMs - 5 * 365 * 24 * 60 * 60 * 1000;
+    return { startMs, endMs, stepMs: 1, rangeMs: endMs - startMs };
+  }, [data, timeScaleProp]);
+  const [window, setWindow] = useState<ZoomXWindow<number>>({ start: timeScale.startMs, end: timeScale.endMs });
+  useEffect(() => setWindow({ start: timeScale.startMs, end: timeScale.endMs }), [timeScale.endMs, timeScale.startMs]);
 
-  const getTimezoneAwareAxisFormatter = useCallback(
-    (rangeMs: number): ((value: number) => string) => createTimezoneAwareAxisFormatter(rangeMs, timeZone),
-    [timeZone]
+  useImperativeHandle(
+    ref,
+    () => ({
+      highlightSeries(_options: ChartInstanceFocusOpts): void {},
+      clearHighlightedSeries(): void {},
+    }),
+    []
   );
 
-  let timeScale: TimeScale;
-  if (timeScaleProp === undefined) {
-    const commonTimeScale = getCommonTimeScale(data);
-    if (commonTimeScale === undefined) {
-      // set default to past 5 years
-      const today = new Date();
-      const pastDate = new Date(today);
-      pastDate.setFullYear(today.getFullYear() - 5);
-      const todayMs = today.getTime();
-      const pastDateMs = pastDate.getTime();
-      timeScale = { startMs: pastDateMs, endMs: todayMs, stepMs: 1, rangeMs: todayMs - pastDateMs };
-    } else {
-      timeScale = commonTimeScale;
-    }
-  } else {
-    timeScale = timeScaleProp;
+  const rows = useMemo<SeriesRow[]>(
+    () =>
+      data.flatMap((series, index) => {
+        const style = seriesMapping[index];
+        if (!style) return [];
+        return series.values.map(([time, value], valueIndex) => ({
+          key: `${style.id}-${time}-${valueIndex}`,
+          seriesId: style.id,
+          seriesName: style.name,
+          time,
+          value,
+          color: style.color ?? '#1976d2',
+          type: style.type,
+        }));
+      }),
+    [data, seriesMapping]
+  );
+  const lineRows = rows.filter((row) => row.type === 'line' && (yAxis.type !== 'log' || (row.value ?? 0) > 0));
+  const barRows = rows.filter((row) => row.type === 'bar' && (yAxis.type !== 'log' || (row.value ?? 0) > 0));
+  const palette = seriesMapping.map((series) => series.color ?? '#1976d2');
+  const seriesIds = seriesMapping.map((series) => series.id);
+  const stackedLines = seriesMapping.some((series) => series.type === 'line' && series.stack === 'all');
+  const areaOpacity = Math.max(0, ...seriesMapping.map((series) => series.areaStyle?.opacity ?? 0));
+  const lineWidth = Math.max(1, ...seriesMapping.map((series) => series.lineStyle?.width ?? 1));
+  const showPoints = seriesMapping.some((series) => series.showSymbol);
+  const annotationRules = useMemo<AnnotationRule[]>(
+    () =>
+      (annotations ?? []).flatMap((annotation) => [
+        { time: annotation.start, color: annotation.color ?? chartsTheme.thresholds.defaultColor },
+        ...(annotation.end === undefined
+          ? []
+          : [{ time: annotation.end, color: annotation.color ?? chartsTheme.thresholds.defaultColor }]),
+      ]),
+    [annotations, chartsTheme.thresholds.defaultColor]
+  );
+
+  const values = rows.flatMap((row) => (typeof row.value === 'number' ? [row.value] : []));
+  const dataMin = Math.min(...values, 0);
+  const dataMax = Math.max(...values, 1);
+  const resolvedMin =
+    typeof yAxis.min === 'function' ? yAxis.min({ min: dataMin, max: dataMax }) : (yAxis.min ?? dataMin);
+  const resolvedMax = yAxis.max ?? dataMax;
+  const yScale = useMemo(
+    () =>
+      yAxis.type === 'log'
+        ? scaleLog()
+            .base(yAxis.logBase ?? 10)
+            .domain([Math.max(Number.MIN_VALUE, resolvedMin), Math.max(resolvedMin * 2, resolvedMax)])
+        : scaleLinear().domain(
+            resolvedMin === resolvedMax ? [resolvedMin - 1, resolvedMax + 1] : [resolvedMin, resolvedMax]
+          ),
+    [resolvedMax, resolvedMin, yAxis.logBase, yAxis.type]
+  );
+  const timeFormatter = useMemo(
+    () => createTimezoneAwareAxisFormatter(timeScale.rangeMs ?? 0, timeZone),
+    [timeScale.rangeMs, timeZone]
+  );
+
+  const definition = useMemo(
+    () =>
+      defineChart({
+        marks: [
+          areaY(lineRows, {
+            x: 'time',
+            y: 'value',
+            z: 'seriesId',
+            color: 'seriesId',
+            key: 'key',
+            fillOpacity: areaOpacity,
+            layout: stackedLines ? stack() : undefined,
+          }),
+          lineY(lineRows, {
+            x: 'time',
+            y: 'value',
+            z: 'seriesId',
+            color: 'seriesId',
+            key: 'key',
+            points: showPoints,
+            strokeWidth: lineWidth,
+          }),
+          barY(barRows, {
+            x: 'time',
+            y: 'value',
+            z: 'seriesId',
+            color: 'seriesId',
+            key: 'key',
+            layout: isStackedBar ? stack() : group({ padding: 0.12 }),
+            maxThickness: 24,
+          }),
+          ruleX(annotationRules, { x: 'time', stroke: (rule) => rule.color, strokeWidth: 2, strokeDasharray: '5 4' }),
+          crosshair({ x: { label: true }, y: false }),
+        ],
+        x: {
+          scale: scaleLinear().domain([window.start, window.end]),
+          axis: { ticks: { format: timeFormatter }, tickLabels: { thin: true } },
+        },
+        y: {
+          scale: yScale,
+          grid: yAxis.show,
+          axis: yAxis.show
+            ? { ticks: { format: (value): string => formatValue(value, format) }, tickLabels: { thin: true } }
+            : false,
+        },
+        color: { domain: seriesIds, range: palette },
+        margin: { top: 8, right: 8, bottom: 8, left: 8 },
+        theme: {
+          foreground: String(chartsTheme.echartsTheme.textStyle?.color ?? 'currentColor'),
+          background: String(chartsTheme.echartsTheme.backgroundColor ?? 'transparent'),
+          palette,
+        },
+        focus: 'group-x',
+        maxFocusDistance: Number.POSITIVE_INFINITY,
+        controls: [
+          zoomX({
+            window: controlledSignal<ZoomXWindow<number>, ZoomXChange<number>>(window, (next, { reason }): void => {
+              setWindow(next);
+              if (reason.type === 'commit') onDataZoom?.({ start: next.start, end: next.end });
+            }),
+            extent: [timeScale.startMs, timeScale.endMs],
+            scaleExtent: [1, 64],
+            ariaLabel: 'Zoom time range',
+            format: timeFormatter,
+          }),
+        ],
+        tooltip: tooltipConfig.hidden
+          ? false
+          : {
+              use: tooltip,
+              sticky: tooltipConfig.enablePinning && enablePinning,
+              formatGroup: (points): string =>
+                [
+                  timeFormatter(Number(points[0]?.xValue ?? 0)),
+                  ...points.map((point) => {
+                    const pointFormat = seriesFormatMap?.get(point.datum.seriesId) ?? format;
+                    const value = point.datum.value;
+                    return `${point.datum.seriesName}: ${value === null ? 'No value' : formatValue(value, pointFormat)}`;
+                  }),
+                ].join('\n'),
+            },
+      }),
+    [
+      annotationRules,
+      areaOpacity,
+      barRows,
+      chartsTheme.echartsTheme,
+      enablePinning,
+      format,
+      isStackedBar,
+      lineRows,
+      lineWidth,
+      onDataZoom,
+      palette,
+      seriesFormatMap,
+      seriesIds,
+      showPoints,
+      stackedLines,
+      timeFormatter,
+      timeScale.endMs,
+      timeScale.startMs,
+      tooltipConfig.enablePinning,
+      tooltipConfig.hidden,
+      window,
+      yAxis.show,
+      yScale,
+    ]
+  );
+
+  if (!rows.length && noDataVariant === 'message') {
+    return <Box sx={{ alignItems: 'center', display: 'flex', height, justifyContent: 'center' }}>No data</Box>;
   }
-
-  useImperativeHandle(ref, () => {
-    return {
-      highlightSeries({ name }: ChartInstanceFocusOpts): void {
-        if (!chartRef.current) {
-          // when chart undef, do not highlight series when hovering over legend
-          return;
-        }
-
-        chartRef.current.dispatchAction({ type: 'highlight', seriesId: name });
-      },
-      clearHighlightedSeries: (): void => {
-        if (!chartRef.current) {
-          // when chart undef, do not clear highlight series
-          return;
-        }
-        clearHighlightedSeries(chartRef.current);
-      },
-    };
-  }, []);
-
-  const handleEvents: OnEventsType<LineSeriesOption['data'] | unknown> = useMemo(() => {
-    return {
-      datazoom: (params): void => {
-        if (onDataZoom === undefined) {
-          setTimeout(() => {
-            // workaround so unpin happens after click event
-            setTooltipPinnedCoords(null);
-          }, 10);
-        }
-        if (onDataZoom === undefined || params.batch[0] === undefined) return;
-        const xAxisStartValue = params.batch[0].startValue;
-        const xAxisEndValue = params.batch[0].endValue;
-        if (xAxisStartValue !== undefined && xAxisEndValue !== undefined) {
-          const zoomEvent: ZoomEventData = {
-            start: xAxisStartValue,
-            end: xAxisEndValue,
-          };
-          onDataZoom(zoomEvent);
-        }
-      },
-      finished: (): void => {
-        if (chartRef.current !== undefined) {
-          enableDataZoom(chartRef.current);
-        }
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      mouseover: (params: any): void => {
-        // Only markPoint (triangles under the X-axis) opens the annotation tooltip.
-        // Hovering markLine or anything else keeps the regular TimeSeries tooltip visible
-        // and clears any stale hovered annotation (mouseout is sometimes missed by ECharts).
-        if (annotations && params.componentType === 'markPoint' && params.data?.annotationIndex !== undefined) {
-          const matchedAnnotation = annotations[params.data.annotationIndex] || null;
-          if (matchedAnnotation) {
-            setHoveredAnnotation(matchedAnnotation);
-            return;
-          }
-        }
-        setHoveredAnnotation(null);
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      mouseout: (params: any): void => {
-        if (
-          annotations &&
-          params.componentType === 'markPoint' &&
-          params.data?.annotationIndex !== undefined &&
-          annotations
-        ) {
-          // Only clear if the mouseout corresponds to the currently hovered annotation, so that
-          // a quick move from one markPoint to another isn't cancelled by a late mouseout event.
-          const leaving = annotations[params.data.annotationIndex] || null;
-          setHoveredAnnotation((current) => (current === leaving ? null : current));
-        }
-      },
-      globalout: (): void => {
-        if (annotations) {
-          // Cursor left the chart canvas — guarantee the annotation tooltip is dismissed.
-          setHoveredAnnotation(null);
-        }
-      },
-    };
-  }, [annotations, onDataZoom]);
-
-  // Generate annotation series for ECharts markArea (range), markLine (point), and markPoint (markers under X-axis)
-  const annotationSeries = useMemo(() => buildAnnotationSeries(annotations), [annotations]);
-
-  const { noDataOption } = chartsTheme;
-
-  const option: EChartsCoreOption = useMemo(() => {
-    // The "chart" `noDataVariant` is only used when the `timeSeries` is an
-    // empty array because a `null` value will throw an error.
-    if (data === null || (data.length === 0 && noDataVariant === 'message')) return noDataOption;
-
-    // Utilizes ECharts dataset so raw data is separate from series option style properties
-    // https://apache.github.io/echarts-handbook/en/concepts/dataset/
-    const dataset: DatasetOption[] = [];
-    data.map((d, index) => {
-      const values = d.values.map(([timestamp, value]) => {
-        const val: string | number = value === null ? '-' : value; // echarts use '-' to represent null data
-        return [timestamp, val];
-      });
-      dataset.push({ id: index, source: [...values], dimensions: ['time', 'value'] });
-    });
-
-    const updatedSeriesMapping =
-      enablePinning && pinnedCrosshair !== null
-        ? [...seriesMapping, pinnedCrosshair, ...annotationSeries]
-        : [...seriesMapping, ...annotationSeries];
-
-    const option: EChartsCoreOption = {
-      dataset: dataset,
-      series: updatedSeriesMapping,
-      xAxis: {
-        type: 'time',
-        min: timeScale.startMs,
-        max: timeScale.endMs,
-        axisLabel: {
-          hideOverlap: true,
-          formatter: getTimezoneAwareAxisFormatter(timeScale.rangeMs ?? 0),
-        },
-        axisPointer: {
-          snap: false, // important so shared crosshair does not lag
-        },
-      },
-      // If yAxis is already an array (multiple Y axes), use it directly; otherwise use getFormattedAxis
-      yAxis: Array.isArray(yAxis) ? yAxis : getFormattedAxis(yAxis, format),
-      animation: false,
-      tooltip: {
-        show: true,
-        // ECharts tooltip content hidden by default since we use custom tooltip instead.
-        // Stacked bar uses ECharts tooltip so subgroup data shows correctly.
-        showContent: isStackedBar,
-        trigger: isStackedBar ? 'item' : 'axis',
-        appendToBody: isStackedBar,
-      },
-      // https://echarts.apache.org/en/option.html#axisPointer
-      axisPointer: {
-        type: 'line',
-        z: 0, // ensure point symbol shows on top of dashed line
-        triggerEmphasis: false, // https://github.com/apache/echarts/issues/18495
-        triggerTooltip: false,
-        snap: false, // xAxis.axisPointer.snap takes priority
-      },
-      toolbox: {
-        feature: {
-          dataZoom: {
-            icon: null, // https://stackoverflow.com/a/67684076/17575201
-            yAxisIndex: 'none',
-          },
-        },
-      },
-      grid,
-    };
-
-    if (__experimentalEChartsOptionsOverride) {
-      return __experimentalEChartsOptionsOverride(option);
-    }
-
-    return option;
-  }, [
-    data,
-    seriesMapping,
-    annotationSeries,
-    timeScale,
-    yAxis,
-    format,
-    grid,
-    noDataOption,
-    __experimentalEChartsOptionsOverride,
-    noDataVariant,
-    isStackedBar,
-    enablePinning,
-    pinnedCrosshair,
-    getTimezoneAwareAxisFormatter,
-  ]);
-
-  // Update adjacent charts so tooltip is unpinned when current chart is clicked.
-  useEffect(() => {
-    // Only allow pinning one tooltip at a time, subsequent tooltip click unpins previous.
-    // Multiple tooltips can only be pinned if Ctrl or Cmd key is pressed while clicking.
-    const multipleTooltipsPinned = tooltipPinnedCoords !== null && lastTooltipPinnedCoords !== null;
-    if (multipleTooltipsPinned) {
-      if (!isEqual(lastTooltipPinnedCoords, tooltipPinnedCoords)) {
-        setTooltipPinnedCoords(null);
-        if (tooltipPinnedCoords !== null && pinnedCrosshair !== null) {
-          setPinnedCrosshair(null);
-        }
-      }
-    }
-    // tooltipPinnedCoords CANNOT be in dep array or tooltip pinning breaks in the current chart's onClick
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastTooltipPinnedCoords, seriesMapping]);
-
   return (
     <Box
       style={{ height }}
-      // onContextMenu={(e) => {
-      //   // TODO: confirm tooltip pinning works correctly on Windows, should e.preventDefault() be added here
-      //   e.preventDefault(); // Prevent the default behaviour when right clicked
-      // }}
-      onClick={(e) => {
-        // If clicking while hovering an annotation, toggle the annotation tooltip pin
-        // instead of pinning the TimeChartTooltip, so pinned TimeChartTooltip is preserved.
-        if (hoveredAnnotation !== null && e.target instanceof HTMLCanvasElement) {
-          const pinnedPos: CursorCoordinates = {
-            page: { x: e.pageX, y: e.pageY },
-            client: { x: e.clientX, y: e.clientY },
-            plotCanvas: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY },
-            target: e.target,
-          };
-          setPinnedAnnotation((current) => {
-            if (current === hoveredAnnotation) {
-              setPinnedAnnotationPos(null);
-              return null;
-            }
-            setPinnedAnnotationPos(pinnedPos);
-            return hoveredAnnotation;
-          });
-          return;
-        }
-
-        // Allows user to opt-in to multi tooltip pinning when Ctrl or Cmd key held down
-        const isControlKeyPressed = e.ctrlKey || e.metaKey;
-        if (isControlKeyPressed) {
-          e.preventDefault();
-        }
-
-        // Determine where on chart canvas to plot pinned crosshair as markLine.
-        const pointInGrid = getPointInGrid(e.nativeEvent.offsetX, e.nativeEvent.offsetY, chartRef.current);
-        if (pointInGrid === null) {
-          return;
-        }
-
-        // Pin and unpin when clicking on chart canvas but not tooltip text.
-        if (isPinningEnabled && e.target instanceof HTMLCanvasElement) {
-          // Pin tooltip and update shared charts context to remember these coordinates.
-          const pinnedPos: CursorCoordinates = {
-            page: {
-              x: e.pageX,
-              y: e.pageY,
-            },
-            client: {
-              x: e.clientX,
-              y: e.clientY,
-            },
-            plotCanvas: {
-              x: e.nativeEvent.offsetX,
-              y: e.nativeEvent.offsetY,
-            },
-            target: e.target,
-          };
-
-          setTooltipPinnedCoords((current) => {
-            if (current === null) {
-              return pinnedPos;
-            } else {
-              setPinnedCrosshair(null);
-              return null;
-            }
-          });
-
-          setPinnedCrosshair((current) => {
-            // Only add pinned crosshair line series when there is not one already in seriesMapping.
-            if (current === null) {
-              const cursorX = pointInGrid[0];
-
-              // Only need to loop through first dataset source since getCommonTimeScale ensures xAxis timestamps are consistent
-              const firstTimeSeriesValues = data[0]?.values;
-              const closestTimestamp = getClosestTimestamp(firstTimeSeriesValues, cursorX);
-
-              // Crosshair snaps to nearest timestamp since cursor may be slightly to left or right
-              const pinnedCrosshair = merge({}, DEFAULT_PINNED_CROSSHAIR, {
-                markLine: {
-                  data: [
-                    {
-                      xAxis: closestTimestamp,
-                    },
-                  ],
-                },
-              } as LineSeriesOption);
-              return pinnedCrosshair;
-            } else {
-              // Clear previously set pinned crosshair
-              return null;
-            }
-          });
-
-          if (!isControlKeyPressed) {
-            setLastTooltipPinnedCoords(pinnedPos);
-          }
-        }
-      }}
-      onMouseDown={(e) => {
-        const { clientX } = e;
-        setIsDragging(true);
-        setStartX(clientX);
-      }}
-      onMouseMove={(e) => {
-        // Allow clicking inside tooltip to copy labels.
-        if (!(e.target instanceof HTMLCanvasElement)) {
-          return;
-        }
-        const { clientX } = e;
-        if (isDragging) {
-          const deltaX = clientX - startX;
-          if (deltaX > 0) {
-            // Hide tooltip when user drags to zoom.
-            setShowTooltip(false);
-          }
-        }
-      }}
-      onMouseUp={() => {
-        setIsDragging(false);
-        setStartX(0);
-        setShowTooltip(true);
-      }}
-      onMouseLeave={() => {
-        if (tooltipPinnedCoords === null) {
-          setShowTooltip(false);
-        }
-        // Defensive: clear hovered annotation in case ECharts missed a mouseout event.
-        setHoveredAnnotation(null);
-        if (chartRef.current !== undefined) {
-          clearHighlightedSeries(chartRef.current);
-        }
-      }}
-      onMouseEnter={() => {
-        setShowTooltip(true);
-        if (chartRef.current !== undefined) {
-          enableDataZoom(chartRef.current);
-        }
-      }}
-      onDoubleClick={(e) => {
-        setTooltipPinnedCoords(null);
-        // either dispatch ECharts restore action to return to orig state or allow consumer to define behavior
-        if (onDoubleClick === undefined) {
-          if (chartRef.current !== undefined) {
-            restoreChart(chartRef.current);
-          }
-        } else {
-          onDoubleClick(e);
-        }
+      onDoubleClick={(event) => {
+        setWindow({ start: timeScale.startMs, end: timeScale.endMs });
+        if (onDoubleClick) onDoubleClick(event);
+        else onDataZoom?.({ start: timeScale.startMs, end: timeScale.endMs });
       }}
     >
-      {/* Allows overrides prop to hide custom tooltip and use the ECharts option.tooltip instead.
-          Keep the time chart tooltip visible when pinned even if user hovers an annotation. */}
-      {showTooltip === true &&
-        (tooltipPinnedCoords !== null || hoveredAnnotation === null) &&
-        (option.tooltip as TooltipComponentOption)?.showContent === false &&
-        tooltipConfig.hidden !== true && (
-          <TimeChartTooltip
-            containerId={chartsTheme.tooltipPortalContainerId}
-            chartRef={chartRef}
-            data={data}
-            seriesMapping={seriesMapping}
-            wrapLabels={tooltipConfig.wrapLabels}
-            enablePinning={isPinningEnabled}
-            pinnedPos={tooltipPinnedCoords}
-            format={format}
-            seriesFormatMap={seriesFormatMap}
-            onUnpinClick={() => {
-              // Unpins tooltip when clicking Pin icon in TooltipHeader.
-              setTooltipPinnedCoords(null);
-              // Clear previously set pinned crosshair.
-              setPinnedCrosshair(null);
-            }}
-          />
-        )}
-      {/* Pinned annotation takes priority over hovered. */}
-      {(pinnedAnnotation ?? hoveredAnnotation) && (
-        <AnnotationTooltip
-          annotation={(pinnedAnnotation ?? hoveredAnnotation) as TimeSeriesAnnotation}
-          containerId={chartsTheme.tooltipPortalContainerId}
-          formatWithUserTimeZone={formatWithUserTimeZone}
-          pinnedPos={pinnedAnnotation !== null ? pinnedAnnotationPos : null}
-          enablePinning={isPinningEnabled}
-          onUnpinClick={() => {
-            setPinnedAnnotation(null);
-            setPinnedAnnotationPos(null);
-          }}
-        />
-      )}
-      <EChart
-        sx={{
-          width: '100%',
-          height: '100%',
-        }}
-        option={option}
-        theme={chartsTheme.echartsTheme}
-        onEvents={handleEvents}
-        _instance={chartRef}
-        syncGroup={enableSyncGrouping ? syncGroup : undefined}
-      />
+      <TanStackChart definition={definition} height={height} ariaLabel="Time series chart" />
     </Box>
   );
 });

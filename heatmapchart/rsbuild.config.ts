@@ -27,7 +27,7 @@ export default createConfigForPlugin({
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
       'react-dom': { requiredVersion: '18.2.0', singleton: true },
-      echarts: { singleton: true },
+      '@tanstack/charts': { singleton: true },
       lodash: { singleton: true },
       '@perses-dev/spec': { singleton: true },
       '@perses-dev/components': { singleton: true },

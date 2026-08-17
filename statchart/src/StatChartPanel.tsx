@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { TitleComponentOption } from 'echarts';
 import {
   useChartsTheme,
   GraphSeries,
@@ -56,8 +55,6 @@ export const StatChartPanel: FC<StatChartPanelProps> = (props) => {
     chartWidth = MIN_WIDTH;
   }
 
-  const noDataTextStyle = (chartsTheme.noDataOption.title as TitleComponentOption).textStyle;
-
   return (
     <Stack
       height={contentDimensions.height}
@@ -89,7 +86,9 @@ export const StatChartPanel: FC<StatChartPanelProps> = (props) => {
           );
         })
       ) : (
-        <Typography sx={{ ...noDataTextStyle } as SxProps}>No data</Typography>
+        <Typography color="text.secondary" sx={{ textAlign: 'center' } as SxProps}>
+          No data
+        </Typography>
       )}
     </Stack>
   );

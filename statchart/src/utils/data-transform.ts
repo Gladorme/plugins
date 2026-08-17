@@ -12,14 +12,18 @@
 // limitations under the License.
 
 import { PersesChartsTheme } from '@perses-dev/components';
-import { LineSeriesOption } from 'echarts/charts';
 import { StatChartSparklineOptions } from '../stat-chart-model';
+
+export interface StatSparklineStyle {
+  lineStyle: { width: number; color: string; opacity: number };
+  areaStyle: { color: string; opacity: number };
+}
 
 export function convertSparkline(
   chartsTheme: PersesChartsTheme,
   color: string,
   sparkline?: StatChartSparklineOptions
-): LineSeriesOption | undefined {
+): StatSparklineStyle | undefined {
   if (sparkline === undefined) return;
 
   return {

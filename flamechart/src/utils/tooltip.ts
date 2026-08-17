@@ -11,22 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import * as echarts from 'echarts';
-import { FlameChartSample } from './data-model';
 import { formatItemValue } from './format';
+
+interface FlameTooltipDatum {
+  functionName: string;
+  totalPercentage: number;
+  selfPercentage: number;
+  self: number;
+  total: number;
+}
 
 /**
  * Generates a tooltip for the flame chart items.
  */
-export function generateTooltip(params: FlameChartSample, unit: string | undefined): string {
-  const totalPercentage = Number(params.value[4]);
-  const selfPercentage = Number(params.value[5]);
-  const functionName = params.value[6];
-  const total = Number(params.value[8]);
-  const self = Number(params.value[7]);
-
-  return `${functionName}<br/><br/>
-            Total: ${formatItemValue(unit, total)} (${totalPercentage.toFixed(2)}%)<br/>
-            Self: ${formatItemValue(unit, self)} (${selfPercentage.toFixed(2)}%)<br/>
-            Samples: ${echarts.format.addCommas(total)}`;
+export function generateTooltip(params: FlameTooltipDatum, unit: string | undefined): string {
+  return `${params.functionName}\nTotal: ${formatItemValue(unit, params.total)} (${params.totalPercentage.toFixed(2)}%)\nSelf: ${formatItemValue(unit, params.self)} (${params.selfPercentage.toFixed(2)}%)\nSamples: ${params.total.toLocaleString()}`;
 }

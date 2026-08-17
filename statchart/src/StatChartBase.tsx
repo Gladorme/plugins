@@ -13,18 +13,15 @@
 
 import { FC, ReactNode, useMemo } from 'react';
 import { Box, Typography, styled, useTheme } from '@mui/material';
-import merge from 'lodash/merge';
-import { use, EChartsCoreOption } from 'echarts/core';
-import { LineChart as EChartsLineChart, LineSeriesOption } from 'echarts/charts';
-import { GridComponent, DatasetComponent, TitleComponent, TooltipComponent } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
-import { EChart, FontSizeOption, FormatOptions, GraphSeries, useChartsTheme } from '@perses-dev/components';
+import { FontSizeOption, FormatOptions, GraphSeries, useChartsTheme } from '@perses-dev/components';
+import { areaY, defineChart, lineY } from '@tanstack/charts';
+import { scaleLinear } from '@tanstack/charts/scales/linear';
 import chroma from 'chroma-js';
 import { useOptimalFontSize } from './utils/calculate-font-size';
 import { formatStatChartValue } from './utils/format-stat-chart-value';
+import { StatSparklineStyle } from './utils/data-transform';
 import { ColorMode } from './stat-chart-model';
-
-use([EChartsLineChart, GridComponent, DatasetComponent, TitleComponent, TooltipComponent, CanvasRenderer]);
+import { TanStackChart } from './TanStackChart';
 
 const LINE_HEIGHT = 1.2;
 const SERIES_NAME_MAX_FONT_SIZE = 30;
@@ -44,7 +41,7 @@ export interface StatChartProps {
   height: number;
   data: StatChartData;
   format?: FormatOptions;
-  sparkline?: LineSeriesOption;
+  sparkline?: StatSparklineStyle;
   showSeriesName?: boolean;
   valueFontSize?: FontSizeOption;
   colorMode?: ColorMode;
@@ -105,69 +102,31 @@ export const StatChartBase: FC<StatChartProps> = (props) => {
   // make sure the series name font size is slightly smaller than value font size
   seriesNameFontSize = Math.min(optimalValueFontSize * 0.7, seriesNameFontSize);
 
-  const option: EChartsCoreOption = useMemo(() => {
-    if (!data.seriesData) return chartsTheme.noDataOption;
-
-    const series = data.seriesData;
-    const statSeries: LineSeriesOption[] = [];
-
-    if (sparkline) {
-      const lineSeries = {
-        type: 'line',
-        name: series.name,
-        data: series.values,
-        zlevel: 1,
-        symbol: 'none',
-        animation: false,
-        silent: true,
-      };
-
-      const clonedSparkLine = { ...sparkline };
-      if (colorMode === 'background_solid') {
-        clonedSparkLine.areaStyle = { color: WHITE_COLOR_CODE, opacity: 0.4 };
-        clonedSparkLine.lineStyle = { color: WHITE_COLOR_CODE, opacity: 1 };
-      }
-
-      const mergedSeries = merge(lineSeries, clonedSparkLine);
-      statSeries.push(mergedSeries);
-    }
-
-    const option: EChartsCoreOption = {
-      title: {
-        show: false,
-      },
-      grid: {
-        show: false,
-        top: '35%', // adds space above sparkline
-        right: 0,
-        bottom: 0,
-        left: 0,
-        containLabel: false,
-      },
-      xAxis: {
-        type: 'time',
-        show: false,
-        boundaryGap: false,
-      },
-      yAxis: {
-        type: 'value',
-        show: false,
-        min: (value: { min: number; max: number }): number => {
-          if (value.min >= 0 && value.min <= 1) {
-            // helps with percent-decimal units, or datasets that return 0 or 1 booleans
-            return 0;
-          }
-          return value.min;
-        },
-      },
-      tooltip: {
-        show: false,
-      },
-      series: statSeries,
-    };
-
-    return option;
-  }, [data, chartsTheme, sparkline, colorMode]);
+  const sparklineDefinition = useMemo(() => {
+    if (!data.seriesData || !sparkline) return undefined;
+    const rows = data.seriesData.values.map(([time, value], index) => ({ id: index, time, value }));
+    const stroke = colorMode === 'background_solid' ? WHITE_COLOR_CODE : sparkline.lineStyle.color;
+    const fill = colorMode === 'background_solid' ? WHITE_COLOR_CODE : sparkline.areaStyle.color;
+    return defineChart({
+      marks: [
+        areaY(rows, { x: 'time', y: 'value', fill, fillOpacity: sparkline.areaStyle.opacity }),
+        lineY(rows, {
+          x: 'time',
+          y: 'value',
+          key: 'id',
+          stroke,
+          strokeOpacity: sparkline.lineStyle.opacity,
+          strokeWidth: sparkline.lineStyle.width,
+        }),
+      ],
+      x: { scale: scaleLinear, axis: false },
+      y: { scale: scaleLinear, axis: false },
+      guides: false,
+      margin: 0,
+      pointer: false,
+      keyboard: false,
+    });
+  }, [colorMode, data.seriesData, sparkline]);
 
   const textAlignment = sparkline ? 'auto' : 'center';
 
@@ -237,19 +196,11 @@ export const StatChartBase: FC<StatChartProps> = (props) => {
     >
       {seriesName}
       {styledFormattedValue}
-      {sparkline && (
-        <EChart
-          sx={{
-            width: '100%',
-          }}
-          style={{
-            // ECharts rounds the height to the nearest integer by default.
-            // This can cause unneccessary scrollbars when the total height of this chart exceeds the 'height' prop.
-            height: Math.floor(height - seriesNameHeight - valueFontHeight),
-          }}
-          option={option}
-          theme={chartsTheme.echartsTheme}
-          renderer="svg"
+      {sparklineDefinition && (
+        <TanStackChart
+          definition={sparklineDefinition}
+          height={Math.max(1, Math.floor(height - seriesNameHeight - valueFontHeight))}
+          ariaLabel={`${data.seriesData?.name ?? 'Value'} sparkline`}
         />
       )}
     </Box>

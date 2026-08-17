@@ -1,41 +1,19 @@
 // Copyright The Perses Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-import { use } from 'echarts/core';
-import { PieChart as EChartsPieChart } from 'echarts/charts';
-import { DatasetComponent, GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
 import { Box, useTheme } from '@mui/material';
-import { ReactElement } from 'react';
-import { EChart, FormatOptions, ModeOption, useChartsTheme } from '@perses-dev/components';
-import { getLabelFormatter, getTooltipFormatter } from './utils';
+import { FormatOptions, ModeOption, formatValue, useChartsTheme } from '@perses-dev/components';
+import { defineChart } from '@tanstack/charts';
+import { pie, polar, radialArc, radialText } from '@tanstack/charts/polar';
+import { tooltip } from '@tanstack/charts/tooltip';
+import { ReactElement, useMemo } from 'react';
+import { TanStackChart } from './TanStackChart';
 
-use([
-  EChartsPieChart,
-  GridComponent,
-  DatasetComponent,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  CanvasRenderer,
-]);
 export interface PieChartData {
   id?: string;
   name: string;
   value: number | null;
-  itemStyle?: {
-    color: string;
-  };
+  itemStyle?: { color: string };
 }
 
 export interface PieChartBaseProps {
@@ -47,64 +25,101 @@ export interface PieChartBaseProps {
   formatOptions?: FormatOptions;
 }
 
-export function PieChartBase(props: PieChartBaseProps): ReactElement {
-  const { width, height, data, mode, formatOptions, showLabels } = props;
+interface PieRow {
+  id: string;
+  name: string;
+  value: number;
+  color: string;
+}
+
+export function PieChartBase({
+  width,
+  height,
+  data,
+  mode,
+  formatOptions,
+  showLabels,
+}: PieChartBaseProps): ReactElement {
   const chartsTheme = useChartsTheme();
   const muiTheme = useTheme();
+  const palette = useMemo(() => (chartsTheme.echartsTheme.color ?? []) as string[], [chartsTheme.echartsTheme.color]);
+  const rows = useMemo<PieRow[]>(
+    () =>
+      (data ?? []).flatMap((row, index) =>
+        typeof row.value === 'number' && row.value >= 0
+          ? [
+              {
+                id: row.id ?? row.name,
+                name: row.name,
+                value: row.value,
+                color: row.itemStyle?.color ?? palette[index % Math.max(1, palette.length)] ?? '#1976d2',
+              },
+            ]
+          : []
+      ),
+    [data, palette]
+  );
 
-  const option = {
-    tooltip: {
-      trigger: 'item',
-      formatter: getTooltipFormatter(formatOptions),
-      appendTo: document.body,
-      confine: false,
-    },
-    series: [
-      {
-        type: 'pie',
-        radius: '90%',
-        label: {
-          show: Boolean(showLabels),
-          position: 'inner',
-          fontSize: 14,
-          formatter: getLabelFormatter(mode, formatOptions),
-          overflow: 'truncate',
-          fontWeight: 'bold',
-        },
-        center: ['50%', '50%'],
-        data: data,
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
-          },
-        },
-        itemStyle: {
-          borderRadius: 5,
-          borderColor: muiTheme.palette.background.default,
-          borderWidth: 2,
+  const definition = useMemo(() => {
+    const slices = pie(rows, { value: 'value', gapAngle: 0.01 });
+    return defineChart({
+      marks: [
+        polar({
+          inset: 4,
+          radiusRatio: 0.9,
+          marks: [
+            radialArc(slices, {
+              key: 'id',
+              fill: (slice) => slice.color,
+              cornerRadius: 5,
+              stroke: muiTheme.palette.background.default,
+              strokeWidth: 2,
+            }),
+            ...(showLabels
+              ? [
+                  radialText(slices, {
+                    key: 'id',
+                    angle: 'angle',
+                    radius: 0.62,
+                    text: (slice) =>
+                      mode === 'percentage'
+                        ? `${slice.name}: ${formatValue(slice.fraction * 100, {
+                            unit: 'percent',
+                            decimalPlaces: formatOptions?.decimalPlaces,
+                          })}`
+                        : `${slice.name}: ${formatValue(slice.value, formatOptions)}`,
+                    fill: muiTheme.palette.getContrastText(muiTheme.palette.background.paper),
+                    fontSize: 12,
+                    fontWeight: 700,
+                    anchor: 'middle',
+                  }),
+                ]
+              : []),
+          ],
+        }),
+      ],
+      guides: false,
+      theme: { foreground: muiTheme.palette.text.primary, palette },
+      tooltip: {
+        use: tooltip,
+        format: (point) => {
+          const slice = point.datum;
+          return `${slice.name}: ${formatValue(slice.value, formatOptions)} (${formatValue(slice.fraction * 100, {
+            unit: 'percent',
+            decimalPlaces: formatOptions?.decimalPlaces,
+          })})`;
         },
       },
-    ],
-  };
+    });
+  }, [formatOptions, mode, muiTheme.palette, palette, rows, showLabels]);
 
   return (
-    <Box
-      style={{
-        width: width,
-        height: height,
-      }}
-      sx={{ overflow: 'auto' }}
-    >
-      <EChart
-        sx={{
-          width: '100%',
-          height: '100%',
-        }}
-        option={option}
-        theme={chartsTheme.echartsTheme}
-      />
+    <Box style={{ width, height }} sx={{ overflow: 'auto' }}>
+      {rows.length ? (
+        <TanStackChart definition={definition} width={width} height={height} ariaLabel="Pie chart" />
+      ) : (
+        <Box sx={{ alignItems: 'center', display: 'flex', height: '100%', justifyContent: 'center' }}>No data</Box>
+      )}
     </Box>
   );
 }

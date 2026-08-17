@@ -1,32 +1,20 @@
 // Copyright The Perses Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-import { ReactElement, useMemo } from 'react';
-import { EChart, FormatOptions, getFormattedAxis, ThresholdOptions, useChartsTheme } from '@perses-dev/components';
-import { use, EChartsCoreOption } from 'echarts/core';
-import { CustomSeriesRenderItemAPI, CustomSeriesRenderItemParams } from 'echarts';
-import { CustomChart } from 'echarts/charts';
-import { CustomSeriesRenderItemReturn } from 'echarts/types/dist/echarts';
+import { FormatOptions, ThresholdOptions, formatValue, useChartsTheme } from '@perses-dev/components';
 import { BucketTuple } from '@perses-dev/spec';
+import { defineChart, rect } from '@tanstack/charts';
+import { scaleLinear } from '@tanstack/charts/scales/linear';
+import { tooltip } from '@tanstack/charts/tooltip';
+import { scaleLog } from 'd3-scale';
+import { ReactElement, useMemo } from 'react';
 import { getColorFromThresholds } from '../utils';
 import { LOG_BASE } from '../histogram-chart-model';
-
-use([CustomChart]);
+import { TanStackChart } from './TanStackChart';
 
 export interface HistogramChartData {
   buckets: BucketTuple[];
 }
-
 export interface HistogramChartProps {
   width: number;
   height: number;
@@ -36,6 +24,14 @@ export interface HistogramChartProps {
   max?: number;
   thresholds?: ThresholdOptions;
   logBase?: LOG_BASE;
+}
+interface HistogramRow {
+  key: string;
+  lower: number;
+  upper: number;
+  count: number;
+  bucket: number;
+  color: string;
 }
 
 export function HistogramChart({
@@ -49,174 +45,79 @@ export function HistogramChart({
   logBase,
 }: HistogramChartProps): ReactElement | null {
   const chartsTheme = useChartsTheme();
-
-  const transformedData = useMemo(() => {
-    return data.buckets
-      .map(([bucket, lowerBound, upperBound, count]) => {
-        let lower = parseFloat(lowerBound);
-        const upper = parseFloat(upperBound);
-        const countValue = parseFloat(count);
-
-        // For logarithmic scales, we need to handle non-positive lower bounds
-        // since log(0) and log(negative) are undefined
+  const palette = useMemo(() => (chartsTheme.echartsTheme.color ?? []) as string[], [chartsTheme.echartsTheme.color]);
+  const rows = useMemo<HistogramRow[]>(
+    () =>
+      data.buckets.flatMap(([bucket, lowerBound, upperBound, count], index) => {
+        let lower = Number.parseFloat(lowerBound);
+        const upper = Number.parseFloat(upperBound);
+        const countValue = Number.parseFloat(count);
+        if (![lower, upper, countValue].every(Number.isFinite)) return [];
         if (logBase !== undefined && lower <= 0) {
-          // Skip buckets that would be entirely non-positive on a log scale
-          if (upper <= 0) {
-            return null;
-          }
-          // For buckets that span from 0 (or negative) to positive,
-          // use a small fraction of the upper bound as the lower bound
-          // This ensures the bucket is still visible on the log scale
-          lower = upper * 0.001; // Use 0.1% of upper bound as minimum
+          if (upper <= 0) return [];
+          lower = upper * 0.001;
         }
-
-        return {
-          value: [lower, upper, countValue, bucket],
-          itemStyle: {
-            color: getColorFromThresholds(
-              parseFloat(lowerBound), // Use original lower bound for threshold coloring
-              thresholds,
-              chartsTheme,
-              chartsTheme.echartsTheme[0] as string
-            ),
+        return [
+          {
+            key: `${index}-${bucket}`,
+            lower,
+            upper,
+            count: countValue,
+            bucket,
+            color:
+              getColorFromThresholds(Number.parseFloat(lowerBound), thresholds, chartsTheme, palette[0] ?? '#1976d2') ??
+              palette[0] ??
+              '#1976d2',
           },
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [chartsTheme, data.buckets, logBase, thresholds]);
+        ];
+      }),
+    [chartsTheme, data.buckets, logBase, palette, thresholds]
+  );
 
-  const minXAxis: number | undefined = useMemo(() => {
-    if (logBase !== undefined) {
-      // For logarithmic scales, let ECharts auto-calculate the range based on data
-      // to avoid issues with non-positive values
-      return undefined;
+  const computedMin = min ?? (logBase === undefined ? Math.min(0, rows[0]?.lower ?? 0) : undefined);
+  const computedMax = max ?? rows.at(-1)?.upper;
+  const definition = useMemo(() => {
+    let xScale: typeof scaleLinear | ReturnType<typeof scaleLinear> | ReturnType<typeof scaleLog<number, number>> =
+      scaleLinear;
+    if (logBase === undefined) {
+      if (computedMin !== undefined && computedMax !== undefined) {
+        xScale = scaleLinear().domain([computedMin, computedMax]);
+      }
+    } else {
+      const logScale = scaleLog<number, number>().base(logBase);
+      if (computedMin !== undefined && computedMax !== undefined) logScale.domain([computedMin, computedMax]);
+      xScale = logScale;
     }
-
-    if (min) {
-      return min;
-    }
-
-    if (transformedData && transformedData[0]) {
-      return Math.min(0, Math.floor(transformedData[0]?.value[0] ?? 0));
-    }
-    return undefined;
-  }, [logBase, min, transformedData]);
-
-  const maxXAxis: number | undefined = useMemo(() => {
-    if (max) {
-      return max;
-    }
-    if (transformedData && transformedData[transformedData.length - 1]) {
-      return Math.ceil(transformedData[transformedData.length - 1]?.value[1] ?? 1);
-    }
-    return undefined;
-  }, [max, transformedData]);
-
-  const option: EChartsCoreOption = useMemo(() => {
-    if (!transformedData) return chartsTheme.noDataOption;
-
-    // Build xAxis configuration based on whether logarithmic scale is requested
-    const xAxisConfig: Record<string, unknown> = {
-      scale: false,
-      min: minXAxis,
-      max: maxXAxis,
-    };
-
-    // Apply logarithmic scale settings if requested
-    if (logBase !== undefined) {
-      xAxisConfig.type = 'log';
-      xAxisConfig.logBase = logBase;
-    }
-
-    return {
-      title: {
-        show: false,
-      },
-      tooltip: {},
-      xAxis: xAxisConfig,
-      yAxis: getFormattedAxis({}, format),
-      series: [
-        {
-          type: 'custom',
-          renderItem: function (
-            params: CustomSeriesRenderItemParams,
-            api: CustomSeriesRenderItemAPI
-          ): CustomSeriesRenderItemReturn {
-            const lowerBound = api.value(0) as number;
-            const upperBound = api.value(1) as number;
-            const yValue = api.value(2) as number;
-
-            // Get the pixel coordinates for the start and end points of the bar
-            const startCoord = api.coord([lowerBound, yValue]);
-            const endCoord = api.coord([upperBound, 0]);
-
-            // Extract coordinates with safety checks
-            const startX = startCoord?.[0];
-            const startY = startCoord?.[1];
-            const endX = endCoord?.[0];
-            const endY = endCoord?.[1];
-
-            // Check if coordinates are valid before proceeding
-            if (startX === undefined || startY === undefined || endX === undefined || endY === undefined) {
-              return null;
-            }
-
-            // For logarithmic scales, api.size() doesn't work correctly because
-            // the visual width isn't linear. Instead, we calculate the width
-            // directly from the pixel coordinates.
-            const barWidth = endX - startX;
-            const barHeight = endY - startY;
-
-            const style = api.style?.();
-
-            // Skip rendering if coordinates are invalid (can happen with log scale edge cases)
-            if (
-              !Number.isFinite(startX) ||
-              !Number.isFinite(startY) ||
-              !Number.isFinite(barWidth) ||
-              !Number.isFinite(barHeight)
-            ) {
-              return null;
-            }
-
-            return {
-              type: 'rect',
-              shape: {
-                x: startX,
-                y: startY,
-                width: barWidth,
-                height: barHeight,
-              },
-              style: style,
-            };
-          },
-          label: {
-            show: false,
-          },
-          dimensions: ['from', 'to'],
-          encode: {
-            x: [0, 1],
-            y: 2,
-            tooltip: [0, 1],
-            itemName: 2,
-          },
-          data: transformedData,
-        },
+    const colors = [...new Set(rows.map((row) => row.color))];
+    return defineChart({
+      marks: [
+        rect(rows, { x1: 'lower', x2: 'upper', y1: () => 0, y2: 'count', color: 'color', key: 'key', inset: 0.5 }),
       ],
-    };
-  }, [chartsTheme.noDataOption, format, logBase, maxXAxis, minXAxis, transformedData]);
-
+      x: { scale: xScale, axis: { tickLabels: { thin: true } } },
+      y: {
+        scale: scaleLinear,
+        nice: true,
+        grid: true,
+        axis: { ticks: { format: (value) => formatValue(value, format) } },
+      },
+      color: { domain: colors, range: colors },
+      margin: 8,
+      theme: { foreground: String(chartsTheme.echartsTheme.textStyle?.color ?? 'currentColor'), palette },
+      tooltip: {
+        use: tooltip,
+        format: (point) =>
+          `${point.datum.bucket}: ${point.datum.lower}–${point.datum.upper} · ${formatValue(point.datum.count, format)}`,
+      },
+    });
+  }, [chartsTheme.echartsTheme.textStyle?.color, computedMax, computedMin, format, logBase, palette, rows]);
+  if (!rows.length) return null;
+  const padding = chartsTheme.container.padding.default;
   return (
-    <EChart
-      style={{
-        width: width,
-        height: height,
-      }}
-      sx={{
-        padding: `${chartsTheme.container.padding.default}px`,
-      }}
-      option={option}
-      theme={chartsTheme.echartsTheme}
+    <TanStackChart
+      definition={definition}
+      width={Math.max(1, width - padding * 2)}
+      height={Math.max(1, height - padding * 2)}
+      ariaLabel="Histogram"
     />
   );
 }

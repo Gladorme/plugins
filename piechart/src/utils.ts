@@ -19,7 +19,6 @@ import {
   SortOption,
   TableColumnConfig,
 } from '@perses-dev/components';
-import { format } from 'echarts';
 import { comparisonLegends, ComparisonValues, LegendValue } from '@perses-dev/plugin-system';
 import { PieChartData } from './PieChartBase';
 import { DEFAULT_SORT } from './pie-chart-model';
@@ -42,9 +41,9 @@ export const getTooltipFormatter = (formatOptions?: FormatOptions): ((props: for
   const relativeFormatOptions = { unit: 'percent', decimalPlaces: formatOptions?.decimalPlaces } as const;
   return ({ name, value, percent }: formatterProps): string => {
     if (typeof value === 'number') {
-      return `${format.encodeHTML(name)}: ${formatValue(value, formatOptions)} (${formatValue(percent, relativeFormatOptions)})`;
+      return `${escapeHtml(name)}: ${formatValue(value, formatOptions)} (${formatValue(percent, relativeFormatOptions)})`;
     }
-    return `${format.encodeHTML(name)}: ${format.encodeHTML(value.toString())}`;
+    return `${escapeHtml(name)}: ${escapeHtml(value.toString())}`;
   };
 };
 export const getLabelFormatter = (
@@ -62,7 +61,7 @@ const labelFormatter = (formatOptions?: FormatOptions) => {
     if (typeof value === 'number') {
       return `${name}:\n${formatValue(value, formatOptions)}`;
     }
-    return `${name}:\n${format.encodeHTML(value.toString())}`;
+    return `${name}:\n${escapeHtml(value.toString())}`;
   };
 };
 
@@ -72,6 +71,13 @@ const percentageLabelFormatter = (formatOptions?: FormatOptions) => {
     return `${name}:\n${formatValue(percent, relativeFormatOptions)}`;
   };
 };
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return entities[character] ?? character;
+  });
+}
 
 export interface PieChartLegendMapper {
   mapToLegendItems: (

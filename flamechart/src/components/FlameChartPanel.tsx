@@ -11,9 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { TitleComponentOption } from 'echarts';
-import { useChartsTheme } from '@perses-dev/components';
-import { Stack, Typography, SxProps, useMediaQuery, useTheme } from '@mui/material';
+import { Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { FC, useState, useEffect, useMemo } from 'react';
 import { PanelProps } from '@perses-dev/plugin-system';
 import { ProfileData, StackTrace } from '@perses-dev/spec';
@@ -49,7 +47,6 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
     setSearchValue('');
   }, [spec]);
 
-  const chartsTheme = useChartsTheme();
   const flameChartData = useMemo(() => {
     return queryResults[0];
   }, [queryResults]);
@@ -65,8 +62,6 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
     () => (selectedStackTrace ? getMaxDepth(selectedStackTrace) : 0),
     [selectedStackTrace]
   );
-
-  const noDataTextStyle = (chartsTheme.noDataOption.title as TitleComponentOption).textStyle as SxProps;
 
   const onChangePalette = (newPalette: 'package-name' | 'value'): void => {
     setLiveSpec((prev) => {
@@ -131,7 +126,7 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
     >
       {queryResults.length > 1 ? (
         // display a message if there is more than one query
-        <Typography sx={{ ...noDataTextStyle }}>
+        <Typography color="text.secondary">
           There is more than one query. Please make sure that you provided only one query.
         </Typography>
       ) : flameChartData ? (
@@ -184,7 +179,7 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
           </Stack>
         </Stack>
       ) : (
-        <Typography sx={{ ...noDataTextStyle }}>No data</Typography>
+        <Typography color="text.secondary">No data</Typography>
       )}
     </Stack>
   );

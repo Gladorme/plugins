@@ -171,12 +171,12 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
 
   // Use configured min/max if provided, otherwise use calculated values
   // For logarithmic scales, ignore user-provided min if it's <= 0 (log of non-positive is undefined)
-  // and let ECharts auto-calculate the range to avoid rendering issues
+  // and let the scale infer the range to avoid rendering issues
   const finalMin = useMemo(() => {
     if (pluginSpec.logBase !== undefined) {
-      // For log scale, ignore min if it's <= 0 or let ECharts auto-calculate
+      // For log scale, ignore min if it's non-positive or let the scale infer it.
       if (pluginSpec.min !== undefined && pluginSpec.min <= 0) {
-        return undefined; // Let ECharts auto-calculate
+        return undefined;
       }
       return pluginSpec.min ?? min;
     }
@@ -187,7 +187,7 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
     if (pluginSpec.logBase !== undefined) {
       // For log scale, ignore max if it's <= 0
       if (pluginSpec.max !== undefined && pluginSpec.max <= 0) {
-        return undefined; // Let ECharts auto-calculate
+        return undefined;
       }
       return pluginSpec.max ?? max;
     }

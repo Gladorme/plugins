@@ -13,7 +13,6 @@
 
 import { ReactElement, useMemo, useRef, useState } from 'react';
 import { Box, useTheme } from '@mui/material';
-import type { GridComponentOption } from 'echarts';
 import merge from 'lodash/merge';
 import {
   LEGEND_VALUE_CONFIG,
@@ -37,8 +36,6 @@ import {
   useId,
   TooltipConfig,
   DEFAULT_TOOLTIP_CONFIG,
-  TimeChartSeriesMapping,
-  getFormattedMultipleYAxes,
   DEFAULT_LEGEND,
   StepOptions,
   formatValue,
@@ -59,6 +56,7 @@ import {
   convertPanelYAxis,
   getThresholdSeries,
   convertPercentThreshold,
+  TimeSeriesStyle,
 } from './utils/data-transform';
 import { getSeriesColor } from './utils/palette-gen';
 import { TimeSeriesChartBase } from './TimeSeriesChartBase';
@@ -87,8 +85,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
 
   const chartRef = useRef<ChartInstance>(null);
 
-  // ECharts theme comes from ChartsProvider, more info: https://echarts.apache.org/en/option.html#color
-  // Colors are manually applied since our legend and tooltip are built custom with React.
+  // Colors are shared by the chart, legend, and tooltip.
   const categoricalPalette = chartsTheme.echartsTheme.color;
 
   // TODO: consider refactoring how the layout/spacing/alignment are calculated
@@ -120,14 +117,13 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
     return merge({}, DEFAULT_VISUAL, props.spec.visual);
   }, [props.spec.visual]);
 
-  // convert Perses dashboard format to be ECharts compatible
-  const echartsYAxis = useMemo(() => {
+  const chartYAxis = useMemo(() => {
     return convertPanelYAxis(yAxis);
   }, [yAxis]);
 
   // Collect unique formats from query settings that differ from the base format
   // These will create additional Y axes on the right side
-  const { additionalFormats, formatToYAxisIndex, seriesFormatMap } = useMemo(() => {
+  const { formatToYAxisIndex, seriesFormatMap } = useMemo(() => {
     const baseUnit = format?.unit ?? 'decimal';
     const additionalFormats: Array<typeof format> = [];
     const formatToYAxisIndex = new Map<string, number>();
@@ -148,7 +144,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
       }
     }
 
-    return { additionalFormats, formatToYAxisIndex, seriesFormatMap };
+    return { formatToYAxisIndex, seriesFormatMap };
   }, [format, querySettingsList]);
 
   const [selectedLegendItems, setSelectedLegendItems] = useState<SelectedLegendItemState>('ALL');
@@ -170,7 +166,6 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
     timeSeriesMapping,
     legendItems,
     seriesFormatMap: computedSeriesFormatMap,
-    maxValuesByFormat,
   } = useMemo(() => {
     const timeScale = getCommonTimeScaleForQueries(queryResults);
     if (timeScale === undefined) {
@@ -184,10 +179,9 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
 
     const legendItems: LegendItem[] = [];
 
-    // Utilizes ECharts dataset so raw data is separate from series option style properties
-    // https://apache.github.io/echarts-handbook/en/concepts/dataset/
+    // Keep raw time-series values separate from their TanStack mark styles.
     const timeChartData: TimeSeries[] = [];
-    const timeSeriesMapping: TimeChartSeriesMapping = [];
+    const timeSeriesMapping: TimeSeriesStyle[] = [];
 
     // Track max values for each format unit (used for dynamic Y axis offset calculation)
     const maxValuesByFormat = new Map<string, number>();
@@ -195,7 +189,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
     // Index is counted across multiple queries which ensures the categorical color palette does not reset for every query
     let seriesIndex = 0;
 
-    // Mapping of each set of query results to be ECharts option compatible
+    // Map each query result to the style metadata used to create TanStack marks.
     // TODO: Look into performance optimizations and moving parts of mapping to the lower level chart
     for (let queryIndex = 0; queryIndex < queryResults.length; queryIndex++) {
       const result = queryResults[queryIndex];
@@ -223,7 +217,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
 
           // Color is used for line, tooltip, and legend
           const seriesColor = getSeriesColor({
-            // ECharts type for color is not always an array but it is always an array in ChartsProvider
+            // ChartsProvider supplies the categorical palette as an array.
             categoricalPalette: categoricalPalette as string[],
             visual,
             muiPrimaryColor: muiTheme.palette.primary.main,
@@ -257,8 +251,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
             const queryFormat = querySettings?.format;
             const yAxisIndex = queryFormat?.unit ? (formatToYAxisIndex.get(queryFormat.unit) ?? 0) : 0;
 
-            // Each series is stored as a separate dataset source.
-            // https://apache.github.io/echarts-handbook/en/concepts/dataset/#how-to-reference-several-datasets
+            // Each series remains a separate source so formats and legend state stay independent.
             timeSeriesMapping.push(
               getTimeSeries(
                 seriesId,
@@ -322,7 +315,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
 
     // map thresholds only if there is at least one time series to avoid displaying thresholds without any data
     if (thresholds && thresholds.steps && timeChartData.length > 0) {
-      // Convert how thresholds are defined in the panel spec to valid ECharts 'line' series.
+      // Convert thresholds from the panel spec into dashed line-series metadata.
       // These are styled with predefined colors and a dashed style to look different than series from query results.
       // Regular series are used instead of markLines since thresholds currently show in our React TimeSeriesTooltip.
       const thresholdsColors = chartsTheme.thresholds;
@@ -333,7 +326,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
         const stepOption: StepOptions = {
           color: thresholdLineColor,
           value:
-            // yAxis is passed here since it corresponds to dashboard JSON instead of the already converted ECharts yAxis
+            // yAxis is the dashboard specification, before conversion to the chart scale options.
             thresholds.mode === 'percent'
               ? convertPercentThreshold(step.value, timeChartData, yAxis?.max, yAxis?.min)
               : step.value,
@@ -383,20 +376,6 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
     seriesFormatMap,
   ]);
 
-  // Create multiple Y axes if there are additional formats
-  // Uses max values from data to compute dynamic offsets that adapt to label widths
-  const multipleYAxes = useMemo(() => {
-    if (additionalFormats.length === 0) {
-      return undefined; // Use single Y axis (default behavior)
-    }
-    // Build array of max values for each additional format (in order)
-    const maxValues = additionalFormats.map((fmt) => {
-      const unitKey = fmt.unit;
-      return unitKey ? (maxValuesByFormat?.get(unitKey) ?? 1000) : 1000;
-    });
-    return getFormattedMultipleYAxes(echartsYAxis, format, additionalFormats, maxValues);
-  }, [echartsYAxis, format, additionalFormats, maxValuesByFormat]);
-
   // Translate the legend values into columns for the table legend.
   const legendColumns = useMemo(() => {
     if (!legend?.values) {
@@ -434,35 +413,15 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
     );
   }, [legend?.values, format]);
 
-  const gridOverrides: GridComponentOption = useMemo(() => {
-    // When Y axes are hidden, disable containLabel to prevent auto-spacing, but add bottom padding for X axis
-    return echartsYAxis.show === false
-      ? {
-          left: 0,
-          right: 0,
-          bottom: 30,
-          containLabel: false,
-        }
-      : {
-          left: yAxis && yAxis.label ? 30 : 20,
-          // With containLabel: true in theme, ECharts auto-reserves space for axis labels.
-          // For multiple right axes, add extra padding for the last axis labels that extend beyond the grid.
-          right: additionalFormats.length > 0 ? 10 : 20,
-          bottom: 0,
-          containLabel: true,
-        };
-  }, [echartsYAxis.show, yAxis, additionalFormats.length]);
-
   if (adjustedContentDimensions === undefined) {
     return null;
   }
 
   const handleDataZoom = (event: ZoomEventData): void => {
-    // TODO: add ECharts transition animation on zoom
     setTimeRange({ start: new Date(event.start), end: new Date(event.end) });
   };
 
-  // Used to opt in to ECharts trigger item which show subgroup data accurately.
+  // Group stacked bars so the tooltip shows subgroup values accurately.
   // Derived from the actual series mapping rather than `visual.stack` alone so that
   // bar charts stacked only via per-query overrides also use the right tooltip mode.
   const isStackedBar =
@@ -520,10 +479,9 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
                 seriesMapping={timeSeriesMapping}
                 annotations={annotations}
                 timeScale={timeScale}
-                yAxis={multipleYAxes ?? echartsYAxis}
+                yAxis={chartYAxis}
                 format={format}
                 seriesFormatMap={computedSeriesFormatMap}
-                grid={gridOverrides}
                 isStackedBar={isStackedBar}
                 tooltipConfig={tooltipConfig}
                 syncGroup="default-panel-group" // TODO: make configurable from dashboard settings and per panel-group overrides

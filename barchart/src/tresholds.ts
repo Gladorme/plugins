@@ -16,7 +16,7 @@ import zip from 'lodash/zip';
 
 export type GaugeColorStop = [number, string];
 
-export type EChartsAxisLineColors = GaugeColorStop[];
+export type AxisLineColors = GaugeColorStop[];
 
 export const defaultThresholdInput: ThresholdOptions = { steps: [{ value: 0 }] };
 
@@ -25,13 +25,12 @@ export function convertThresholds(
   unit: FormatOptions,
   max: number,
   palette: ThresholdColorPalette
-): EChartsAxisLineColors {
+): AxisLineColors {
   const defaultThresholdColor = thresholds.defaultColor ?? palette.defaultColor;
-  const defaultThresholdSteps: EChartsAxisLineColors = [[0, defaultThresholdColor]];
+  const defaultThresholdSteps: AxisLineColors = [[0, defaultThresholdColor]];
 
   if (thresholds.steps !== undefined) {
-    // https://echarts.apache.org/en/option.html#series-gauge.axisLine.lineStyle.color
-    // color segments must be decimal between 0 and 1
+    // Color segment stops are normalized between 0 and 1.
     const segmentMax = 1;
     const valuesArr: number[] = thresholds.steps.map((step: StepOptions) => {
       if (thresholds.mode === 'percent') {
