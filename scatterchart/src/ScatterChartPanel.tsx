@@ -33,6 +33,49 @@ export type ScatterChartPanelProps = PanelProps<ScatterChartOptions, TraceData>;
 /** default size range of the circles diameter */
 const DEFAULT_SIZE_RANGE: [number, number] = [6, 20];
 
+function buildDataset(traceResults: ScatterChartPanelProps['queryResults']): {
+  dataset: Array<{ source: EChartTraceValue[] }>;
+  minSpanCount: number;
+  maxSpanCount: number;
+} {
+  const dataset: Array<{ source: EChartTraceValue[] }> = [];
+  let minSpanCount: number | undefined;
+  let maxSpanCount: number | undefined;
+  for (const result of traceResults) {
+    if (result.data.searchResult === undefined) continue;
+    const dataSeries = result.data.searchResult.map((trace) => {
+      let spanCount = 0;
+      let errorCount = 0;
+      for (const stats of Object.values(trace.serviceStats)) {
+        spanCount += stats.spanCount;
+        errorCount += stats.errorCount ?? 0;
+      }
+
+      if (minSpanCount === undefined || spanCount < minSpanCount) {
+        minSpanCount = spanCount;
+      }
+      if (maxSpanCount === undefined || spanCount > maxSpanCount) {
+        maxSpanCount = spanCount;
+      }
+
+      const pluginSpec = result.definition.spec.plugin.spec as { datasource?: { name?: string } } | undefined;
+      return {
+        ...trace,
+        linkVariables: {
+          datasourceName: pluginSpec?.datasource?.name ?? '',
+          traceId: trace.traceId,
+        },
+        name: `${trace.rootServiceName}: ${trace.rootTraceName}`,
+        startTime: new Date(trace.startTimeUnixMs),
+        spanCount,
+        errorCount,
+      };
+    });
+    dataset.push({ source: dataSeries });
+  }
+  return { dataset, minSpanCount: minSpanCount ?? 0, maxSpanCount: maxSpanCount ?? 0 };
+}
+
 /**
  * ScatterChartPanel receives data from the DataQueriesProvider and transforms it
  * into a `dataset` object that Apache ECharts can consume. Additionally,
@@ -57,47 +100,7 @@ export function ScatterChartPanel(props: ScatterChartPanelProps): ReactElement |
   // Generate dataset
   // Transform Tempo API response to fit 'dataset' structure from Apache ECharts
   // https://echarts.apache.org/handbook/en/concepts/dataset
-  const { dataset, minSpanCount, maxSpanCount } = useMemo(() => {
-    const dataset = [];
-    let minSpanCount: number | undefined;
-    let maxSpanCount: number | undefined;
-    for (const result of traceResults) {
-      if (result.data.searchResult === undefined) continue;
-      const dataSeries = result.data.searchResult.map((trace) => {
-        let spanCount = 0;
-        let errorCount = 0;
-        for (const stats of Object.values(trace.serviceStats)) {
-          spanCount += stats.spanCount;
-          errorCount += stats.errorCount ?? 0;
-        }
-
-        if (minSpanCount === undefined || spanCount < minSpanCount) {
-          minSpanCount = spanCount;
-        }
-        if (maxSpanCount === undefined || spanCount > maxSpanCount) {
-          maxSpanCount = spanCount;
-        }
-
-        const pluginSpec = result.definition.spec.plugin.spec as { datasource?: { name?: string } } | undefined;
-        const newTraceValue: EChartTraceValue = {
-          ...trace,
-          linkVariables: {
-            datasourceName: pluginSpec?.datasource?.name ?? '',
-            traceId: trace.traceId,
-          },
-          name: `${trace.rootServiceName}: ${trace.rootTraceName}`,
-          startTime: new Date(trace.startTimeUnixMs), // convert unix epoch time to Date
-          spanCount,
-          errorCount,
-        };
-        return newTraceValue;
-      });
-      dataset.push({
-        source: dataSeries,
-      });
-    }
-    return { dataset, minSpanCount: minSpanCount ?? 0, maxSpanCount: maxSpanCount ?? 0 };
-  }, [traceResults]);
+  const { dataset, minSpanCount, maxSpanCount } = useMemo(() => buildDataset(traceResults), [traceResults]);
 
   // Formatting for the dataset
   // 1. Map x,y coordinates

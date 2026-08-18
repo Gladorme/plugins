@@ -19,7 +19,7 @@ import { DataQueriesProvider, MultiQueryEditor, useDatasourceClient } from '@per
 import { DatasourceSelector, QueryDefinition } from '@perses-dev/spec';
 import { useQueryClient } from '@tanstack/react-query';
 import BellOffIcon from 'mdi-material-ui/BellOff';
-import { ReactElement, useCallback, useMemo, useRef, useState } from 'react';
+import { ReactElement, useCallback, useMemo, useState } from 'react';
 
 import { SilenceForm } from '../components/SilenceForm';
 import { AlertManagerClient, DEFAULT_ALERTMANAGER, PostableSilence } from '../model';
@@ -48,10 +48,10 @@ function CreateSilenceButton({ queries }: { queries: QueryDefinition[] }): React
   const { successSnackbar, exceptionSnackbar } = useSnackbar();
 
   const [open, setOpen] = useState(false);
-  const formKeyRef = useRef(0);
+  const [formKey, setFormKey] = useState(0);
 
   const handleOpen = useCallback(() => {
-    formKeyRef.current++;
+    setFormKey((current) => current + 1);
     setOpen(true);
   }, []);
 
@@ -75,7 +75,7 @@ function CreateSilenceButton({ queries }: { queries: QueryDefinition[] }): React
       <Button variant="contained" startIcon={<BellOffIcon />} onClick={handleOpen} size="small">
         Create Silence
       </Button>
-      <SilenceForm key={formKeyRef.current} open={open} onClose={() => setOpen(false)} onSubmit={handleSubmit} />
+      <SilenceForm key={formKey} open={open} onClose={() => setOpen(false)} onSubmit={handleSubmit} />
     </>
   );
 }

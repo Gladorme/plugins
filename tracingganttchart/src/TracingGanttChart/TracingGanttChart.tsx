@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Box, Stack } from '@mui/material';
+import { Box, Stack, useTheme } from '@mui/material';
 import * as otlptracev1 from '@perses-dev/spec/dist/dashboard/query-type/otlp/trace/v1/trace';
 import { ReactElement, useMemo, useRef, useState } from 'react';
 
@@ -40,6 +40,7 @@ export interface TracingGanttChartProps {
  */
 export function TracingGanttChart(props: TracingGanttChartProps): ReactElement {
   const { options, customLinks, trace: otlpTrace } = props;
+  const theme = useTheme();
 
   const trace = useMemo(() => {
     try {
@@ -62,7 +63,7 @@ export function TracingGanttChart(props: TracingGanttChartProps): ReactElement {
   // setTableWidth() is only called by <ResizableDivider />
   const [tableWidth, setTableWidth] = useState<number>(0.82);
   const gap = 2;
-  const spacing = ganttChart.current ? parseFloat(getComputedStyle(ganttChart.current).columnGap) || 0 : 0;
+  const spacing = parseFloat(theme.spacing(gap));
 
   return (
     <Stack ref={ganttChart} direction="row" sx={{ height: '100%', minHeight: '240px', gap }}>

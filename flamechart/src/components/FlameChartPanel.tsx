@@ -16,7 +16,7 @@ import { useChartsTheme } from '@perses-dev/components';
 import { PanelProps } from '@perses-dev/plugin-system';
 import { ProfileData, StackTrace } from '@perses-dev/spec';
 import { TitleComponentOption } from 'echarts';
-import { FC, useState, useEffect, useMemo } from 'react';
+import { FC, useMemo, useState } from 'react';
 
 import { FlameChartOptions } from '../flame-chart-model';
 import { filterStackTraceById, getMaxDepth } from '../utils/data-transform';
@@ -30,25 +30,32 @@ const DEFAULT_SERIES_CHART_HEIGHT = 200;
 
 export type FlameChartPanelProps = PanelProps<FlameChartOptions, ProfileData>;
 
+interface FlameChartPanelState {
+  sourceSpec: FlameChartOptions;
+  liveSpec: FlameChartOptions;
+  selectedId: number;
+  searchValue: string;
+}
+
+function getCurrentPanelState(state: FlameChartPanelState, spec: FlameChartOptions): FlameChartPanelState {
+  if (state.sourceSpec === spec) {
+    return state;
+  }
+  return { sourceSpec: spec, liveSpec: spec, selectedId: 0, searchValue: '' };
+}
+
 export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
   const { contentDimensions, queryResults, spec } = props;
 
   const isMobileSize = useMediaQuery(useTheme().breakpoints.down('sm'));
 
-  // selectedId equals 0 => Flame Graph is not zoomed in
-  // selectedId different from 0 => Flame Graph is zoomed in
-  const [selectedId, setSelectedId] = useState(0);
-  const [searchValue, setSearchValue] = useState('');
-
-  // This spec is used to manage settings temporarily
-  const [liveSpec, setLiveSpec] = useState<FlameChartOptions>(spec);
-
-  // keep liveSpec up to date
-  useEffect(() => {
-    setLiveSpec(spec);
-    setSelectedId(0);
-    setSearchValue('');
-  }, [spec]);
+  const [panelState, setPanelState] = useState<FlameChartPanelState>(() => ({
+    sourceSpec: spec,
+    liveSpec: spec,
+    selectedId: 0,
+    searchValue: '',
+  }));
+  const { liveSpec, selectedId, searchValue } = getCurrentPanelState(panelState, spec);
 
   const chartsTheme = useChartsTheme();
   const flameChartData = useMemo(() => {
@@ -70,8 +77,9 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
   const noDataTextStyle = (chartsTheme.noDataOption.title as TitleComponentOption).textStyle as SxProps;
 
   const onChangePalette = (newPalette: 'package-name' | 'value'): void => {
-    setLiveSpec((prev) => {
-      return { ...prev, palette: newPalette };
+    setPanelState((previousState) => {
+      const currentState = getCurrentPanelState(previousState, spec);
+      return { ...currentState, liveSpec: { ...currentState.liveSpec, palette: newPalette } };
     });
   };
 
@@ -83,9 +91,24 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
     } else if (value === 'flame-graph') {
       showTable = false;
     }
-    setLiveSpec((prev) => {
-      return { ...prev, showTable: showTable, showFlameGraph: showFlameGraph };
+    setPanelState((previousState) => {
+      const currentState = getCurrentPanelState(previousState, spec);
+      return { ...currentState, liveSpec: { ...currentState.liveSpec, showTable, showFlameGraph } };
     });
+  };
+
+  const onSelectedIdChange = (newSelectedId: number): void => {
+    setPanelState((previousState) => ({
+      ...getCurrentPanelState(previousState, spec),
+      selectedId: newSelectedId,
+    }));
+  };
+
+  const onSearchValueChange = (newSearchValue: string): void => {
+    setPanelState((previousState) => ({
+      ...getCurrentPanelState(previousState, spec),
+      searchValue: newSearchValue,
+    }));
   };
 
   if (!contentDimensions) return null;
@@ -146,7 +169,7 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
           )}
           {liveSpec.showSettings && (
             <Settings
-              onSelectedIdChange={setSelectedId}
+              onSelectedIdChange={onSelectedIdChange}
               onChangePalette={onChangePalette}
               onDisplayChange={onDisplayChange}
               value={liveSpec}
@@ -164,8 +187,8 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
                 height={tableFlameChartHeight}
                 data={flameChartData.data}
                 searchValue={searchValue}
-                onSearchValueChange={setSearchValue}
-                onSelectedIdChange={setSelectedId}
+                onSearchValueChange={onSearchValueChange}
+                onSelectedIdChange={onSelectedIdChange}
               />
             )}
             {liveSpec.showFlameGraph && (
@@ -176,7 +199,7 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
                 palette={liveSpec.palette}
                 selectedId={selectedId}
                 searchValue={searchValue}
-                onSelectedIdChange={setSelectedId}
+                onSelectedIdChange={onSelectedIdChange}
               />
             )}
           </Stack>

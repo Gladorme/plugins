@@ -158,8 +158,8 @@ export function SilenceTablePanel({ spec, queryResults, contentDimensions }: Sil
   const [search, setSearch] = useState('');
 
   const effectiveActions = useMemo<SilenceAction[]>(
-    () => spec?.allowedActions ?? ALL_SILENCE_ACTIONS,
-    [spec?.allowedActions],
+    () => spec.allowedActions ?? ALL_SILENCE_ACTIONS,
+    [spec.allowedActions],
   );
   const showActionsColumn = effectiveActions.length > 0;
 

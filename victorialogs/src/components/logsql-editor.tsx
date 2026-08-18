@@ -15,7 +15,7 @@ import { useTheme } from '@mui/material';
 import CodeMirror, { EditorView, ReactCodeMirrorProps } from '@uiw/react-codemirror';
 import { ReactElement, useMemo } from 'react';
 
-import { LogsQLExtension } from './logsql-extension';
+import { LogsQLExtension as logsQLExtension } from './logsql-extension';
 
 export type LogsQLEditorProps = Omit<ReactCodeMirrorProps, 'theme' | 'extensions'>;
 
@@ -24,7 +24,7 @@ export function LogsQLEditor(props: LogsQLEditorProps): ReactElement {
   const isDarkMode = theme.palette.mode === 'dark';
 
   const logsqlExtension = useMemo(() => {
-    return LogsQLExtension();
+    return logsQLExtension();
   }, []);
 
   const codemirrorTheme = useMemo(() => {

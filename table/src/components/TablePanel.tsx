@@ -33,7 +33,7 @@ import {
 } from '@perses-dev/plugin-system';
 import { QueryDataType, TimeSeriesData } from '@perses-dev/spec';
 import { ColumnFiltersState, PaginationState, RowSelectionState, SortingState } from '@tanstack/react-table';
-import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Dispatch, ReactElement, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { CellSettings, ColumnSettings, evaluateConditionalFormatting, TableOptions } from '../models';
@@ -402,7 +402,6 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     variableState: allVariables,
   });
 
-  const filteredDataRef = useRef<Array<Record<string, unknown>>>([]);
   // Refs used to keep the filter row in sync with the table's horizontal
   const panelContainerRef = useRef<HTMLDivElement>(null);
   const filterRowInnerRef = useRef<HTMLDivElement>(null);
@@ -416,27 +415,6 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     });
     return result;
   }, [selectionMap]);
-
-  const handleRowSelectionChange = useCallback(
-    (newRowSelection: RowSelectionState) => {
-      const newSelection: Array<{ id: string; item: Record<string, unknown> }> = [];
-      for (const [id, isSelected] of Object.entries(newRowSelection)) {
-        if (isSelected) {
-          const index = parseInt(id, 10);
-          if (filteredDataRef.current[index] !== undefined) {
-            newSelection.push({ id, item: filteredDataRef.current[index] });
-          }
-        }
-      }
-
-      if (newSelection.length === 0) {
-        clearSelection();
-      } else {
-        setSelection(newSelection);
-      }
-    },
-    [setSelection, clearSelection],
-  );
 
   // TODO: handle other query types
   const rawData: Array<Record<string, unknown>> = useMemo(() => {
@@ -610,6 +588,27 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     });
   }, [data, columnFilters, spec.enableFiltering]);
 
+  const handleRowSelectionChange = useCallback(
+    (newRowSelection: RowSelectionState) => {
+      const newSelection: Array<{ id: string; item: Record<string, unknown> }> = [];
+      for (const [id, isSelected] of Object.entries(newRowSelection)) {
+        if (isSelected) {
+          const item = filteredData[parseInt(id, 10)];
+          if (item !== undefined) {
+            newSelection.push({ id, item });
+          }
+        }
+      }
+
+      if (newSelection.length === 0) {
+        clearSelection();
+      } else {
+        setSelection(newSelection);
+      }
+    },
+    [clearSelection, filteredData, setSelection],
+  );
+
   // Generate cell settings that will be used by the table to render cells (text color, background color, ...)
   const cellConfigs: TableCellConfigs = useMemo(() => {
     // If there are no cell settings globally or per column, return an empty object
@@ -734,21 +733,30 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     };
   }, [openFilterColumn]);
 
-  // Keep ref in sync with filtered data for use in selection handler
-  filteredDataRef.current = filteredData;
-
-  const [pagination, setPagination] = useState<PaginationState | undefined>(
-    spec.pagination ? { pageIndex: 0, pageSize: 10 } : undefined,
+  const paginationEnabled = Boolean(spec.pagination);
+  const [paginationState, setPaginationState] = useState<{
+    enabled: boolean;
+    value: PaginationState | undefined;
+  }>(() => ({
+    enabled: paginationEnabled,
+    value: paginationEnabled ? { pageIndex: 0, pageSize: 10 } : undefined,
+  }));
+  let pagination = paginationState.value;
+  if (paginationState.enabled !== paginationEnabled) {
+    pagination = paginationEnabled ? { pageIndex: 0, pageSize: 10 } : undefined;
+  }
+  const setPagination: Dispatch<SetStateAction<PaginationState | undefined>> = useCallback(
+    (nextPagination) => {
+      setPaginationState((current) => {
+        const currentValue = current.enabled === paginationEnabled ? current.value : pagination;
+        return {
+          enabled: paginationEnabled,
+          value: typeof nextPagination === 'function' ? nextPagination(currentValue) : nextPagination,
+        };
+      });
+    },
+    [pagination, paginationEnabled],
   );
-
-  useEffect(() => {
-    // If the pagination setting changes from no pagination to pagination, but the pagination state is undefined, update the pagination state
-    if (spec.pagination && !pagination) {
-      setPagination({ pageIndex: 0, pageSize: 10 });
-    } else if (!spec.pagination && pagination) {
-      setPagination(undefined);
-    }
-  }, [spec.pagination, pagination]);
 
   // Sync the filter row's horizontal position with the table scroll.
   useEffect(() => {

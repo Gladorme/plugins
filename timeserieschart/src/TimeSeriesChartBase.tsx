@@ -60,7 +60,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { DatasetOption } from 'echarts/types/dist/shared';
 import isEqual from 'lodash/isEqual';
 import merge from 'lodash/merge';
-import { forwardRef, MouseEvent, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, MouseEvent, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
 import { AnnotationTooltip, buildAnnotationSeries } from './annotations/AnnotationTooltip';
 import { TimeSeriesAnnotation } from './utils/annotation';
@@ -129,14 +129,20 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
   const isPinningEnabled = tooltipConfig.enablePinning && enablePinning;
   const chartRef = useRef<EChartsInstance>();
   const [showTooltip, setShowTooltip] = useState<boolean>(true);
-  const [tooltipPinnedCoords, setTooltipPinnedCoords] = useState<CursorCoordinates | null>(null);
-  const [pinnedCrosshair, setPinnedCrosshair] = useState<LineSeriesOption | null>(null);
+  const [localTooltipPinnedCoords, setLocalTooltipPinnedCoords] = useState<CursorCoordinates | null>(null);
+  const [localPinnedCrosshair, setLocalPinnedCrosshair] = useState<LineSeriesOption | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [hoveredAnnotation, setHoveredAnnotation] = useState<TimeSeriesAnnotation | null>(null);
   const [pinnedAnnotation, setPinnedAnnotation] = useState<TimeSeriesAnnotation | null>(null);
   const [pinnedAnnotationPos, setPinnedAnnotationPos] = useState<CursorCoordinates | null>(null);
   const { timeZone, formatWithUserTimeZone } = useTimeZone();
+  const pinIsSuperseded =
+    localTooltipPinnedCoords !== null &&
+    lastTooltipPinnedCoords !== null &&
+    !isEqual(lastTooltipPinnedCoords, localTooltipPinnedCoords);
+  const tooltipPinnedCoords = pinIsSuperseded ? null : localTooltipPinnedCoords;
+  const pinnedCrosshair = pinIsSuperseded ? null : localPinnedCrosshair;
 
   const getTimezoneAwareAxisFormatter = useCallback(
     (rangeMs: number): ((value: number) => string) => createTimezoneAwareAxisFormatter(rangeMs, timeZone),
@@ -187,7 +193,7 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
         if (onDataZoom === undefined) {
           setTimeout(() => {
             // workaround so unpin happens after click event
-            setTooltipPinnedCoords(null);
+            setLocalTooltipPinnedCoords(null);
           }, 10);
         }
         if (onDataZoom === undefined || params.batch[0] === undefined) return;
@@ -336,23 +342,6 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
     getTimezoneAwareAxisFormatter,
   ]);
 
-  // Update adjacent charts so tooltip is unpinned when current chart is clicked.
-  useEffect(() => {
-    // Only allow pinning one tooltip at a time, subsequent tooltip click unpins previous.
-    // Multiple tooltips can only be pinned if Ctrl or Cmd key is pressed while clicking.
-    const multipleTooltipsPinned = tooltipPinnedCoords !== null && lastTooltipPinnedCoords !== null;
-    if (multipleTooltipsPinned) {
-      if (!isEqual(lastTooltipPinnedCoords, tooltipPinnedCoords)) {
-        setTooltipPinnedCoords(null);
-        if (tooltipPinnedCoords !== null && pinnedCrosshair !== null) {
-          setPinnedCrosshair(null);
-        }
-      }
-    }
-    // tooltipPinnedCoords CANNOT be in dep array or tooltip pinning breaks in the current chart's onClick
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastTooltipPinnedCoords, seriesMapping]);
-
   return (
     <Box
       style={{ height }}
@@ -412,18 +401,18 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
             target: e.target,
           };
 
-          setTooltipPinnedCoords((current) => {
-            if (current === null) {
+          setLocalTooltipPinnedCoords((current) => {
+            if (pinIsSuperseded || current === null) {
               return pinnedPos;
             } else {
-              setPinnedCrosshair(null);
+              setLocalPinnedCrosshair(null);
               return null;
             }
           });
 
-          setPinnedCrosshair((current) => {
+          setLocalPinnedCrosshair((current) => {
             // Only add pinned crosshair line series when there is not one already in seriesMapping.
-            if (current === null) {
+            if (pinIsSuperseded || current === null) {
               const cursorX = pointInGrid[0];
 
               // Only need to loop through first dataset source since getCommonTimeScale ensures xAxis timestamps are consistent
@@ -493,7 +482,7 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
         }
       }}
       onDoubleClick={(e) => {
-        setTooltipPinnedCoords(null);
+        setLocalTooltipPinnedCoords(null);
         // either dispatch ECharts restore action to return to orig state or allow consumer to define behavior
         if (onDoubleClick === undefined) {
           if (chartRef.current !== undefined) {
@@ -522,9 +511,9 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
             seriesFormatMap={seriesFormatMap}
             onUnpinClick={() => {
               // Unpins tooltip when clicking Pin icon in TooltipHeader.
-              setTooltipPinnedCoords(null);
+              setLocalTooltipPinnedCoords(null);
               // Clear previously set pinned crosshair.
-              setPinnedCrosshair(null);
+              setLocalPinnedCrosshair(null);
             }}
           />
         )}

@@ -18,7 +18,7 @@ import CodeMirror, { EditorView, ReactCodeMirrorProps } from '@uiw/react-codemir
 import { ReactElement, useMemo } from 'react';
 
 import { TempoClient } from '../model';
-import { TraceQLExtension } from './TraceQLExtension';
+import { TraceQLExtension as createTraceQLExtension } from './TraceQLExtension';
 
 export interface TraceQLEditorProps extends Omit<ReactCodeMirrorProps, 'theme' | 'extensions'> {
   client?: TempoClient;
@@ -30,7 +30,7 @@ export function TraceQLEditor({ client, ...rest }: TraceQLEditorProps): ReactEle
 
   const { absoluteTimeRange } = useTimeRange();
   const traceQLExtension = useMemo(() => {
-    return TraceQLExtension({ client, timeRange: absoluteTimeRange });
+    return createTraceQLExtension({ client, timeRange: absoluteTimeRange });
   }, [client, absoluteTimeRange]);
 
   const codemirrorTheme = useMemo(() => {

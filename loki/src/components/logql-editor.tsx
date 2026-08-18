@@ -15,7 +15,7 @@ import { useTheme } from '@mui/material';
 import CodeMirror, { EditorView, ReactCodeMirrorProps } from '@uiw/react-codemirror';
 import { ReactElement, useMemo } from 'react';
 
-import { LogQLExtension, CompletionConfig } from './logql-extension';
+import { CompletionConfig, LogQLExtension as logQLExtension } from './logql-extension';
 
 export type LogQLEditorProps = Omit<ReactCodeMirrorProps, 'theme' | 'extensions'> & {
   completionConfig?: CompletionConfig;
@@ -27,7 +27,7 @@ export function LogQLEditor(props: LogQLEditorProps): ReactElement {
   const isDarkMode = theme.palette.mode === 'dark';
 
   const logqlExtension = useMemo(() => {
-    return LogQLExtension(completionConfig);
+    return logQLExtension(completionConfig);
   }, [completionConfig]);
 
   const codemirrorTheme = useMemo(() => {

@@ -111,7 +111,7 @@ export function DataTable(props: DataTableProps): ReactElement {
       }
     }
     return result_rows;
-  }, [result, options.links?.trace, variableValues]);
+  }, [result, options.links, variableValues]);
 
   const rowsById = useMemo(() => {
     const map = new Map<string, Row>();

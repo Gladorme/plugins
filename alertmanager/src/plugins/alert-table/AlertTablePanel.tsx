@@ -50,7 +50,7 @@ import ChevronRightIcon from 'mdi-material-ui/ChevronRight';
 import MagnifyIcon from 'mdi-material-ui/Magnify';
 import UnfoldLessHorizontalIcon from 'mdi-material-ui/UnfoldLessHorizontal';
 import UnfoldMoreHorizontalIcon from 'mdi-material-ui/UnfoldMoreHorizontal';
-import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactElement, useCallback, useMemo, useState } from 'react';
 
 import { SilenceForm } from '../../components/SilenceForm';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -84,6 +84,15 @@ interface AlertGroup {
   key: string;
   alerts: Alert[];
   summary: GroupSummary;
+}
+
+interface ExpandedGroupsState {
+  groupKeys: string;
+  value: Set<string>;
+}
+
+function getDefaultExpandedGroups(groups: AlertGroup[]): Set<string> {
+  return groups.length === 1 ? new Set(groups.map((group) => group.key)) : new Set();
 }
 
 function GroupSummaryChips({ summary }: { summary: GroupSummary }): ReactElement {
@@ -341,13 +350,12 @@ export function AlertTablePanel({ spec, queryResults, contentDimensions }: Alert
   const queryClient = useQueryClient();
 
   const [silenceTarget, setSilenceTarget] = useState<Alert | null>(null);
-  const silenceKeyRef = useRef(0);
+  const [silenceKey, setSilenceKey] = useState(0);
   const handleSetSilenceTarget = useCallback((alert: Alert) => {
-    silenceKeyRef.current++;
+    setSilenceKey((current) => current + 1);
     setSilenceTarget(alert);
   }, []);
   const [search, setSearch] = useState('');
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const { successSnackbar, exceptionSnackbar } = useSnackbar();
 
   const handleSilenceSubmit = useCallback(
@@ -408,11 +416,11 @@ export function AlertTablePanel({ spec, queryResults, contentDimensions }: Alert
     return result;
   }, [defaultGroupBy, variableState]);
 
-  const [groupBy, setGroupBy] = useState<string[]>(resolvedDefaultGroupBy);
-
-  useEffect(() => {
-    setGroupBy(resolvedDefaultGroupBy);
-  }, [resolvedDefaultGroupBy]);
+  const [groupByState, setGroupByState] = useState(() => ({
+    source: resolvedDefaultGroupBy,
+    value: resolvedDefaultGroupBy,
+  }));
+  const groupBy = groupByState.source === resolvedDefaultGroupBy ? groupByState.value : resolvedDefaultGroupBy;
 
   const effectiveActions = useMemo<AlertAction[]>(
     () => spec.allowedActions ?? ALL_ALERT_ACTIONS,
@@ -513,42 +521,41 @@ export function AlertTablePanel({ spec, queryResults, contentDimensions }: Alert
     return result;
   }, [alerts, groupBy, allTrackedKeys, sortState]);
 
-  const prevGroupKeysRef = useRef<string>('');
-  useEffect(() => {
-    const currentKeys = groups.map((g) => g.key).join('\0');
-    if (currentKeys === prevGroupKeysRef.current) return;
-    prevGroupKeysRef.current = currentKeys;
+  const groupKeys = groups.map((group) => group.key).join('\0');
+  const [expandedGroupsState, setExpandedGroupsState] = useState<ExpandedGroupsState>(() => ({
+    groupKeys,
+    value: getDefaultExpandedGroups(groups),
+  }));
+  const expandedGroups =
+    expandedGroupsState.groupKeys === groupKeys ? expandedGroupsState.value : getDefaultExpandedGroups(groups);
 
-    if (groups.length === 1) {
-      setExpandedGroups(new Set(groups.map((g) => g.key)));
-    } else {
-      setExpandedGroups(new Set());
-    }
-  }, [groups]);
-
-  const handleToggleGroup = useCallback((key: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  }, []);
+  const handleToggleGroup = useCallback(
+    (key: string) => {
+      setExpandedGroupsState((previousState) => {
+        const current = previousState.groupKeys === groupKeys ? previousState.value : getDefaultExpandedGroups(groups);
+        const next = new Set(current);
+        if (next.has(key)) {
+          next.delete(key);
+        } else {
+          next.add(key);
+        }
+        return { groupKeys, value: next };
+      });
+    },
+    [groupKeys, groups],
+  );
 
   const handleExpandAll = useCallback(() => {
-    setExpandedGroups(new Set(groups.map((g) => g.key)));
-  }, [groups]);
+    setExpandedGroupsState({ groupKeys, value: new Set(groups.map((group) => group.key)) });
+  }, [groupKeys, groups]);
 
   const handleCollapseAll = useCallback(() => {
-    setExpandedGroups(new Set());
-  }, []);
+    setExpandedGroupsState({ groupKeys, value: new Set() });
+  }, [groupKeys]);
 
   const handleGroupByChange = (event: SelectChangeEvent<string[]>): void => {
     const value = event.target.value;
-    setGroupBy(typeof value === 'string' ? value.split(',') : value);
+    setGroupByState({ source: resolvedDefaultGroupBy, value: typeof value === 'string' ? value.split(',') : value });
   };
 
   if (allAlerts.length === 0) {
@@ -695,7 +702,7 @@ export function AlertTablePanel({ spec, queryResults, contentDimensions }: Alert
         </Table>
       </TableContainer>
       <SilenceForm
-        key={silenceKeyRef.current}
+        key={silenceKey}
         open={!!silenceTarget}
         onClose={() => setSilenceTarget(null)}
         onSubmit={handleSilenceSubmit}

@@ -12,7 +12,7 @@
 // limitations under the License.
 
 import { TextField } from '@mui/material';
-import { ChangeEvent, ReactElement, useCallback, useEffect, useState } from 'react';
+import { ChangeEvent, ReactElement, useCallback, useState } from 'react';
 
 export interface LazyTextFieldProps {
   label: string;
@@ -26,15 +26,16 @@ export interface LazyTextFieldProps {
 
 export function LazyTextField(props: LazyTextFieldProps): ReactElement {
   const { value, onCommit, ...textFieldProps } = props;
-  const [draftValue, setDraftValue] = useState(value ?? '');
+  const propValue = value ?? '';
+  const [draft, setDraft] = useState(() => ({ source: propValue, value: propValue }));
+  const draftValue = draft.source === propValue ? draft.value : propValue;
 
-  useEffect(() => {
-    setDraftValue(value ?? '');
-  }, [value]);
-
-  const handleChange = useCallback((event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-    setDraftValue(event.target.value);
-  }, []);
+  const handleChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+      setDraft({ source: propValue, value: event.target.value });
+    },
+    [propValue],
+  );
 
   const handleBlur = useCallback((): void => {
     onCommit(draftValue);

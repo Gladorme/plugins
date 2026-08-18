@@ -17,7 +17,7 @@ import { Box, CircularProgress, List, ListItem, Stack, Tooltip, Typography, useT
 import { StatusError } from '@perses-dev/client';
 import AlertCircle from 'mdi-material-ui/AlertCircle';
 import CircleIcon from 'mdi-material-ui/Circle';
-import { ReactElement, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { PrometheusDatasourceSelector } from '../model';
 import ASTNode, { nodeType } from './promql/ast';
@@ -36,6 +36,18 @@ const maxLabelNames = 10;
 const maxLabelValues = 10;
 
 type NodeState = 'waiting' | 'running' | 'error' | 'success';
+
+interface ResultStats {
+  numSeries: number;
+  labelExamples: Record<string, Array<{ value: string; count: number }>>;
+  sortedLabelCards: Array<[string, number]>;
+}
+
+const EMPTY_RESULT_STATS: ResultStats = {
+  numSeries: 0,
+  labelExamples: {},
+  sortedLabelCards: [],
+};
 
 // mergeChildStates basically returns the "worst" state found among the children.
 const mergeChildStates = (states: NodeState[]): NodeState => {
@@ -86,17 +98,6 @@ export default function TreeNode({
   // create a state update using a callback ref. See also
   // https://tkdodo.eu/blog/avoiding-use-effect-with-callback-refs
   const [nodeEl, setNodeEl] = useState<HTMLDivElement | null>(null);
-  const nodeRef = useCallback((node: HTMLDivElement) => setNodeEl(node), []);
-
-  const [resultStats, setResultStats] = useState<{
-    numSeries: number;
-    labelExamples: Record<string, Array<{ value: string; count: number }>>;
-    sortedLabelCards: Array<[string, number]>;
-  }>({
-    numSeries: 0,
-    labelExamples: {},
-    sortedLabelCards: [],
-  });
 
   const [connectorStyle, setConnectorStyle] = useState({
     borderColor: theme.palette.grey['500'],
@@ -105,6 +106,37 @@ export default function TreeNode({
     width: connectorWidth,
     left: -connectorWidth,
   });
+  const nodeRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      setNodeEl(element);
+      if (parentEl === undefined || parentEl === null || element === null) {
+        return;
+      }
+
+      const parentRect = parentEl.getBoundingClientRect();
+      const nodeRect = element.getBoundingClientRect();
+      setConnectorStyle((previousStyle) =>
+        reverse
+          ? {
+              ...previousStyle,
+              top: 'calc(50% - 1px)',
+              bottom: nodeRect.bottom - parentRect.top,
+              borderTopLeftRadius: 10,
+              borderTopStyle: 'solid',
+              borderBottomLeftRadius: undefined,
+            }
+          : {
+              ...previousStyle,
+              top: parentRect.bottom - nodeRect.top,
+              bottom: 'calc(50% - 1px)',
+              borderBottomLeftRadius: 10,
+              borderBottomStyle: 'solid',
+              borderTopLeftRadius: undefined,
+            },
+      );
+    },
+    [parentEl, reverse],
+  );
 
   const [childStates, setChildStates] = useState<NodeState[]>(children.map(() => 'waiting'));
   const mergedChildState = useMemo(() => mergeChildStates(childStates), [childStates]);
@@ -132,13 +164,15 @@ export default function TreeNode({
   // report the node state to the parent
   useEffect(() => {
     if (reportNodeState) {
-      if (mergedChildState === 'error' || error) {
+      if (instantQueryResponse?.status === 'success') {
+        reportNodeState(childIdx, 'success');
+      } else if (mergedChildState === 'error' || error) {
         reportNodeState(childIdx, 'error');
       } else if (isFetching) {
         reportNodeState(childIdx, 'running');
       }
     }
-  }, [mergedChildState, error, isFetching, reportNodeState, childIdx]);
+  }, [mergedChildState, error, isFetching, reportNodeState, childIdx, instantQueryResponse?.status]);
 
   // This function is passed down to the child nodes so they can report their state.
   const childReportNodeState = useCallback(
@@ -152,49 +186,9 @@ export default function TreeNode({
     [setChildStates],
   );
 
-  // Update the size and position of tree connector lines based on the node's and its parent's position.
-  useLayoutEffect(() => {
-    if (parentEl === undefined) {
-      // We're the root node.
-      return;
-    }
-
-    if (parentEl === null || nodeEl === null) {
-      // Either of the two connected nodes hasn't been rendered yet.
-      return;
-    }
-
-    const parentRect = parentEl.getBoundingClientRect();
-    const nodeRect = nodeEl.getBoundingClientRect();
-    if (reverse) {
-      setConnectorStyle((prevStyle) => ({
-        ...prevStyle,
-        top: 'calc(50% - 1px)',
-        bottom: nodeRect.bottom - parentRect.top,
-        borderTopLeftRadius: 10,
-        borderTopStyle: 'solid',
-        borderBottomLeftRadius: undefined,
-      }));
-    } else {
-      setConnectorStyle((prevStyle) => ({
-        ...prevStyle,
-        top: parentRect.bottom - nodeRect.top,
-        bottom: 'calc(50% - 1px)',
-        borderBottomLeftRadius: 10,
-        borderBottomStyle: 'solid',
-        borderTopLeftRadius: undefined,
-      }));
-    }
-  }, [parentEl, nodeEl, reverse, nodeRef, setConnectorStyle]);
-
-  // Update the node info state based on the query result.
-  useEffect(() => {
+  const resultStats = useMemo<ResultStats>(() => {
     if (instantQueryResponse?.status !== 'success') {
-      return;
-    }
-
-    if (reportNodeState) {
-      reportNodeState(childIdx, 'success');
+      return EMPTY_RESULT_STATS;
     }
 
     let resultSeries = 0;
@@ -231,12 +225,12 @@ export default function TreeNode({
         .map(([lv, cnt]) => ({ value: lv, count: cnt }));
     });
 
-    setResultStats({
+    return {
       numSeries: resultSeries,
       sortedLabelCards: Object.entries(labelCardinalities).toSorted((a, b) => b[1] - a[1]),
       labelExamples,
-    });
-  }, [instantQueryResponse, reportNodeState, childIdx]);
+    };
+  }, [instantQueryResponse]);
 
   const innerNode = (
     <Stack direction="row" gap={2}>

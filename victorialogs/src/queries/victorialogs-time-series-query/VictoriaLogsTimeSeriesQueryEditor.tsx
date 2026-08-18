@@ -20,7 +20,7 @@ import {
   OptionsEditorProps,
   useDatasourceSelectValueToSelector,
 } from '@perses-dev/plugin-system';
-import { ReactElement, useCallback, useState, useEffect } from 'react';
+import { ReactElement, useCallback, useState } from 'react';
 
 import { LogsQLEditor } from '../../components/logsql-editor';
 import { VICTORIALOGS_DATASOURCE_KIND, VictoriaLogsDatasourceSelector } from '../../model';
@@ -39,12 +39,8 @@ export function VictoriaLogsQueryEditor(props: VictoriaLogsQueryEditorProps): Re
   ) as VictoriaLogsDatasourceSelector;
 
   // Local state for editor value to prevent query_range calls on every keystroke
-  const [localQuery, setLocalQuery] = useState(value.query);
-
-  // Update local state when prop changes
-  useEffect(() => {
-    setLocalQuery(value.query);
-  }, [value.query]);
+  const [queryDraft, setQueryDraft] = useState(() => ({ source: value.query, value: value.query }));
+  const localQuery = queryDraft.source === value.query ? queryDraft.value : value.query;
 
   const handleDatasourceChange: DatasourceSelectProps['onChange'] = (newDatasourceSelection) => {
     if (!isVariableDatasource(newDatasourceSelection) && newDatasourceSelection.kind === DATASOURCE_KIND) {
@@ -56,9 +52,12 @@ export function VictoriaLogsQueryEditor(props: VictoriaLogsQueryEditorProps): Re
   };
 
   // Debounced query change handler to prevent excessive query_range calls
-  const handleQueryChange = useCallback((newQuery: string) => {
-    setLocalQuery(newQuery);
-  }, []);
+  const handleQueryChange = useCallback(
+    (newQuery: string) => {
+      setQueryDraft({ source: value.query, value: newQuery });
+    },
+    [value.query],
+  );
 
   // Immediate query execution on Enter or blur
   const handleQueryExecute = useCallback(

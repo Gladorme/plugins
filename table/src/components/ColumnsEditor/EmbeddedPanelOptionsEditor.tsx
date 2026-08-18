@@ -15,7 +15,7 @@ import { CircularProgress, Stack, Typography } from '@mui/material';
 import { OptionsEditorTabs, PanelPlugin, usePlugin } from '@perses-dev/plugin-system';
 import { UnknownSpec } from '@perses-dev/spec';
 import merge from 'lodash/merge';
-import { ReactElement, useEffect, useMemo, useRef } from 'react';
+import { ReactElement, useEffect, useMemo } from 'react';
 
 export interface EmbeddedPanelOptionsEditorProps {
   kind: string;
@@ -50,16 +50,13 @@ export function EmbeddedPanelOptionsEditor({ kind, spec, onChange }: EmbeddedPan
     return mergeWithPluginDefaults(panelPlugin, spec);
   }, [panelPlugin, spec]);
 
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
-
   // Persist plugin defaults when the column still has an empty spec (e.g. after switching panel kind).
   useEffect(() => {
     if (!panelPlugin || !isSpecEmpty(spec)) {
       return;
     }
-    onChangeRef.current(mergeWithPluginDefaults(panelPlugin, spec));
-  }, [panelPlugin, kind, spec]);
+    onChange(mergeWithPluginDefaults(panelPlugin, spec));
+  }, [panelPlugin, kind, spec, onChange]);
 
   if (isLoading) {
     return (

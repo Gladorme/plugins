@@ -14,7 +14,7 @@
 import { Autocomplete, Checkbox, Stack, TextField, TextFieldProps } from '@mui/material';
 import { useTimeRange } from '@perses-dev/plugin-system';
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { ReactElement, SyntheticEvent, useCallback, useEffect, useState } from 'react';
+import { ReactElement, SyntheticEvent, useCallback, useState } from 'react';
 
 import { TempoClient } from '../model';
 import { getUnixTimeRange } from '../plugins';
@@ -213,16 +213,16 @@ interface LazyTextInputProps extends Omit<TextFieldProps, 'variant'> {
 /** A <TextField> which calls props.setValue when the input field is blurred and the validation passes. */
 function LazyTextInput(props: LazyTextInputProps): ReactElement {
   const { validationRegex, validationFailedMessage, value, setValue, ...otherProps } = props;
-  const [draftValue, setDraftValue] = useState(value);
+  const [draft, setDraft] = useState(() => ({ source: value, value }));
+  const draftValue = draft.source === value ? draft.value : value;
   const isValidInput = draftValue === '' || validationRegex === undefined || validationRegex.test(draftValue);
 
-  useEffect(() => {
-    setDraftValue(value);
-  }, [value, setDraftValue]);
-
-  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setDraftValue(event.target.value);
-  }, []);
+  const handleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setDraft({ source: value, value: event.target.value });
+    },
+    [value],
+  );
 
   const handleBlur = useCallback(() => {
     if (isValidInput) {

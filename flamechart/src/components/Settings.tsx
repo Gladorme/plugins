@@ -15,7 +15,7 @@ import { Stack, Button, useTheme, MenuItem, Menu, Fade } from '@mui/material';
 import { ToolbarIconButton, InfoTooltip } from '@perses-dev/components';
 import PaletteIcon from 'mdi-material-ui/Palette';
 import RefreshIcon from 'mdi-material-ui/Refresh';
-import { ReactElement, useState, useMemo } from 'react';
+import { ReactElement, useState } from 'react';
 
 import { FlameChartOptions } from '../flame-chart-model';
 import { TOOLTIP_TEXT } from '../utils/ui-text';
@@ -26,6 +26,16 @@ export interface SettingsProps {
   onChangePalette: (palette: 'package-name' | 'value') => void;
   onSelectedIdChange: (newId: number) => void;
   onDisplayChange: (value: 'table' | 'flame-graph' | 'both') => void;
+}
+
+function getSelectedView(value: FlameChartOptions): 'table' | 'flame-graph' | 'both' | 'none' {
+  if (!value.showTable && !value.showFlameGraph) {
+    return 'none';
+  }
+  if (value.showTable && value.showFlameGraph) {
+    return 'both';
+  }
+  return value.showTable ? 'table' : 'flame-graph';
 }
 
 export function Settings(props: SettingsProps): ReactElement {
@@ -62,18 +72,7 @@ export function Settings(props: SettingsProps): ReactElement {
   const isFlameGraphSelected = (): boolean => selectedView === 'flame-graph';
   const isBothSelected = (): boolean => selectedView === 'both';
 
-  // Update selected view based on the value of showTable and showFlameGraph
-  const selectedView: 'table' | 'flame-graph' | 'both' | 'none' = useMemo(() => {
-    if (!value.showTable && !value.showFlameGraph) {
-      return 'none';
-    } else if (value.showTable && value.showFlameGraph) {
-      return 'both';
-    } else if (value.showTable) {
-      return 'table';
-    } else {
-      return 'flame-graph';
-    }
-  }, [value.showTable, value.showFlameGraph]);
+  const selectedView = getSelectedView(value);
 
   return (
     <Stack spacing="10px" direction="row" justifyContent="center" alignItems="center">

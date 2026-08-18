@@ -31,7 +31,7 @@ import ArrowDownIcon from 'mdi-material-ui/ArrowDown';
 import ArrowUpIcon from 'mdi-material-ui/ArrowUp';
 import DeleteIcon from 'mdi-material-ui/Delete';
 import PlusIcon from 'mdi-material-ui/Plus';
-import { ReactElement, useCallback, useRef } from 'react';
+import { ReactElement, useCallback, useState } from 'react';
 
 export interface BaseColumnDefinition {
   name: string;
@@ -63,6 +63,26 @@ const DEFAULT_SORT_LABELS: Record<string, string> = {
   asc: 'Ascending',
   desc: 'Descending',
 };
+
+interface ColumnIdsState {
+  ids: number[];
+  nextId: number;
+}
+
+function normalizeColumnIds(state: ColumnIdsState, columnCount: number): ColumnIdsState {
+  if (state.ids.length === columnCount) {
+    return state;
+  }
+  if (state.ids.length > columnCount) {
+    return { ...state, ids: state.ids.slice(0, columnCount) };
+  }
+
+  const addedIds = Array.from({ length: columnCount - state.ids.length }, (_, index) => state.nextId + index);
+  return {
+    ids: [...state.ids, ...addedIds],
+    nextId: state.nextId + addedIds.length,
+  };
+}
 
 function ColumnEntry<C extends BaseColumnDefinition>({
   column,
@@ -201,47 +221,55 @@ export function ColumnsEditor<C extends BaseColumnDefinition>(props: ColumnsEdit
     renderNameField,
   } = props;
 
-  const idCounterRef = useRef(0);
-  const idsRef = useRef<number[]>([]);
-
-  while (idsRef.current.length < columns.length) {
-    idsRef.current.push(idCounterRef.current++);
-  }
-  idsRef.current.length = columns.length;
+  const [columnIds, setColumnIds] = useState<ColumnIdsState>(() => ({
+    ids: columns.map((_, index) => index),
+    nextId: columns.length,
+  }));
+  const normalizedColumnIds = normalizeColumnIds(columnIds, columns.length);
 
   const handleAdd = useCallback((): void => {
-    idsRef.current.push(idCounterRef.current++);
+    setColumnIds((current) => {
+      const normalized = normalizeColumnIds(current, columns.length);
+      return { ids: [...normalized.ids, normalized.nextId], nextId: normalized.nextId + 1 };
+    });
     onAdd();
-  }, [onAdd]);
+  }, [columns.length, onAdd]);
 
   const handleRemove = useCallback(
     (index: number): void => {
-      idsRef.current.splice(index, 1);
+      setColumnIds((current) => {
+        const normalized = normalizeColumnIds(current, columns.length);
+        return { ...normalized, ids: normalized.ids.filter((_, currentIndex) => currentIndex !== index) };
+      });
       onRemove(index);
     },
-    [onRemove],
+    [columns.length, onRemove],
   );
 
   const handleMoveUp = useCallback(
     (index: number): void => {
       if (index <= 0) return;
-      const ids = idsRef.current;
+      const normalized = normalizeColumnIds(columnIds, columns.length);
+      const ids = [...normalized.ids];
       const id = ids.splice(index, 1)[0]!;
       ids.splice(index - 1, 0, id);
+      setColumnIds({ ...normalized, ids });
       onMoveUp(index);
     },
-    [onMoveUp],
+    [columnIds, columns.length, onMoveUp],
   );
 
   const handleMoveDown = useCallback(
     (index: number): void => {
-      const ids = idsRef.current;
+      const normalized = normalizeColumnIds(columnIds, columns.length);
+      const ids = [...normalized.ids];
       if (index >= ids.length - 1) return;
       const id = ids.splice(index, 1)[0]!;
       ids.splice(index + 1, 0, id);
+      setColumnIds({ ...normalized, ids });
       onMoveDown(index);
     },
-    [onMoveDown],
+    [columnIds, columns.length, onMoveDown],
   );
 
   return (
@@ -251,7 +279,7 @@ export function ColumnsEditor<C extends BaseColumnDefinition>(props: ColumnsEdit
           {description}
         </Typography>
         {columns.map((column, index) => (
-          <Box key={idsRef.current[index]}>
+          <Box key={normalizedColumnIds.ids[index]}>
             {index > 0 && <Divider sx={{ mb: 2 }} />}
             <ColumnEntry
               column={column}

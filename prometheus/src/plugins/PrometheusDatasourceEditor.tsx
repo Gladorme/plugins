@@ -17,7 +17,7 @@ import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { DurationString } from '@perses-dev/spec';
 import MinusIcon from 'mdi-material-ui/Minus';
 import PlusIcon from 'mdi-material-ui/Plus';
-import { ReactElement, useRef, useState } from 'react';
+import { ReactElement, useState } from 'react';
 
 import { DEFAULT_SCRAPE_INTERVAL, PrometheusDatasourceSpec } from './types';
 
@@ -26,6 +26,11 @@ interface QueryParamEntry {
   id: string;
   key: string;
   value: string;
+}
+
+interface QueryParamEditorState {
+  entries: QueryParamEntry[];
+  nextId: number;
 }
 
 export interface PrometheusDatasourceEditorProps {
@@ -37,19 +42,18 @@ export interface PrometheusDatasourceEditorProps {
 export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProps): ReactElement {
   const { value, onChange, isReadonly } = props;
 
-  // Counter for generating unique IDs
-  const nextIdRef = useRef(0);
-
   // Use local state to maintain an array of entries during editing, instead of
   // manipulating a map directly which causes weird UX.
-  const [entries, setEntries] = useState<QueryParamEntry[]>(() => {
+  const [editorState, setEditorState] = useState<QueryParamEditorState>(() => {
     const queryParams: QueryParamValues = value.queryParams ?? {};
-    return Object.entries(queryParams).map(([key, val]) => ({
-      id: String(nextIdRef.current++),
+    const entries = Object.entries(queryParams).map(([key, val], index) => ({
+      id: String(index),
       key,
       value: Array.isArray(val) ? val.join(',') : val,
     }));
+    return { entries, nextId: entries.length };
   });
+  const { entries } = editorState;
 
   // Check for duplicate keys
   const keyMap = new Map<string, number>();
@@ -88,19 +92,19 @@ export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProp
       if (entry.id !== id) return entry;
       return field === 'key' ? { ...entry, key: newValue } : { ...entry, value: newValue };
     });
-    setEntries(newEntries);
+    setEditorState((current) => ({ ...current, entries: newEntries }));
     syncToParent(newEntries);
   };
 
   const addQueryParam = (): void => {
-    const newEntries = [...entries, { id: String(nextIdRef.current++), key: '', value: '' }];
-    setEntries(newEntries);
+    const newEntries = [...entries, { id: String(editorState.nextId), key: '', value: '' }];
+    setEditorState({ entries: newEntries, nextId: editorState.nextId + 1 });
     syncToParent(newEntries);
   };
 
   const removeQueryParam = (id: string): void => {
     const newEntries = entries.filter((entry) => entry.id !== id);
-    setEntries(newEntries);
+    setEditorState((current) => ({ ...current, entries: newEntries }));
     syncToParent(newEntries);
   };
 
