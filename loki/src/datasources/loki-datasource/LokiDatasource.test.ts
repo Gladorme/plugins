@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { applyLokiAttributeFilters } from './loki-otel-explorer';
+import { applyLokiAttributeFilters, LOKI_OTEL_EXPLORER } from './loki-otel-explorer';
 
 const serviceFilter = {
   key: 'service_name',
@@ -30,5 +30,27 @@ describe('applyLokiAttributeFilters', () => {
     expect(applyLokiAttributeFilters('{level="error",service_name="checkout"}', [], [serviceFilter])).toBe(
       '{level="error"}',
     );
+  });
+});
+
+describe('Loki OTel explorer capability', () => {
+  it('creates a native query from universal attribute filters', () => {
+    expect(
+      LOKI_OTEL_EXPLORER.logs.createQuery({
+        datasource: { kind: 'LokiDatasource', name: 'lokidemo' },
+        filters: [serviceFilter],
+      }),
+    ).toEqual({
+      kind: 'LogQuery',
+      spec: {
+        plugin: {
+          kind: 'LokiLogQuery',
+          spec: {
+            datasource: { kind: 'LokiDatasource', name: 'lokidemo' },
+            query: '{service_name="checkout"}',
+          },
+        },
+      },
+    });
   });
 });

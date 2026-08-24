@@ -5,7 +5,8 @@ shared set of OpenTelemetry attribute filters.
 
 The explorer is datasource-neutral. Datasource plugins opt in by exposing an `otelExplorer` capability on their
 `DatasourcePlugin`; the capability declares supported signals and translates the common filters into native Perses
-query definitions. The datasource's normal query editor remains available for backend-specific controls.
+query definitions. Provider-specific query editors are not rendered: provider details remain behind the capability
+boundary while the explorer owns the complete filtering experience.
 
 ```ts
 import type { OTelExplorerDatasourcePlugin } from '@perses-dev/otel-explorer-plugin';
@@ -15,10 +16,8 @@ export const ExampleDatasource: OTelExplorerDatasourcePlugin<ExampleSpec, Exampl
   createInitialOptions: () => ({ directUrl: '' }),
   otelExplorer: {
     logs: {
-      queryType: 'LogQuery',
-      queryPluginKind: 'ExampleLogQuery',
-      applyAttributeFilters: ({ datasource, filters, previousFilters, query }) => {
-        // Return a LogQuery definition using the datasource's native query language.
+      createQuery: ({ datasource, filters }) => {
+        // Build and return a LogQuery definition using the datasource's native query language.
       },
     },
   },
@@ -27,6 +26,9 @@ export const ExampleDatasource: OTelExplorerDatasourcePlugin<ExampleSpec, Exampl
 
 Attribute names and values are intentionally free-form. A provider can therefore expose OpenTelemetry attributes as-is
 or translate them to the backend's storage conventions.
+
+The built-in Pyroscope capability treats an equality filter named `profile.type` as the required profile type and
+translates all other filters to Pyroscope label filters.
 
 ## Development
 

@@ -22,8 +22,6 @@ export interface ExplorerAttributeFilter {
 export interface ExplorerFilterArgs {
   datasource: DatasourceSelector;
   filters: ExplorerAttributeFilter[];
-  previousFilters: ExplorerAttributeFilter[];
-  query: QueryDefinition;
 }
 
 function escapeMatcherValue(value: string): string {
@@ -73,33 +71,16 @@ export function applyTempoAttributeFilters(
   throw new Error('Attribute filters require a TraceQL query that starts with a spanset selector.');
 }
 
-function applyExplorerFilters({
-  datasource,
-  filters,
-  previousFilters,
-  query: queryDefinition,
-}: ExplorerFilterArgs): QueryDefinition {
-  if (queryDefinition.kind !== 'TraceQuery' || queryDefinition.spec.plugin.kind !== 'TempoTraceQuery') {
-    throw new Error('The selected datasource requires a Tempo trace query.');
-  }
-  const spec: unknown = queryDefinition.spec.plugin.spec;
-  if (typeof spec !== 'object' || spec === null) {
-    throw new Error('The Tempo trace query is missing its query expression.');
-  }
-  const queryExpression = 'query' in spec ? spec.query : undefined;
-  if (typeof queryExpression !== 'string') {
-    throw new Error('The Tempo trace query is missing its query expression.');
-  }
+function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): QueryDefinition {
   return {
-    ...queryDefinition,
+    kind: 'TraceQuery',
     spec: {
-      ...queryDefinition.spec,
       plugin: {
-        ...queryDefinition.spec.plugin,
+        kind: 'TempoTraceQuery',
         spec: {
-          ...spec,
           datasource,
-          query: applyTempoAttributeFilters(queryExpression, filters, previousFilters),
+          query: applyTempoAttributeFilters('', filters, []),
+          limit: 20,
         },
       },
     },
@@ -108,8 +89,6 @@ function applyExplorerFilters({
 
 export const TEMPO_OTEL_EXPLORER = {
   traces: {
-    queryType: 'TraceQuery',
-    queryPluginKind: 'TempoTraceQuery',
-    applyAttributeFilters: applyExplorerFilters,
+    createQuery: createExplorerQuery,
   },
 } as const;

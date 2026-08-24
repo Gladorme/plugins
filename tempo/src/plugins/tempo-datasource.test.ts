@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { applyTempoAttributeFilters } from './tempo-otel-explorer';
+import { applyTempoAttributeFilters, TEMPO_OTEL_EXPLORER } from './tempo-otel-explorer';
 
 const serviceFilter = {
   key: 'resource.service.name',
@@ -34,5 +34,28 @@ describe('applyTempoAttributeFilters', () => {
         [serviceFilter],
       ),
     ).toBe('{ resource.service.name = "payments" }');
+  });
+});
+
+describe('Tempo OTel explorer capability', () => {
+  it('creates a native query from universal attribute filters', () => {
+    expect(
+      TEMPO_OTEL_EXPLORER.traces.createQuery({
+        datasource: { kind: 'TempoDatasource', name: 'tempodemo' },
+        filters: [serviceFilter],
+      }),
+    ).toEqual({
+      kind: 'TraceQuery',
+      spec: {
+        plugin: {
+          kind: 'TempoTraceQuery',
+          spec: {
+            datasource: { kind: 'TempoDatasource', name: 'tempodemo' },
+            limit: 20,
+            query: '{ resource.service.name = "checkout" }',
+          },
+        },
+      },
+    });
   });
 });

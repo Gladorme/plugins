@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { applyPrometheusAttributeFilters } from './prometheus-otel-explorer';
+import { applyPrometheusAttributeFilters, PROMETHEUS_OTEL_EXPLORER } from './prometheus-otel-explorer';
 
 const serviceFilter = {
   key: 'service_name',
@@ -34,5 +34,27 @@ describe('applyPrometheusAttributeFilters', () => {
         [serviceFilter],
       ),
     ).toBe('http_requests_total{method="GET",service_name="payments"}');
+  });
+});
+
+describe('Prometheus OTel explorer capability', () => {
+  it('creates a native query without rendering the Prometheus editor', () => {
+    expect(
+      PROMETHEUS_OTEL_EXPLORER.metrics.createQuery({
+        datasource: { kind: 'PrometheusDatasource', name: 'prometheusdemo' },
+        filters: [serviceFilter],
+      }),
+    ).toEqual({
+      kind: 'TimeSeriesQuery',
+      spec: {
+        plugin: {
+          kind: 'PrometheusTimeSeriesQuery',
+          spec: {
+            datasource: { kind: 'PrometheusDatasource', name: 'prometheusdemo' },
+            query: '{service_name="checkout"}',
+          },
+        },
+      },
+    });
   });
 });

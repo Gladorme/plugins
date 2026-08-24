@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { applyPyroscopeAttributeFilters } from './pyroscope-otel-explorer';
+import { applyPyroscopeAttributeFilters, PYROSCOPE_OTEL_EXPLORER } from './pyroscope-otel-explorer';
 
 const serviceFilter = {
   key: 'service_name',
@@ -37,5 +37,33 @@ describe('applyPyroscopeAttributeFilters', () => {
         [serviceFilter],
       ),
     ).toEqual([{ labelName: 'service_name', labelValue: 'payments', operator: '=' }]);
+  });
+});
+
+describe('Pyroscope OTel explorer capability', () => {
+  it('uses profile.type to create a native profile query', () => {
+    expect(
+      PYROSCOPE_OTEL_EXPLORER.profiles.createQuery({
+        datasource: { kind: 'PyroscopeDatasource', name: 'pyroscopedemo' },
+        filters: [
+          { key: 'profile.type', operator: '=', value: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds' },
+          serviceFilter,
+        ],
+      }),
+    ).toEqual({
+      kind: 'ProfileQuery',
+      spec: {
+        plugin: {
+          kind: 'PyroscopeProfileQuery',
+          spec: {
+            datasource: { kind: 'PyroscopeDatasource', name: 'pyroscopedemo' },
+            filters: [{ labelName: 'service_name', labelValue: 'checkout', operator: '=' }],
+            maxNodes: 0,
+            profileType: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds',
+            service: '',
+          },
+        },
+      },
+    });
   });
 });

@@ -24,8 +24,6 @@ export interface ExplorerAttributeFilter {
 export interface ExplorerFilterArgs {
   datasource: DatasourceSelector;
   filters: ExplorerAttributeFilter[];
-  previousFilters: ExplorerAttributeFilter[];
-  query: QueryDefinition;
 }
 
 function toPyroscopeFilter(filter: ExplorerAttributeFilter): LabelFilter {
@@ -34,19 +32,6 @@ function toPyroscopeFilter(filter: ExplorerAttributeFilter): LabelFilter {
 
 function sameFilter(left: LabelFilter, right: LabelFilter): boolean {
   return left.labelName === right.labelName && left.labelValue === right.labelValue && left.operator === right.operator;
-}
-
-function isLabelFilter(value: unknown): value is LabelFilter {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'labelName' in value &&
-    typeof value.labelName === 'string' &&
-    'labelValue' in value &&
-    typeof value.labelValue === 'string' &&
-    'operator' in value &&
-    (value.operator === '=' || value.operator === '!=' || value.operator === '=~' || value.operator === '!~')
-  );
 }
 
 export function applyPyroscopeAttributeFilters(
@@ -61,30 +46,24 @@ export function applyPyroscopeAttributeFilters(
   return [...manualFilters, ...filters.map(toPyroscopeFilter)];
 }
 
-function applyExplorerFilters({ datasource, filters, previousFilters, query }: ExplorerFilterArgs): QueryDefinition {
-  if (query.kind !== 'ProfileQuery' || query.spec.plugin.kind !== 'PyroscopeProfileQuery') {
-    throw new Error('The selected datasource requires a Pyroscope profile query.');
+function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): QueryDefinition {
+  const profileTypeFilter = filters.find((filter) => filter.key === 'profile.type' && filter.operator === '=');
+  if (!profileTypeFilter) {
+    throw new Error('Add a profile.type equality filter before running a profiles query.');
   }
-  const spec: unknown = query.spec.plugin.spec;
-  if (typeof spec !== 'object' || spec === null) {
-    throw new Error('The Pyroscope profile query is missing its profile type.');
-  }
-  const profileType = 'profileType' in spec ? spec.profileType : undefined;
-  if (typeof profileType !== 'string') {
-    throw new Error('The Pyroscope profile query is missing its profile type.');
-  }
-  const currentFilters =
-    'filters' in spec && Array.isArray(spec.filters) ? spec.filters.filter(isLabelFilter) : undefined;
+
+  const attributeFilters = filters.filter((filter) => filter !== profileTypeFilter);
   return {
-    ...query,
+    kind: 'ProfileQuery',
     spec: {
-      ...query.spec,
       plugin: {
-        ...query.spec.plugin,
+        kind: 'PyroscopeProfileQuery',
         spec: {
-          ...spec,
           datasource,
-          filters: applyPyroscopeAttributeFilters(currentFilters, filters, previousFilters),
+          profileType: profileTypeFilter.value,
+          service: '',
+          maxNodes: 0,
+          filters: applyPyroscopeAttributeFilters(undefined, attributeFilters, []),
         },
       },
     },
@@ -93,8 +72,6 @@ function applyExplorerFilters({ datasource, filters, previousFilters, query }: E
 
 export const PYROSCOPE_OTEL_EXPLORER = {
   profiles: {
-    queryType: 'ProfileQuery',
-    queryPluginKind: 'PyroscopeProfileQuery',
-    applyAttributeFilters: applyExplorerFilters,
+    createQuery: createExplorerQuery,
   },
 } as const;

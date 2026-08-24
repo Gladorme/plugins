@@ -14,6 +14,7 @@
 import {
   Alert,
   Box,
+  Button,
   FormControl,
   InputLabel,
   MenuItem,
@@ -31,7 +32,6 @@ import {
   DatasourcePlugin,
   DatasourceSelect,
   DatasourceSelectValue,
-  MultiQueryEditor,
   PluginMetadataWithModule,
   useListPluginMetadata,
   usePlugins,
@@ -51,14 +51,12 @@ import { AttributeFilters } from './AttributeFilters';
 
 type SignalQueries = Partial<Record<OTelSignal, QueryDefinition[]>>;
 type SignalDatasources = Partial<Record<OTelSignal, DatasourceSelector>>;
-type AppliedSignalFilters = Partial<Record<OTelSignal, OTelAttributeFilter[]>>;
 
 interface OTelExplorerQueryParams {
   signal?: OTelSignal;
   filters?: OTelAttributeFilter[];
   queries?: SignalQueries;
   datasources?: SignalDatasources;
-  appliedFilters?: AppliedSignalFilters;
 }
 
 interface OTelProvider {
@@ -79,6 +77,7 @@ const TABS_SX = { borderBottom: 1, borderColor: 'divider' };
 const PROVIDER_STACK_DIRECTION = { xs: 'column' as const, md: 'row' as const };
 const PROVIDER_CONTROL_SX = { minWidth: 280 };
 const DATASOURCE_CONTROL_SX = { minWidth: 360 };
+const RUN_BUTTON_SX = { alignSelf: 'flex-end' };
 
 const SIGNAL_LABELS: Record<OTelSignal, string> = {
   metrics: 'Metrics',
@@ -217,8 +216,7 @@ function ProviderSelector({
 
 export function OTelExplorer(): ReactElement {
   const { data, setData } = useExplorerManagerContext<OTelExplorerQueryParams>();
-  const { signal = 'metrics', filters = EMPTY_FILTERS, queries = {}, datasources = {}, appliedFilters = {} } = data;
-  const [draftQueries, setDraftQueries] = useState<SignalQueries>(queries);
+  const { signal = 'metrics', filters = EMPTY_FILTERS, queries = {}, datasources = {} } = data;
   const [applyError, setApplyError] = useState<string>();
 
   const { data: datasourceMetadata = EMPTY_DATASOURCE_METADATA } = useListPluginMetadata(DATASOURCE_PLUGIN_TYPES);
@@ -245,10 +243,7 @@ export function OTelExplorer(): ReactElement {
       selectedDatasource?.kind === selectedProvider.kind ? selectedDatasource : { kind: selectedProvider.kind };
   }
   const capability: OTelSignalCapability | undefined = selectedProvider?.plugin.otelExplorer[signal];
-  const currentDraftQueries = draftQueries[signal] ?? EMPTY_QUERIES;
   const executedQueries = queries[signal] ?? EMPTY_QUERIES;
-  const queryTypes = useMemo(() => (capability ? [capability.queryType] : []), [capability]);
-  const filteredQueryPlugins = useMemo(() => (capability ? [capability.queryPluginKind] : []), [capability]);
 
   const updateData = useCallback(
     (next: Partial<OTelExplorerQueryParams>): void => setData({ ...data, ...next }),
@@ -258,71 +253,42 @@ export function OTelExplorer(): ReactElement {
   const handleProviderChange = useCallback(
     (kind: string): void => {
       setApplyError(undefined);
-      setDraftQueries({ ...draftQueries, [signal]: EMPTY_QUERIES });
       updateData({
         datasources: { ...datasources, [signal]: { kind } },
         queries: { ...queries, [signal]: EMPTY_QUERIES },
-        appliedFilters: { ...appliedFilters, [signal]: EMPTY_FILTERS },
       });
     },
-    [appliedFilters, datasources, draftQueries, queries, signal, updateData],
+    [datasources, queries, signal, updateData],
   );
 
   const handleDatasourceChange = useCallback(
     (next: DatasourceSelector): void => {
       setApplyError(undefined);
-      setDraftQueries({ ...draftQueries, [signal]: EMPTY_QUERIES });
       updateData({
         datasources: { ...datasources, [signal]: next },
         queries: { ...queries, [signal]: EMPTY_QUERIES },
-        appliedFilters: { ...appliedFilters, [signal]: EMPTY_FILTERS },
       });
     },
-    [appliedFilters, datasources, draftQueries, queries, signal, updateData],
+    [datasources, queries, signal, updateData],
   );
 
-  const handleQueryRun = useCallback(
-    (index: number, query: QueryDefinition): void => {
-      if (!capability || !datasource) {
-        return;
-      }
+  const handleQueryRun = useCallback((): void => {
+    if (!capability || !datasource) {
+      return;
+    }
 
-      const nextDraftQueries = [...currentDraftQueries];
-      nextDraftQueries[index] = query;
-      const nextFilters = validAttributeFilters(filters);
-      try {
-        const nextQueries = nextDraftQueries.map((item) =>
-          capability.applyAttributeFilters({
-            datasource,
-            filters: nextFilters,
-            previousFilters: appliedFilters[signal] ?? EMPTY_FILTERS,
-            query: item,
-          }),
-        );
-        setApplyError(undefined);
-        setDraftQueries({ ...draftQueries, [signal]: nextQueries });
-        updateData({
-          queries: { ...queries, [signal]: nextQueries },
-          datasources: { ...datasources, [signal]: datasource },
-          appliedFilters: { ...appliedFilters, [signal]: nextFilters },
-        });
-      } catch (error) {
-        setApplyError(error instanceof Error ? error.message : 'The datasource could not apply the attribute filters.');
-      }
-    },
-    [
-      appliedFilters,
-      capability,
-      currentDraftQueries,
-      datasource,
-      datasources,
-      draftQueries,
-      filters,
-      queries,
-      signal,
-      updateData,
-    ],
-  );
+    const nextFilters = validAttributeFilters(filters);
+    try {
+      const nextQueries = [capability.createQuery({ datasource, filters: nextFilters })];
+      setApplyError(undefined);
+      updateData({
+        queries: { ...queries, [signal]: nextQueries },
+        datasources: { ...datasources, [signal]: datasource },
+      });
+    } catch (error) {
+      setApplyError(error instanceof Error ? error.message : 'The datasource could not create the query.');
+    }
+  }, [capability, datasource, datasources, filters, queries, signal, updateData]);
   const handleSignalChange = useCallback(
     (_: SyntheticEvent, next: OTelSignal): void => {
       setApplyError(undefined);
@@ -334,11 +300,6 @@ export function OTelExplorer(): ReactElement {
     (next: OTelAttributeFilter[]): void => updateData({ filters: next }),
     [updateData],
   );
-  const handleQueriesChange = useCallback(
-    (next: QueryDefinition[]): void => setDraftQueries({ ...draftQueries, [signal]: next }),
-    [draftQueries, signal],
-  );
-
   return (
     <Stack gap={2} sx={EXPLORER_SX}>
       <Tabs value={signal} onChange={handleSignalChange} variant="scrollable" sx={TABS_SX}>
@@ -363,13 +324,9 @@ export function OTelExplorer(): ReactElement {
           />
           <AttributeFilters value={filters} onChange={handleFiltersChange} />
           {applyError && <Alert severity="error">{applyError}</Alert>}
-          <MultiQueryEditor
-            queryTypes={queryTypes}
-            filteredQueryPlugins={filteredQueryPlugins}
-            queries={currentDraftQueries}
-            onChange={handleQueriesChange}
-            onQueryRun={handleQueryRun}
-          />
+          <Button variant="contained" onClick={handleQueryRun} sx={RUN_BUTTON_SX}>
+            Run query
+          </Button>
           <SignalResults signal={signal} queries={executedQueries} />
         </Stack>
       )}

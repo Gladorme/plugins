@@ -31,9 +31,10 @@ describe('OTel explorer model', () => {
       ...datasource,
       otelExplorer: {
         traces: {
-          queryType: 'TraceQuery',
-          queryPluginKind: 'ExampleTraceQuery',
-          applyAttributeFilters: ({ query }) => query,
+          createQuery: ({ datasource: selectedDatasource }) => ({
+            kind: 'TraceQuery',
+            spec: { plugin: { kind: 'ExampleTraceQuery', spec: { datasource: selectedDatasource } } },
+          }),
         },
       },
     };

@@ -22,8 +22,6 @@ export interface ExplorerAttributeFilter {
 export interface ExplorerFilterArgs {
   datasource: DatasourceSelector;
   filters: ExplorerAttributeFilter[];
-  previousFilters: ExplorerAttributeFilter[];
-  query: QueryDefinition;
 }
 
 function escapeMatcherValue(value: string): string {
@@ -73,33 +71,20 @@ export function applyLokiAttributeFilters(
   throw new Error('Attribute filters require a Loki query that starts with a stream selector.');
 }
 
-function applyExplorerFilters({
-  datasource,
-  filters,
-  previousFilters,
-  query: queryDefinition,
-}: ExplorerFilterArgs): QueryDefinition {
-  if (queryDefinition.kind !== 'LogQuery' || queryDefinition.spec.plugin.kind !== 'LokiLogQuery') {
-    throw new Error('The selected datasource requires a Loki log query.');
+function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): QueryDefinition {
+  const query = applyLokiAttributeFilters('', filters, []);
+  if (query === '') {
+    throw new Error('Add at least one attribute filter before running a logs query.');
   }
-  const spec: unknown = queryDefinition.spec.plugin.spec;
-  if (typeof spec !== 'object' || spec === null) {
-    throw new Error('The Loki log query is missing its query expression.');
-  }
-  const queryExpression = 'query' in spec ? spec.query : undefined;
-  if (typeof queryExpression !== 'string') {
-    throw new Error('The Loki log query is missing its query expression.');
-  }
+
   return {
-    ...queryDefinition,
+    kind: 'LogQuery',
     spec: {
-      ...queryDefinition.spec,
       plugin: {
-        ...queryDefinition.spec.plugin,
+        kind: 'LokiLogQuery',
         spec: {
-          ...spec,
           datasource,
-          query: applyLokiAttributeFilters(queryExpression, filters, previousFilters),
+          query,
         },
       },
     },
@@ -108,8 +93,6 @@ function applyExplorerFilters({
 
 export const LOKI_OTEL_EXPLORER = {
   logs: {
-    queryType: 'LogQuery',
-    queryPluginKind: 'LokiLogQuery',
-    applyAttributeFilters: applyExplorerFilters,
+    createQuery: createExplorerQuery,
   },
 } as const;

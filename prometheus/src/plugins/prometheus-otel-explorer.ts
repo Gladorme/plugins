@@ -22,8 +22,6 @@ export interface ExplorerAttributeFilter {
 export interface ExplorerFilterArgs {
   datasource: DatasourceSelector;
   filters: ExplorerAttributeFilter[];
-  previousFilters: ExplorerAttributeFilter[];
-  query: QueryDefinition;
 }
 
 function escapeMatcherValue(value: string): string {
@@ -79,28 +77,20 @@ export function applyPrometheusAttributeFilters(
   return expression;
 }
 
-function applyExplorerFilters({ datasource, filters, previousFilters, query }: ExplorerFilterArgs): QueryDefinition {
-  if (query.kind !== 'TimeSeriesQuery' || query.spec.plugin.kind !== 'PrometheusTimeSeriesQuery') {
-    throw new Error('The selected datasource requires a Prometheus time series query.');
+function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): QueryDefinition {
+  const query = applyPrometheusAttributeFilters('', filters, []);
+  if (query === '') {
+    throw new Error('Add at least one attribute filter before running a metrics query.');
   }
-  const spec: unknown = query.spec.plugin.spec;
-  if (typeof spec !== 'object' || spec === null) {
-    throw new Error('The Prometheus time series query is missing its query expression.');
-  }
-  const queryExpression = 'query' in spec ? spec.query : undefined;
-  if (typeof queryExpression !== 'string') {
-    throw new Error('The Prometheus time series query is missing its query expression.');
-  }
+
   return {
-    ...query,
+    kind: 'TimeSeriesQuery',
     spec: {
-      ...query.spec,
       plugin: {
-        ...query.spec.plugin,
+        kind: 'PrometheusTimeSeriesQuery',
         spec: {
-          ...spec,
           datasource,
-          query: applyPrometheusAttributeFilters(queryExpression, filters, previousFilters),
+          query,
         },
       },
     },
@@ -109,8 +99,6 @@ function applyExplorerFilters({ datasource, filters, previousFilters, query }: E
 
 export const PROMETHEUS_OTEL_EXPLORER = {
   metrics: {
-    queryType: 'TimeSeriesQuery',
-    queryPluginKind: 'PrometheusTimeSeriesQuery',
-    applyAttributeFilters: applyExplorerFilters,
+    createQuery: createExplorerQuery,
   },
 } as const;

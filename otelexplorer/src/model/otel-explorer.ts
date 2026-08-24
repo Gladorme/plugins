@@ -12,13 +12,7 @@
 // limitations under the License.
 
 import { DatasourcePlugin } from '@perses-dev/plugin-system';
-import {
-  DatasourceSelector,
-  isValidQueryPluginType,
-  QueryDefinition,
-  QueryPluginType,
-  UnknownSpec,
-} from '@perses-dev/spec';
+import { DatasourceSelector, QueryDefinition, UnknownSpec } from '@perses-dev/spec';
 
 export const OTEL_SIGNALS = ['metrics', 'logs', 'traces', 'profiles'] as const;
 
@@ -32,17 +26,13 @@ export interface OTelAttributeFilter {
   value: string;
 }
 
-export interface ApplyOTelAttributeFiltersArgs {
+export interface CreateOTelQueryArgs {
   datasource: DatasourceSelector;
   filters: OTelAttributeFilter[];
-  previousFilters: OTelAttributeFilter[];
-  query: QueryDefinition;
 }
 
 export interface OTelSignalCapability {
-  queryType: QueryPluginType;
-  queryPluginKind: string;
-  applyAttributeFilters: (args: ApplyOTelAttributeFiltersArgs) => QueryDefinition;
+  createQuery: (args: CreateOTelQueryArgs) => QueryDefinition;
 }
 
 export type OTelSignalCapabilities = Partial<Record<OTelSignal, OTelSignalCapability>>;
@@ -71,13 +61,8 @@ export function isOTelExplorerDatasourcePlugin(
     return (
       typeof signalCapability === 'object' &&
       signalCapability !== null &&
-      'queryType' in signalCapability &&
-      typeof signalCapability.queryType === 'string' &&
-      isValidQueryPluginType(signalCapability.queryType) &&
-      'queryPluginKind' in signalCapability &&
-      typeof signalCapability.queryPluginKind === 'string' &&
-      'applyAttributeFilters' in signalCapability &&
-      typeof signalCapability.applyAttributeFilters === 'function'
+      'createQuery' in signalCapability &&
+      typeof signalCapability.createQuery === 'function'
     );
   });
 }
