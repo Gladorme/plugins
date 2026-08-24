@@ -22,6 +22,7 @@ import {
   searchServices,
 } from '../model/pyroscope-client';
 import { PyroscopeDatasourceSpec } from './pyroscope-datasource-types';
+import { PYROSCOPE_OTEL_EXPLORER } from './pyroscope-otel-explorer';
 import { PyroscopeDatasourceEditor } from './PyroscopeDatasourceEditor';
 
 /**
@@ -55,8 +56,11 @@ const createClient: DatasourcePlugin<PyroscopeDatasourceSpec, PyroscopeClient>['
   };
 };
 
-export const PyroscopeDatasource: DatasourcePlugin<PyroscopeDatasourceSpec, PyroscopeClient> = {
+export const PyroscopeDatasource = {
   createClient,
   OptionsEditorComponent: PyroscopeDatasourceEditor,
-  createInitialOptions: () => ({ directUrl: '' }),
+  createInitialOptions: (): PyroscopeDatasourceSpec => ({ directUrl: '' }),
+  otelExplorer: PYROSCOPE_OTEL_EXPLORER,
+} satisfies DatasourcePlugin<PyroscopeDatasourceSpec, PyroscopeClient> & {
+  otelExplorer: typeof PYROSCOPE_OTEL_EXPLORER;
 };

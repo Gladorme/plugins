@@ -15,6 +15,7 @@ import { DatasourcePlugin } from '@perses-dev/plugin-system';
 
 import { TempoClient, query, search, searchTagValues, searchTags } from '../model/tempo-client';
 import { TempoDatasourceSpec } from './tempo-datasource-types';
+import { TEMPO_OTEL_EXPLORER } from './tempo-otel-explorer';
 import { TempoDatasourceEditor } from './TempoDatasourceEditor';
 
 /**
@@ -43,8 +44,11 @@ const createClient: DatasourcePlugin<TempoDatasourceSpec, TempoClient>['createCl
   };
 };
 
-export const TempoDatasource: DatasourcePlugin<TempoDatasourceSpec, TempoClient> = {
+export const TempoDatasource = {
   createClient,
   OptionsEditorComponent: TempoDatasourceEditor,
-  createInitialOptions: () => ({ directUrl: '' }),
+  createInitialOptions: (): TempoDatasourceSpec => ({ directUrl: '' }),
+  otelExplorer: TEMPO_OTEL_EXPLORER,
+} satisfies DatasourcePlugin<TempoDatasourceSpec, TempoClient> & {
+  otelExplorer: typeof TEMPO_OTEL_EXPLORER;
 };

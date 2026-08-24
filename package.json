@@ -31,6 +31,7 @@
     "loki",
     "markdown",
     "opensearch",
+    "otelexplorer",
     "piechart",
     "prometheus",
     "pyroscope",

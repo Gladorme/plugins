@@ -30,6 +30,7 @@ import {
   rangeQuery,
   series,
 } from '../model';
+import { PROMETHEUS_OTEL_EXPLORER } from './prometheus-otel-explorer';
 import { PrometheusDatasourceEditor } from './PrometheusDatasourceEditor';
 import { PrometheusDatasourceSpec } from './types';
 
@@ -125,9 +126,12 @@ const getBuiltinVariableDefinitions: () => BuiltinVariableDefinition[] = () => {
   ] as BuiltinVariableDefinition[];
 };
 
-export const PrometheusDatasource: DatasourcePlugin<PrometheusDatasourceSpec, PrometheusClient> = {
+export const PrometheusDatasource = {
   createClient,
   getBuiltinVariableDefinitions,
   OptionsEditorComponent: PrometheusDatasourceEditor,
-  createInitialOptions: () => ({ directUrl: '' }),
+  createInitialOptions: (): PrometheusDatasourceSpec => ({ directUrl: '' }),
+  otelExplorer: PROMETHEUS_OTEL_EXPLORER,
+} satisfies DatasourcePlugin<PrometheusDatasourceSpec, PrometheusClient> & {
+  otelExplorer: typeof PROMETHEUS_OTEL_EXPLORER;
 };

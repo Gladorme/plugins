@@ -25,6 +25,7 @@ import {
   indexStats,
 } from '../../model/loki-client';
 import { LokiDatasourceSpec } from './loki-datasource-types';
+import { LOKI_OTEL_EXPLORER } from './loki-otel-explorer';
 import { LokiDatasourceEditor } from './LokiDatasourceEditor';
 
 const createClient: DatasourcePlugin<LokiDatasourceSpec, LokiClient>['createClient'] = (spec, options) => {
@@ -55,8 +56,11 @@ const createClient: DatasourcePlugin<LokiDatasourceSpec, LokiClient>['createClie
   };
 };
 
-export const LokiDatasource: DatasourcePlugin<LokiDatasourceSpec, LokiClient> = {
+export const LokiDatasource = {
   createClient,
   OptionsEditorComponent: LokiDatasourceEditor,
-  createInitialOptions: () => ({ directUrl: '' }),
+  createInitialOptions: (): LokiDatasourceSpec => ({ directUrl: '' }),
+  otelExplorer: LOKI_OTEL_EXPLORER,
+} satisfies DatasourcePlugin<LokiDatasourceSpec, LokiClient> & {
+  otelExplorer: typeof LOKI_OTEL_EXPLORER;
 };
