@@ -1,0 +1,7 @@
+{
+  "kind": "ClickHouseLabelValuesVariable",
+  "spec": {
+    "query": "SELECT ResourceAttributes FROM otel_logs",
+    "labelName": "service.name"
+  }
+}

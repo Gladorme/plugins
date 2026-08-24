@@ -34,3 +34,33 @@ See also technical docs related to this plugin:
 
 - [Data model](./model.md#clickhouselogquery)
 - [Dashboard-as-Code Go lib](./go-sdk/log-query.md)
+
+## Variables
+
+ClickHouse variables populate dashboard dropdowns from SQL results. Variables can reference earlier variables and can
+be used in both time-series and log queries with the [standard Perses variable
+syntax](https://perses.dev/perses/docs/concepts/variable/#using-variables). Variable SQL also supports the ClickHouse
+`{start}` and `{end}` time-range placeholders.
+
+### Query (`ClickHouseQueryVariable`)
+
+Executes arbitrary SQL and uses the first returned column for each option. A query can instead return columns named
+`__text` and `__value` to keep a friendly display label separate from the value inserted into panel queries.
+
+- [Data model](./model.md#clickhousequeryvariable)
+- [Dashboard-as-Code Go lib](./go-sdk/variable/query.md)
+
+### Label Names (`ClickHouseLabelNamesVariable`)
+
+Returns the column names from a SQL result. When a query returns one ClickHouse Map/object column, the Map keys are
+returned instead, which is useful with OpenTelemetry resource and log attributes.
+
+- [Data model](./model.md#clickhouselabelnamesvariable)
+- [Dashboard-as-Code Go lib](./go-sdk/variable/label-names.md)
+
+### Label Values (`ClickHouseLabelValuesVariable`)
+
+Returns the unique values of a named result column or a named key inside a ClickHouse Map/object column.
+
+- [Data model](./model.md#clickhouselabelvaluesvariable)
+- [Dashboard-as-Code Go lib](./go-sdk/variable/label-values.md)

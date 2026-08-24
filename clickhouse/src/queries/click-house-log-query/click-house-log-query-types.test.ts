@@ -92,4 +92,24 @@ describe('ClickHouseLogQuery', () => {
       "SELECT * FROM application_logs WHERE timestamp >= '2025-01-01 00:00:00' AND timestamp <= '2025-01-02 00:00:00'",
     );
   });
+
+  it('should interpolate dashboard variables in the query', async () => {
+    const context = createStubContext();
+    context.variableState = {
+      level: { value: 'error', loading: false },
+    } as unknown as LogQueryContext['variableState'];
+
+    await ClickHouseLogQuery.getLogData(
+      {
+        query: "SELECT * FROM application_logs WHERE level = '$level' AND timestamp >= '{start}'",
+      },
+      context,
+    );
+
+    expect(clickhouseStubClient.query).toHaveBeenCalledWith({
+      start: '2025-01-01 00:00:00',
+      end: '2025-01-02 00:00:00',
+      query: "SELECT * FROM application_logs WHERE level = 'error' AND timestamp >= '2025-01-01 00:00:00'",
+    });
+  });
 });

@@ -11,7 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-export { getPluginModule } from './getPluginModule';
-export * from './queries';
-export * from './datasources';
-export * from './variables';
+export * from './ClickHouseLabelNamesVariable';
+export * from './ClickHouseLabelValuesVariable';
+export * from './ClickHouseQueryVariable';
+export * from './ClickHouseVariableEditor';
+export * from './types';
+export * from './utils';

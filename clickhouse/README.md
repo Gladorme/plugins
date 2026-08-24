@@ -39,3 +39,7 @@ Build the plugin for distribution:
 ```bash
 npm run build
 ```
+
+The package provides the `ClickHouseQueryVariable`, `ClickHouseLabelNamesVariable`, and
+`ClickHouseLabelValuesVariable` list-variable plugins in addition to its datasource, time-series query, and log query
+plugins. Variable SQL supports chained Perses variables and the `{start}` / `{end}` time-range placeholders.

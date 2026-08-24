@@ -129,6 +129,77 @@ spec:
       query: "SELECT timestamp, level, message, service FROM application_logs WHERE level = 'ERROR' AND timestamp >= now() - INTERVAL 1 HOUR ORDER BY timestamp DESC LIMIT 1000"
 ```
 
+## ClickHouseQueryVariable
+
+```yaml
+kind: "ClickHouseQueryVariable"
+spec:
+  # SQL used to populate the variable options. The first column is used by default.
+  # Return __text and __value columns to provide separate labels and values.
+  query: <string>
+
+  # If omitted, the default ClickHouseDatasource is used.
+  datasource: <ClickHouse Datasource selector> # Optional
+```
+
+### Example
+
+```yaml
+kind: "ListVariable"
+spec:
+  name: "service"
+  plugin:
+    kind: "ClickHouseQueryVariable"
+    spec:
+      query: "SELECT DISTINCT service_name AS __text, service_id AS __value FROM services ORDER BY __text"
+```
+
+## ClickHouseLabelNamesVariable
+
+```yaml
+kind: "ClickHouseLabelNamesVariable"
+spec:
+  # SQL whose result columns, or single returned Map/object column keys, become options.
+  query: <string>
+  datasource: <ClickHouse Datasource selector> # Optional
+```
+
+### Example
+
+```yaml
+kind: "ListVariable"
+spec:
+  name: "label"
+  plugin:
+    kind: "ClickHouseLabelNamesVariable"
+    spec:
+      query: "SELECT ResourceAttributes FROM otel_logs WHERE Timestamp BETWEEN '{start}' AND '{end}'"
+```
+
+## ClickHouseLabelValuesVariable
+
+```yaml
+kind: "ClickHouseLabelValuesVariable"
+spec:
+  # SQL whose result contains the requested column or Map/object key.
+  query: <string>
+  labelName: <string>
+  datasource: <ClickHouse Datasource selector> # Optional
+```
+
+### Example
+
+```yaml
+kind: "ListVariable"
+spec:
+  name: "service"
+  plugin:
+    kind: "ClickHouseLabelValuesVariable"
+    spec:
+      query: "SELECT ResourceAttributes FROM otel_logs WHERE Timestamp BETWEEN '{start}' AND '{end}'"
+      labelName: "service.name"
+```
+
 ## Shared definitions
 
 ### ClickHouse Datasource selector

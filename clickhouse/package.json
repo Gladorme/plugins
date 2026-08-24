@@ -73,6 +73,33 @@
           },
           "name": "ClickHouseLogQuery"
         }
+      },
+      {
+        "kind": "Variable",
+        "spec": {
+          "display": {
+            "name": "ClickHouse Query Variable"
+          },
+          "name": "ClickHouseQueryVariable"
+        }
+      },
+      {
+        "kind": "Variable",
+        "spec": {
+          "display": {
+            "name": "ClickHouse Label Names Variable"
+          },
+          "name": "ClickHouseLabelNamesVariable"
+        }
+      },
+      {
+        "kind": "Variable",
+        "spec": {
+          "display": {
+            "name": "ClickHouse Label Values Variable"
+          },
+          "name": "ClickHouseLabelValuesVariable"
+        }
       }
     ]
   }

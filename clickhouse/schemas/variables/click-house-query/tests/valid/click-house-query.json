@@ -1,0 +1,6 @@
+{
+  "kind": "ClickHouseQueryVariable",
+  "spec": {
+    "query": "SELECT DISTINCT service FROM logs"
+  }
+}

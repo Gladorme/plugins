@@ -11,7 +11,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-export { getPluginModule } from './getPluginModule';
-export * from './queries';
-export * from './datasources';
-export * from './variables';
+import { DatasourceSelectValue } from '@perses-dev/plugin-system';
+import { DatasourceSelector } from '@perses-dev/spec';
+
+export interface ClickHouseVariableOptionsBase {
+  datasource?: DatasourceSelectValue<DatasourceSelector>;
+}
+
+export type ClickHouseQueryVariableOptions = ClickHouseVariableOptionsBase & {
+  query: string;
+};
+
+export type ClickHouseLabelNamesVariableOptions = ClickHouseVariableOptionsBase & {
+  query: string;
+};
+
+export type ClickHouseLabelValuesVariableOptions = ClickHouseVariableOptionsBase & {
+  query: string;
+  labelName: string;
+};

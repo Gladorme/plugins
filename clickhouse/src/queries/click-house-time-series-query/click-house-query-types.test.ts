@@ -128,6 +128,27 @@ describe('ClickHouseTimeSeriesQuery', () => {
     );
   });
 
+  it('should interpolate dashboard variables in the query', async () => {
+    const context = createStubContext();
+    context.variableState = {
+      service: { value: 'checkout', loading: false },
+    } as unknown as TimeSeriesQueryContext['variableState'];
+
+    await ClickHouseTimeSeriesQuery.getTimeSeriesData(
+      {
+        query: "SELECT time, value FROM metrics WHERE service = '$service' AND time BETWEEN '{start}' AND '{end}'",
+      },
+      context,
+    );
+
+    expect(clickhouseStubClient.query).toHaveBeenCalledWith({
+      start: '2025-01-01 00:00:00',
+      end: '2025-01-02 00:00:00',
+      query:
+        "SELECT time, value FROM metrics WHERE service = 'checkout' AND time BETWEEN '2025-01-01 00:00:00' AND '2025-01-02 00:00:00'",
+    });
+  });
+
   it('should infer daily query step from returned timestamps', async () => {
     (clickhouseStubClient.query as jest.Mock).mockResolvedValueOnce({
       status: 'success',

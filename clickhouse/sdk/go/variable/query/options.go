@@ -11,7 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-export { getPluginModule } from './getPluginModule';
-export * from './queries';
-export * from './datasources';
-export * from './variables';
+package query
+
+import clickhouseDatasource "github.com/perses/plugins/clickhouse/sdk/go/datasource"
+
+func Query(expr string) Option {
+	return func(builder *Builder) error {
+		builder.Query = expr
+		return nil
+	}
+}
+
+func Datasource(datasourceName string) Option {
+	return func(builder *Builder) error {
+		builder.Datasource = clickhouseDatasource.Selector(datasourceName)
+		return nil
+	}
+}
