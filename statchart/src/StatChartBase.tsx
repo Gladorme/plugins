@@ -202,9 +202,8 @@ export const StatChartBase: FC<StatChartProps> = (props) => {
     );
   }, [colorMode, containerPadding, optimalValueFontSize, formattedValue, color, paletteMode]);
 
-  const seriesName = useMemo((): ReactNode | null => {
-    if (!showSeriesName) return null;
-
+  let seriesName: ReactNode | null = null;
+  if (showSeriesName) {
     let textColor = '';
 
     switch (colorMode) {
@@ -221,12 +220,12 @@ export const StatChartBase: FC<StatChartProps> = (props) => {
         break;
     }
 
-    return (
+    seriesName = (
       <SeriesName padding={containerPadding} fontSize={seriesNameFontSize} color={textColor}>
         {data.seriesData?.name}
       </SeriesName>
     );
-  }, [colorMode, showSeriesName, secondary, color, containerPadding, seriesNameFontSize, data?.seriesData?.name]);
+  }
 
   return (
     <Box

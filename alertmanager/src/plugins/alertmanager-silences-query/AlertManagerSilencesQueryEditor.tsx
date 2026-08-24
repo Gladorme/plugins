@@ -12,12 +12,11 @@
 // limitations under the License.
 
 import { FormControl, Stack } from '@mui/material';
-import { useId } from '@perses-dev/components';
 import type { DatasourceSelectProps } from '@perses-dev/plugin-system';
 import { DatasourceSelect } from '@perses-dev/plugin-system';
 import { produce } from 'immer';
 import type { ReactElement } from 'react';
-import { useCallback } from 'react';
+import { useCallback, useId } from 'react';
 
 import { LazyTextField } from '../../components/LazyTextField';
 import {
@@ -36,7 +35,7 @@ interface AlertManagerSilencesQueryEditorProps {
 export function AlertManagerSilencesQueryEditor(props: AlertManagerSilencesQueryEditorProps): ReactElement {
   const { onChange, value } = props;
   const datasourceSelectValue = value.datasource ?? DEFAULT_ALERTMANAGER;
-  const datasourceSelectLabelID = useId('alertmanager-silences-datasource-label');
+  const datasourceSelectLabelID = `alertmanager-silences-datasource-label-${useId()}`;
 
   const handleDatasourceChange: DatasourceSelectProps['onChange'] = (next) => {
     if (isAlertManagerDatasourceSelector(next)) {

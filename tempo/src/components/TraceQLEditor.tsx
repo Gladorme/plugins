@@ -20,7 +20,7 @@ import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 
 import type { TempoClient } from '../model';
-import { TraceQLExtension } from './TraceQLExtension';
+import { traceQLExtension } from './TraceQLExtension';
 
 export interface TraceQLEditorProps extends Omit<ReactCodeMirrorProps, 'theme' | 'extensions'> {
   client?: TempoClient;
@@ -31,8 +31,8 @@ export function TraceQLEditor({ client, ...rest }: TraceQLEditorProps): ReactEle
   const isDarkMode = theme.palette.mode === 'dark';
 
   const { absoluteTimeRange } = useTimeRange();
-  const traceQLExtension = useMemo(() => {
-    return TraceQLExtension({ client, timeRange: absoluteTimeRange });
+  const traceQLEditorExtensions = useMemo(() => {
+    return traceQLExtension({ client, timeRange: absoluteTimeRange });
   }, [client, absoluteTimeRange]);
 
   const codemirrorTheme = useMemo(() => {
@@ -82,7 +82,7 @@ export function TraceQLEditor({ client, ...rest }: TraceQLEditorProps): ReactEle
           // therefore let's disable syntax highlighting if the input is a Trace ID.
           syntaxHighlighting: !isValidTraceId(rest.value ?? ''),
         }}
-        extensions={[EditorView.lineWrapping, traceQLExtension, codemirrorTheme]}
+        extensions={[EditorView.lineWrapping, traceQLEditorExtensions, codemirrorTheme]}
         placeholder='Example: {span.http.method = "GET"}'
       />
     </Stack>

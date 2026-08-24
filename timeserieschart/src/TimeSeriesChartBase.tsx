@@ -342,19 +342,19 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
 
   // Update adjacent charts so tooltip is unpinned when current chart is clicked.
   useEffect(() => {
-    // Only allow pinning one tooltip at a time, subsequent tooltip click unpins previous.
-    // Multiple tooltips can only be pinned if Ctrl or Cmd key is pressed while clicking.
-    const multipleTooltipsPinned = tooltipPinnedCoords !== null && lastTooltipPinnedCoords !== null;
-    if (multipleTooltipsPinned) {
-      if (!isEqual(lastTooltipPinnedCoords, tooltipPinnedCoords)) {
-        setTooltipPinnedCoords(null);
-        if (tooltipPinnedCoords !== null && pinnedCrosshair !== null) {
+    const animationFrame = requestAnimationFrame(() => {
+      // Only allow pinning one tooltip at a time. Multiple tooltips can only be pinned
+      // if Ctrl or Cmd was pressed, which leaves the shared coordinates unchanged.
+      setTooltipPinnedCoords((current) => {
+        if (current !== null && lastTooltipPinnedCoords !== null && !isEqual(lastTooltipPinnedCoords, current)) {
           setPinnedCrosshair(null);
+          return null;
         }
-      }
-    }
-    // tooltipPinnedCoords CANNOT be in dep array or tooltip pinning breaks in the current chart's onClick
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        return current;
+      });
+    });
+
+    return (): void => cancelAnimationFrame(animationFrame);
   }, [lastTooltipPinnedCoords, seriesMapping]);
 
   return (

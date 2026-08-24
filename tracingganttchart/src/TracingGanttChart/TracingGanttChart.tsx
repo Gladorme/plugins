@@ -14,7 +14,7 @@
 import { Box, Stack } from '@mui/material';
 import type * as otlptracev1 from '@perses-dev/spec/dist/dashboard/query-type/otlp/trace/v1/trace';
 import type { ReactElement } from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { CustomLinks, TracingGanttChartOptions } from '../gantt-chart-model';
 import { DetailPane } from './DetailPane/DetailPane';
@@ -59,15 +59,19 @@ export function TracingGanttChart(props: TracingGanttChartProps): ReactElement {
   );
   const search = useSpanSearch(trace);
 
-  const ganttChart = useRef<HTMLDivElement>(null);
+  const ganttChart = useRef<HTMLDivElement | null>(null);
   // tableWidth only comes to effect if the detail pane is visible.
   // setTableWidth() is only called by <ResizableDivider />
   const [tableWidth, setTableWidth] = useState<number>(0.82);
   const gap = 2;
-  const spacing = ganttChart.current ? parseFloat(getComputedStyle(ganttChart.current).columnGap) || 0 : 0;
+  const [spacing, setSpacing] = useState(0);
+  const setGanttChart = useCallback((element: HTMLDivElement | null): void => {
+    ganttChart.current = element;
+    setSpacing(element ? parseFloat(getComputedStyle(element).columnGap) || 0 : 0);
+  }, []);
 
   return (
-    <Stack ref={ganttChart} direction="row" sx={{ height: '100%', minHeight: '240px', gap }}>
+    <Stack ref={setGanttChart} direction="row" sx={{ height: '100%', minHeight: '240px', gap }}>
       <Stack sx={{ flexGrow: 1, gap }}>
         <TraceHeaderBar trace={trace} search={search} />
         <MiniGanttChart options={options} trace={trace} viewport={viewport} setViewport={setViewport} />

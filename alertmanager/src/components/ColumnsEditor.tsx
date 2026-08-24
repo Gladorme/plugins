@@ -32,7 +32,7 @@ import ArrowUpIcon from 'mdi-material-ui/ArrowUp';
 import DeleteIcon from 'mdi-material-ui/Delete';
 import PlusIcon from 'mdi-material-ui/Plus';
 import type { ReactElement } from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface BaseColumnDefinition {
   name: string;
@@ -57,6 +57,20 @@ export interface ColumnsEditorProps<C extends BaseColumnDefinition> {
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
   renderNameField: (column: C, index: number, onUpdate: ColumnUpdater<C>) => ReactElement;
+}
+
+interface ColumnIdState {
+  ids: number[];
+  nextId: number;
+}
+
+function resizeColumnIds(state: ColumnIdState, length: number): ColumnIdState {
+  const ids = state.ids.slice(0, length);
+  let nextId = state.nextId;
+  while (ids.length < length) {
+    ids.push(nextId++);
+  }
+  return { ids, nextId };
 }
 
 const DEFAULT_SORT_LABELS: Record<string, string> = {
@@ -202,47 +216,56 @@ export function ColumnsEditor<C extends BaseColumnDefinition>(props: ColumnsEdit
     renderNameField,
   } = props;
 
-  const idCounterRef = useRef(0);
-  const idsRef = useRef<number[]>([]);
-
-  while (idsRef.current.length < columns.length) {
-    idsRef.current.push(idCounterRef.current++);
-  }
-  idsRef.current.length = columns.length;
+  const [idState, setIdState] = useState<ColumnIdState>(() => resizeColumnIds({ ids: [], nextId: 0 }, columns.length));
+  const columnIds = resizeColumnIds(idState, columns.length).ids;
 
   const handleAdd = useCallback((): void => {
-    idsRef.current.push(idCounterRef.current++);
+    setIdState((current) => {
+      const resized = resizeColumnIds(current, columns.length);
+      return { ids: [...resized.ids, resized.nextId], nextId: resized.nextId + 1 };
+    });
     onAdd();
-  }, [onAdd]);
+  }, [columns.length, onAdd]);
 
   const handleRemove = useCallback(
     (index: number): void => {
-      idsRef.current.splice(index, 1);
+      setIdState((current) => {
+        const resized = resizeColumnIds(current, columns.length);
+        return { ...resized, ids: resized.ids.filter((_, columnIndex) => columnIndex !== index) };
+      });
       onRemove(index);
     },
-    [onRemove],
+    [columns.length, onRemove],
   );
 
   const handleMoveUp = useCallback(
     (index: number): void => {
       if (index <= 0) return;
-      const ids = idsRef.current;
-      const id = ids.splice(index, 1)[0]!;
-      ids.splice(index - 1, 0, id);
+      setIdState((current) => {
+        const resized = resizeColumnIds(current, columns.length);
+        const ids = [...resized.ids];
+        const id = ids.splice(index, 1)[0]!;
+        ids.splice(index - 1, 0, id);
+        return { ...resized, ids };
+      });
       onMoveUp(index);
     },
-    [onMoveUp],
+    [columns.length, onMoveUp],
   );
 
   const handleMoveDown = useCallback(
     (index: number): void => {
-      const ids = idsRef.current;
-      if (index >= ids.length - 1) return;
-      const id = ids.splice(index, 1)[0]!;
-      ids.splice(index + 1, 0, id);
+      if (index >= columns.length - 1) return;
+      setIdState((current) => {
+        const resized = resizeColumnIds(current, columns.length);
+        const ids = [...resized.ids];
+        const id = ids.splice(index, 1)[0]!;
+        ids.splice(index + 1, 0, id);
+        return { ...resized, ids };
+      });
       onMoveDown(index);
     },
-    [onMoveDown],
+    [columns.length, onMoveDown],
   );
 
   return (
@@ -252,7 +275,7 @@ export function ColumnsEditor<C extends BaseColumnDefinition>(props: ColumnsEdit
           {description}
         </Typography>
         {columns.map((column, index) => (
-          <Box key={idsRef.current[index]}>
+          <Box key={columnIds[index]}>
             {index > 0 && <Divider sx={{ mb: 2 }} />}
             <ColumnEntry
               column={column}

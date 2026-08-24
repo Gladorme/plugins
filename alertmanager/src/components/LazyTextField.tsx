@@ -13,7 +13,7 @@
 
 import { TextField } from '@mui/material';
 import type { ChangeEvent, ReactElement } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface LazyTextFieldProps {
   label: string;
@@ -26,12 +26,12 @@ export interface LazyTextFieldProps {
 }
 
 export function LazyTextField(props: LazyTextFieldProps): ReactElement {
+  return <LazyTextFieldInput key={props.value ?? ''} {...props} />;
+}
+
+function LazyTextFieldInput(props: LazyTextFieldProps): ReactElement {
   const { value, onCommit, ...textFieldProps } = props;
   const [draftValue, setDraftValue] = useState(value ?? '');
-
-  useEffect(() => {
-    setDraftValue(value ?? '');
-  }, [value]);
 
   const handleChange = useCallback((event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     setDraftValue(event.target.value);

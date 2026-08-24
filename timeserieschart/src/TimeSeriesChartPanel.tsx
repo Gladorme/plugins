@@ -47,7 +47,7 @@ import type { TimeSeries, TimeSeriesData, TimeSeriesValueTuple } from '@perses-d
 import type { GridComponentOption } from 'echarts';
 import merge from 'lodash/merge';
 import type { ReactElement } from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 
 import type { TimeSeriesChartOptions, QuerySettingsOptions } from './time-series-chart-model';
 import { DEFAULT_FORMAT, DEFAULT_VISUAL, THRESHOLD_PLOT_INTERVAL } from './time-series-chart-model';
@@ -82,7 +82,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
   } = props;
   const chartsTheme = useChartsTheme();
   const muiTheme = useTheme();
-  const chartId = useId('time-series-panel');
+  const chartId = `time-series-panel-${useId()}`;
 
   const chartRef = useRef<ChartInstance>(null);
 

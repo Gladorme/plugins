@@ -16,7 +16,7 @@ import { createModEnterHandler } from '@perses-dev/dashboards';
 import type { DatasourceSelectProps, OptionsEditorProps } from '@perses-dev/plugin-system';
 import { DatasourceSelect, isVariableDatasource, useDatasourceSelectValueToSelector } from '@perses-dev/plugin-system';
 import type { ReactElement } from 'react';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 
 import { LogsQLEditor } from '../../components/logsql-editor';
 import type { VictoriaLogsDatasourceSelector } from '../../model';
@@ -38,14 +38,6 @@ export function VictoriaLogsLogQueryEditor(props: VictoriaLogsQueryEditorProps):
   // const { data: client } = useDatasourceClient<VictoriaLogsClient>(selectedDatasource);
   // const victorialogsURL = client?.options.datasourceUrl;
 
-  // Local state for editor value to prevent query_range calls on every keystroke
-  const [localQuery, setLocalQuery] = useState(value.query);
-
-  // Update local state when prop changes
-  useEffect(() => {
-    setLocalQuery(value.query);
-  }, [value.query]);
-
   const handleDatasourceChange: DatasourceSelectProps['onChange'] = (newDatasourceSelection) => {
     if (!isVariableDatasource(newDatasourceSelection) && newDatasourceSelection.kind === DATASOURCE_KIND) {
       onChange({ ...value, datasource: newDatasourceSelection });
@@ -54,11 +46,6 @@ export function VictoriaLogsLogQueryEditor(props: VictoriaLogsQueryEditorProps):
 
     throw new Error('Got unexpected non VictoriaLogsQuery datasource selection');
   };
-
-  // Debounced query change handler to prevent excessive query_range calls
-  const handleQueryChange = useCallback((newQuery: string) => {
-    setLocalQuery(newQuery);
-  }, []);
 
   // Immediate query execution on Enter or blur
   const handleQueryExecute = useCallback(
@@ -99,15 +86,27 @@ export function VictoriaLogsLogQueryEditor(props: VictoriaLogsQueryEditorProps):
         >
           LogsQL Query
         </InputLabel>
-        <LogsQLEditor
-          value={localQuery}
-          onChange={handleQueryChange}
-          onBlur={() => handleQueryExecute(localQuery)}
-          onKeyDown={createModEnterHandler(() => handleQueryExecute(localQuery))}
-          placeholder='Enter LogsQL query (e.g. {job="mysql"} |= "error")'
-          // height="120px"
-        />
+        <QueryInput key={value.query} query={value.query} onExecute={handleQueryExecute} />
       </div>
     </Stack>
+  );
+}
+
+interface QueryInputProps {
+  query: string;
+  onExecute: (query: string) => void;
+}
+
+function QueryInput({ query, onExecute }: QueryInputProps): ReactElement {
+  const [localQuery, setLocalQuery] = useState(query);
+
+  return (
+    <LogsQLEditor
+      value={localQuery}
+      onChange={setLocalQuery}
+      onBlur={() => onExecute(localQuery)}
+      onKeyDown={createModEnterHandler(() => onExecute(localQuery))}
+      placeholder='Enter LogsQL query (e.g. {job="mysql"} |= "error")'
+    />
   );
 }

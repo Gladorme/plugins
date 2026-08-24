@@ -18,7 +18,7 @@ import type { PanelProps } from '@perses-dev/plugin-system';
 import type { ProfileData, StackTrace } from '@perses-dev/spec';
 import type { TitleComponentOption } from 'echarts';
 import type { FC } from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { FlameChartOptions } from '../flame-chart-model';
 import { filterStackTraceById, getMaxDepth } from '../utils/data-transform';
@@ -33,6 +33,10 @@ const DEFAULT_SERIES_CHART_HEIGHT = 200;
 export type FlameChartPanelProps = PanelProps<FlameChartOptions, ProfileData>;
 
 export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
+  return <FlameChartPanelContent key={JSON.stringify(props.spec)} {...props} />;
+};
+
+const FlameChartPanelContent: FC<FlameChartPanelProps> = (props) => {
   const { contentDimensions, queryResults, spec } = props;
 
   const isMobileSize = useMediaQuery(useTheme().breakpoints.down('sm'));
@@ -44,13 +48,6 @@ export const FlameChartPanel: FC<FlameChartPanelProps> = (props) => {
 
   // This spec is used to manage settings temporarily
   const [liveSpec, setLiveSpec] = useState<FlameChartOptions>(spec);
-
-  // keep liveSpec up to date
-  useEffect(() => {
-    setLiveSpec(spec);
-    setSelectedId(0);
-    setSearchValue('');
-  }, [spec]);
 
   const chartsTheme = useChartsTheme();
   const flameChartData = useMemo(() => {

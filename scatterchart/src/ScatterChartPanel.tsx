@@ -64,7 +64,8 @@ export function ScatterChartPanel(props: ScatterChartPanelProps): ReactElement |
     let maxSpanCount: number | undefined;
     for (const result of traceResults) {
       if (result.data.searchResult === undefined) continue;
-      const dataSeries = result.data.searchResult.map((trace) => {
+      const dataSeries: EChartTraceValue[] = [];
+      for (const trace of result.data.searchResult) {
         let spanCount = 0;
         let errorCount = 0;
         for (const stats of Object.values(trace.serviceStats)) {
@@ -80,7 +81,7 @@ export function ScatterChartPanel(props: ScatterChartPanelProps): ReactElement |
         }
 
         const pluginSpec = result.definition.spec.plugin.spec as { datasource?: { name?: string } } | undefined;
-        const newTraceValue: EChartTraceValue = {
+        dataSeries.push({
           ...trace,
           linkVariables: {
             datasourceName: pluginSpec?.datasource?.name ?? '',
@@ -90,9 +91,8 @@ export function ScatterChartPanel(props: ScatterChartPanelProps): ReactElement |
           startTime: new Date(trace.startTimeUnixMs), // convert unix epoch time to Date
           spanCount,
           errorCount,
-        };
-        return newTraceValue;
-      });
+        });
+      }
       dataset.push({
         source: dataSeries,
       });

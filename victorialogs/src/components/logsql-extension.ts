@@ -29,7 +29,7 @@ function logsqlLanguage(): LRLanguage {
   });
 }
 
-export function LogsQLExtension(): Array<LRLanguage | Extension> {
+export function logsQLExtension(): Array<LRLanguage | Extension> {
   const language = logsqlLanguage();
   return [language];
 }

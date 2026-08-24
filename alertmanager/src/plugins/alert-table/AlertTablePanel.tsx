@@ -51,7 +51,7 @@ import MagnifyIcon from 'mdi-material-ui/Magnify';
 import UnfoldLessHorizontalIcon from 'mdi-material-ui/UnfoldLessHorizontal';
 import UnfoldMoreHorizontalIcon from 'mdi-material-ui/UnfoldMoreHorizontal';
 import type { ReactElement } from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { SilenceForm } from '../../components/SilenceForm';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -88,6 +88,16 @@ interface AlertGroup {
   key: string;
   alerts: Alert[];
   summary: GroupSummary;
+}
+
+interface GroupByState {
+  defaultKey: string;
+  value: string[];
+}
+
+interface ExpandedGroupsState {
+  groupKeys: string;
+  value: Set<string>;
 }
 
 function GroupSummaryChips({ summary }: { summary: GroupSummary }): ReactElement {
@@ -345,13 +355,12 @@ export function AlertTablePanel({ spec, queryResults, contentDimensions }: Alert
   const queryClient = useQueryClient();
 
   const [silenceTarget, setSilenceTarget] = useState<Alert | null>(null);
-  const silenceKeyRef = useRef(0);
+  const [silenceFormKey, setSilenceFormKey] = useState(0);
   const handleSetSilenceTarget = useCallback((alert: Alert) => {
-    silenceKeyRef.current++;
+    setSilenceFormKey((current) => current + 1);
     setSilenceTarget(alert);
   }, []);
   const [search, setSearch] = useState('');
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const { successSnackbar, exceptionSnackbar } = useSnackbar();
 
   const handleSilenceSubmit = useCallback(
@@ -412,11 +421,12 @@ export function AlertTablePanel({ spec, queryResults, contentDimensions }: Alert
     return result;
   }, [defaultGroupBy, variableState]);
 
-  const [groupBy, setGroupBy] = useState<string[]>(resolvedDefaultGroupBy);
-
-  useEffect(() => {
-    setGroupBy(resolvedDefaultGroupBy);
-  }, [resolvedDefaultGroupBy]);
+  const defaultGroupByKey = JSON.stringify(resolvedDefaultGroupBy);
+  const [groupByState, setGroupByState] = useState<GroupByState>(() => ({
+    defaultKey: defaultGroupByKey,
+    value: resolvedDefaultGroupBy,
+  }));
+  const groupBy = groupByState.defaultKey === defaultGroupByKey ? groupByState.value : resolvedDefaultGroupBy;
 
   const effectiveActions = useMemo<AlertAction[]>(
     () => spec.allowedActions ?? ALL_ALERT_ACTIONS,
@@ -517,42 +527,45 @@ export function AlertTablePanel({ spec, queryResults, contentDimensions }: Alert
     return result;
   }, [alerts, groupBy, allTrackedKeys, sortState]);
 
-  const prevGroupKeysRef = useRef<string>('');
-  useEffect(() => {
-    const currentKeys = groups.map((g) => g.key).join('\0');
-    if (currentKeys === prevGroupKeysRef.current) return;
-    prevGroupKeysRef.current = currentKeys;
+  const groupKeys = JSON.stringify(groups.map((group) => group.key));
+  const defaultExpandedGroups = useMemo(
+    () => (groups.length === 1 ? new Set(groups.map((group) => group.key)) : new Set<string>()),
+    [groups],
+  );
+  const [expandedGroupsState, setExpandedGroupsState] = useState<ExpandedGroupsState>(() => ({
+    groupKeys,
+    value: defaultExpandedGroups,
+  }));
+  const expandedGroups =
+    expandedGroupsState.groupKeys === groupKeys ? expandedGroupsState.value : defaultExpandedGroups;
 
-    if (groups.length === 1) {
-      setExpandedGroups(new Set(groups.map((g) => g.key)));
-    } else {
-      setExpandedGroups(new Set());
-    }
-  }, [groups]);
-
-  const handleToggleGroup = useCallback((key: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  }, []);
+  const handleToggleGroup = useCallback(
+    (key: string) => {
+      setExpandedGroupsState((current) => {
+        const currentValue = current.groupKeys === groupKeys ? current.value : defaultExpandedGroups;
+        const next = new Set(currentValue);
+        if (next.has(key)) {
+          next.delete(key);
+        } else {
+          next.add(key);
+        }
+        return { groupKeys, value: next };
+      });
+    },
+    [defaultExpandedGroups, groupKeys],
+  );
 
   const handleExpandAll = useCallback(() => {
-    setExpandedGroups(new Set(groups.map((g) => g.key)));
-  }, [groups]);
+    setExpandedGroupsState({ groupKeys, value: new Set(groups.map((group) => group.key)) });
+  }, [groupKeys, groups]);
 
   const handleCollapseAll = useCallback(() => {
-    setExpandedGroups(new Set());
-  }, []);
+    setExpandedGroupsState({ groupKeys, value: new Set() });
+  }, [groupKeys]);
 
   const handleGroupByChange = (event: SelectChangeEvent<string[]>): void => {
     const value = event.target.value;
-    setGroupBy(typeof value === 'string' ? value.split(',') : value);
+    setGroupByState({ defaultKey: defaultGroupByKey, value: typeof value === 'string' ? value.split(',') : value });
   };
 
   if (allAlerts.length === 0) {
@@ -699,7 +712,7 @@ export function AlertTablePanel({ spec, queryResults, contentDimensions }: Alert
         </Table>
       </TableContainer>
       <SilenceForm
-        key={silenceKeyRef.current}
+        key={silenceFormKey}
         open={!!silenceTarget}
         onClose={() => setSilenceTarget(null)}
         onSubmit={handleSilenceSubmit}

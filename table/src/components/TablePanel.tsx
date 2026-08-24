@@ -391,7 +391,6 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     variableState: allVariables,
   });
 
-  const filteredDataRef = useRef<Array<Record<string, unknown>>>([]);
   // Refs used to keep the filter row in sync with the table's horizontal
   const panelContainerRef = useRef<HTMLDivElement>(null);
   const filterRowInnerRef = useRef<HTMLDivElement>(null);
@@ -405,27 +404,6 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     });
     return result;
   }, [selectionMap]);
-
-  const handleRowSelectionChange = useCallback(
-    (newRowSelection: RowSelectionState) => {
-      const newSelection: Array<{ id: string; item: Record<string, unknown> }> = [];
-      for (const [id, isSelected] of Object.entries(newRowSelection)) {
-        if (isSelected) {
-          const index = parseInt(id, 10);
-          if (filteredDataRef.current[index] !== undefined) {
-            newSelection.push({ id, item: filteredDataRef.current[index] });
-          }
-        }
-      }
-
-      if (newSelection.length === 0) {
-        clearSelection();
-      } else {
-        setSelection(newSelection);
-      }
-    },
-    [setSelection, clearSelection],
-  );
 
   // TODO: handle other query types
   const rawData: Array<Record<string, unknown>> = useMemo(() => {
@@ -599,6 +577,26 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     });
   }, [data, columnFilters, spec.enableFiltering]);
 
+  const handleRowSelectionChange = useCallback(
+    (newRowSelection: RowSelectionState) => {
+      const newSelection: Array<{ id: string; item: Record<string, unknown> }> = [];
+      for (const [id, isSelected] of Object.entries(newRowSelection)) {
+        if (!isSelected) continue;
+        const item = filteredData[parseInt(id, 10)];
+        if (item !== undefined) {
+          newSelection.push({ id, item });
+        }
+      }
+
+      if (newSelection.length === 0) {
+        clearSelection();
+      } else {
+        setSelection(newSelection);
+      }
+    },
+    [filteredData, setSelection, clearSelection],
+  );
+
   // Generate cell settings that will be used by the table to render cells (text color, background color, ...)
   const cellConfigs: TableCellConfigs = useMemo(() => {
     // If there are no cell settings globally or per column, return an empty object
@@ -723,21 +721,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     };
   }, [openFilterColumn]);
 
-  // Keep ref in sync with filtered data for use in selection handler
-  filteredDataRef.current = filteredData;
-
-  const [pagination, setPagination] = useState<PaginationState | undefined>(
-    spec.pagination ? { pageIndex: 0, pageSize: 10 } : undefined,
-  );
-
-  useEffect(() => {
-    // If the pagination setting changes from no pagination to pagination, but the pagination state is undefined, update the pagination state
-    if (spec.pagination && !pagination) {
-      setPagination({ pageIndex: 0, pageSize: 10 });
-    } else if (!spec.pagination && pagination) {
-      setPagination(undefined);
-    }
-  }, [spec.pagination, pagination]);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
   // Sync the filter row's horizontal position with the table scroll.
   useEffect(() => {
@@ -958,7 +942,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
         defaultColumnHeight={spec.defaultColumnHeight}
         sorting={sorting}
         onSortingChange={setSorting}
-        pagination={pagination}
+        pagination={spec.pagination ? pagination : undefined}
         onPaginationChange={setPagination}
         checkboxSelection={selectionEnabled}
         rowSelection={rowSelection}

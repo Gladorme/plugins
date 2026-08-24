@@ -41,7 +41,7 @@ export interface CompletionConfig {
   timeRange?: AbsoluteTimeRange;
 }
 
-export function LogQLExtension(completionCfg?: CompletionConfig): Array<LRLanguage | Extension> {
+export function logQLExtension(completionCfg?: CompletionConfig): Array<LRLanguage | Extension> {
   const language = logqlLanguage();
 
   // Only add autocomplete if config is provided

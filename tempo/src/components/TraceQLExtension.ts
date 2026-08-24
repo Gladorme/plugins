@@ -50,7 +50,7 @@ export interface CompletionConfig {
   maxStaleValues?: number;
 }
 
-export function TraceQLExtension(completionCfg: CompletionConfig): Array<LRLanguage | Extension> {
+export function traceQLExtension(completionCfg: CompletionConfig): Array<LRLanguage | Extension> {
   const language = traceQLLanguage();
   const completion = language.data.of({
     autocomplete: (ctx: CompletionContext) =>
@@ -58,3 +58,6 @@ export function TraceQLExtension(completionCfg: CompletionConfig): Array<LRLangu
   });
   return [language, completion];
 }
+
+/** @deprecated Use `traceQLExtension` so React tooling does not mistake this factory for a component. */
+export const TraceQLExtension = traceQLExtension;

@@ -90,16 +90,6 @@ export default function TreeNode({
   const [nodeEl, setNodeEl] = useState<HTMLDivElement | null>(null);
   const nodeRef = useCallback((node: HTMLDivElement) => setNodeEl(node), []);
 
-  const [resultStats, setResultStats] = useState<{
-    numSeries: number;
-    labelExamples: Record<string, Array<{ value: string; count: number }>>;
-    sortedLabelCards: Array<[string, number]>;
-  }>({
-    numSeries: 0,
-    labelExamples: {},
-    sortedLabelCards: [],
-  });
-
   const [connectorStyle, setConnectorStyle] = useState({
     borderColor: theme.palette.grey['500'],
     borderLeftStyle: 'solid',
@@ -166,37 +156,43 @@ export default function TreeNode({
       return;
     }
 
-    const parentRect = parentEl.getBoundingClientRect();
-    const nodeRect = nodeEl.getBoundingClientRect();
-    if (reverse) {
-      setConnectorStyle((prevStyle) => ({
-        ...prevStyle,
-        top: 'calc(50% - 1px)',
-        bottom: nodeRect.bottom - parentRect.top,
-        borderTopLeftRadius: 10,
-        borderTopStyle: 'solid',
-        borderBottomLeftRadius: undefined,
-      }));
-    } else {
-      setConnectorStyle((prevStyle) => ({
-        ...prevStyle,
-        top: parentRect.bottom - nodeRect.top,
-        bottom: 'calc(50% - 1px)',
-        borderBottomLeftRadius: 10,
-        borderBottomStyle: 'solid',
-        borderTopLeftRadius: undefined,
-      }));
-    }
+    const animationFrame = requestAnimationFrame(() => {
+      const parentRect = parentEl.getBoundingClientRect();
+      const nodeRect = nodeEl.getBoundingClientRect();
+      if (reverse) {
+        setConnectorStyle((prevStyle) => ({
+          ...prevStyle,
+          top: 'calc(50% - 1px)',
+          bottom: nodeRect.bottom - parentRect.top,
+          borderTopLeftRadius: 10,
+          borderTopStyle: 'solid',
+          borderBottomLeftRadius: undefined,
+        }));
+      } else {
+        setConnectorStyle((prevStyle) => ({
+          ...prevStyle,
+          top: parentRect.bottom - nodeRect.top,
+          bottom: 'calc(50% - 1px)',
+          borderBottomLeftRadius: 10,
+          borderBottomStyle: 'solid',
+          borderTopLeftRadius: undefined,
+        }));
+      }
+    });
+
+    return (): void => cancelAnimationFrame(animationFrame);
   }, [parentEl, nodeEl, reverse, nodeRef, setConnectorStyle]);
 
-  // Update the node info state based on the query result.
+  // Report successful completion to the parent.
   useEffect(() => {
-    if (instantQueryResponse?.status !== 'success') {
-      return;
-    }
-
-    if (reportNodeState) {
+    if (instantQueryResponse?.status === 'success' && reportNodeState) {
       reportNodeState(childIdx, 'success');
+    }
+  }, [instantQueryResponse?.status, reportNodeState, childIdx]);
+
+  const resultStats = useMemo(() => {
+    if (instantQueryResponse?.status !== 'success') {
+      return { numSeries: 0, labelExamples: {}, sortedLabelCards: [] };
     }
 
     let resultSeries = 0;
@@ -233,12 +229,12 @@ export default function TreeNode({
         .map(([lv, cnt]) => ({ value: lv, count: cnt }));
     });
 
-    setResultStats({
+    return {
       numSeries: resultSeries,
       sortedLabelCards: Object.entries(labelCardinalities).toSorted((a, b) => b[1] - a[1]),
       labelExamples,
-    });
-  }, [instantQueryResponse, reportNodeState, childIdx]);
+    };
+  }, [instantQueryResponse]);
 
   const innerNode = (
     <Stack direction="row" gap={2}>
