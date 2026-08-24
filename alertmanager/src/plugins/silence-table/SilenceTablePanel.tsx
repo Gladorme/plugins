@@ -39,8 +39,8 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { MatchersList } from '../../components/MatchersList';
 import { StatusBadge } from '../../components/StatusBadge';
-import type { AlertManagerClient } from '../../model';
-import { extractDatasourceSelector } from '../../model';
+import type { AlertManagerClient } from '../../model/alertmanager-client';
+import { extractDatasourceSelector } from '../../model/alertmanager-selectors';
 import type {
   SilenceAction,
   SilenceColumnDefinition,

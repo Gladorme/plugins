@@ -19,8 +19,8 @@ import type { ReactElement } from 'react';
 import { useCallback, useState } from 'react';
 
 import { LogsQLEditor } from '../../components/logsql-editor';
-import type { VictoriaLogsDatasourceSelector } from '../../model';
-import { VICTORIALOGS_DATASOURCE_KIND } from '../../model';
+import type { VictoriaLogsDatasourceSelector } from '../../model/selectors';
+import { VICTORIALOGS_DATASOURCE_KIND } from '../../model/selectors';
 import { DATASOURCE_KIND, DEFAULT_DATASOURCE } from '../constants';
 import type { VictoriaLogsLogQuerySpec } from './types';
 

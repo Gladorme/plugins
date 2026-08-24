@@ -24,7 +24,7 @@ import {
   DEFAULT_ALERTMANAGER,
   isAlertManagerDatasourceSelector,
   isDefaultAlertManagerSelector,
-} from '../../model';
+} from '../../model/alertmanager-selectors';
 import type { AlertManagerAlertsQuerySpec } from '../types';
 
 interface AlertManagerAlertsQueryEditorProps {

@@ -19,10 +19,12 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactElement, SyntheticEvent } from 'react';
 import { useCallback, useState } from 'react';
 
-import type { TempoClient } from '../model';
-import { getUnixTimeRange } from '../plugins';
-import type { DurationField, Filter } from './filter';
-import { filterToTraceQL, traceQLToFilter, splitByUnquotedWhitespace } from './filter';
+import type { TempoClient } from '../model/tempo-client';
+import { getUnixTimeRange } from '../plugins/tempo-trace-query/get-trace-data';
+import type { DurationField, Filter } from './filter/filter';
+import { splitByUnquotedWhitespace } from './filter/filter';
+import { filterToTraceQL } from './filter/filter_to_traceql';
+import { traceQLToFilter } from './filter/traceql_to_filter';
 
 const statusOptions = ['unset', 'ok', 'error'];
 

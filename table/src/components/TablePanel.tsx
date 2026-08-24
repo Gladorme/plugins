@@ -24,8 +24,8 @@ import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { CellSettings, ColumnSettings, TableOptions } from '../models';
-import { evaluateConditionalFormatting } from '../models';
+import type { CellSettings, ColumnSettings, TableOptions } from '../models/table-model';
+import { evaluateConditionalFormatting } from '../models/table-model';
 import { buildRawTableData, getTablePanelQueryMode } from '../table-data-utils';
 import { EmbeddedPanel } from './EmbeddedPanel';
 
@@ -704,7 +704,12 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
   useEffect(() => {
     if (!openFilterColumn) return;
 
+    let listenerActive = false;
     const handleClick = (e: MouseEvent): void => {
+      if (!listenerActive) {
+        return;
+      }
+
       const target = e.target as Element;
       if (!target.closest('[data-filter-dropdown]') && !target.closest('button')) {
         handleFilterClose();
@@ -712,8 +717,9 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     };
 
     const timer = setTimeout(() => {
-      document.addEventListener('click', handleClick);
+      listenerActive = true;
     }, 100);
+    document.addEventListener('click', handleClick);
 
     return (): void => {
       clearTimeout(timer);

@@ -19,8 +19,14 @@ import { produce } from 'immer';
 import type { ChangeEvent, ReactElement, SyntheticEvent } from 'react';
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 
-import type { JaegerClient, JaegerTraceQuerySpec } from '../model';
-import { DEFAULT_JAEGER, isDefaultJaegerSelector, isJaegerDatasourceSelector, JAEGER_DATASOURCE_KIND } from '../model';
+import type { JaegerClient } from '../model/jaeger-client';
+import {
+  DEFAULT_JAEGER,
+  isDefaultJaegerSelector,
+  isJaegerDatasourceSelector,
+  JAEGER_DATASOURCE_KIND,
+} from '../model/jaeger-selectors';
+import type { JaegerTraceQuerySpec } from '../model/trace-query-model';
 
 interface JaegerTraceQueryEditorProps {
   value: JaegerTraceQuerySpec;

@@ -40,27 +40,18 @@ export function ColumnsEditor({ columnSettings, onChange, defaultEnableSorting }
     const updatedColumns = [...columnSettings];
     updatedColumns.push({ name: columnName });
     onChange(updatedColumns);
-    setColumnsCollapsed((prev) => {
-      prev.push(false);
-      return [...prev];
-    });
+    setColumnsCollapsed((prev) => [...prev, false]);
   }
 
   function handleColumnDelete(index: number): void {
     const updatedColumns = [...columnSettings];
     updatedColumns.splice(index, 1);
     onChange(updatedColumns);
-    setColumnsCollapsed((prev) => {
-      prev.splice(index, 1);
-      return [...prev];
-    });
+    setColumnsCollapsed((prev) => prev.filter((_, columnIndex) => columnIndex !== index));
   }
 
   function handleColumnCollapseExpand(index: number, collapsed: boolean): void {
-    setColumnsCollapsed((prev) => {
-      prev[index] = collapsed;
-      return [...prev];
-    });
+    setColumnsCollapsed((prev) => prev.map((value, columnIndex) => (columnIndex === index ? collapsed : value)));
   }
 
   useDragAndDropMonitor({

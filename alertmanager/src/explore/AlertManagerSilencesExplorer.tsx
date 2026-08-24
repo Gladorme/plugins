@@ -23,8 +23,9 @@ import type { ReactElement } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 
 import { SilenceForm } from '../components/SilenceForm';
-import type { AlertManagerClient, PostableSilence } from '../model';
-import { DEFAULT_ALERTMANAGER } from '../model';
+import type { AlertManagerClient } from '../model/alertmanager-client';
+import { DEFAULT_ALERTMANAGER } from '../model/alertmanager-selectors';
+import type { PostableSilence } from '../model/api-types';
 
 interface SilencesExplorerQueryParams {
   queries?: QueryDefinition[];

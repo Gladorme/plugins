@@ -18,16 +18,18 @@ import { produce } from 'immer';
 import type { ReactElement } from 'react';
 import { useId } from 'react';
 
-import { ProfileTypeSelector, Service, Filters } from '../../components';
-import type { PyroscopeDatasourceSelector } from '../../model';
+import { Filters } from '../../components/Filters';
+import { ProfileTypeSelector } from '../../components/ProfileTypeSelector';
+import { Service } from '../../components/Service';
+import type { PyroscopeDatasourceSelector } from '../../model/pyroscope-selectors';
 import {
   DEFAULT_PYROSCOPE,
   isDefaultPyroscopeSelector,
   isPyroscopeDatasourceSelector,
   PYROSCOPE_DATASOURCE_KIND,
-} from '../../model';
+} from '../../model/pyroscope-selectors';
 import type { ProfileQueryEditorProps } from './query-editor-model';
-import { useMaxNodesState, useProfileTypeState, useServiceState, useFiltersState } from './query-editor-model';
+import { useFiltersState, useMaxNodesState, useProfileTypeState, useServiceState } from './query-editor-model';
 
 export function PyroscopeProfileQueryEditor(props: ProfileQueryEditorProps): ReactElement {
   const { onChange, value } = props;

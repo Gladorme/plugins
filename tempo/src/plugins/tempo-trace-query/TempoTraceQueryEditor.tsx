@@ -18,10 +18,17 @@ import { produce } from 'immer';
 import type { ReactElement } from 'react';
 import { useCallback, useId, useState } from 'react';
 
-import { TraceQLEditor, filterToTraceQL, traceQLToFilter } from '../../components';
 import { AttributeFilters } from '../../components/AttributeFilters';
-import type { TempoClient } from '../../model';
-import { DEFAULT_TEMPO, isDefaultTempoSelector, isTempoDatasourceSelector, TEMPO_DATASOURCE_KIND } from '../../model';
+import { filterToTraceQL } from '../../components/filter/filter_to_traceql';
+import { traceQLToFilter } from '../../components/filter/traceql_to_filter';
+import { TraceQLEditor } from '../../components/TraceQLEditor';
+import type { TempoClient } from '../../model/tempo-client';
+import {
+  DEFAULT_TEMPO,
+  isDefaultTempoSelector,
+  isTempoDatasourceSelector,
+  TEMPO_DATASOURCE_KIND,
+} from '../../model/tempo-selectors';
 import type { TraceQueryEditorProps } from './query-editor-model';
 import { useQueryState } from './query-editor-model';
 

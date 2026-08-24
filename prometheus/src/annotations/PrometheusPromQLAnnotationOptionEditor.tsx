@@ -18,9 +18,15 @@ import { produce } from 'immer';
 import type { ReactElement } from 'react';
 import { useId } from 'react';
 
-import { PromQLEditor } from '../components';
-import type { PrometheusClient, PrometheusDatasourceSelector } from '../model';
-import { DEFAULT_PROM, isDefaultPromSelector, isPrometheusDatasourceSelector, PROM_DATASOURCE_KIND } from '../model';
+import { PromQLEditor } from '../components/PromQLEditor';
+import type { PrometheusClient } from '../model/prometheus-client';
+import type { PrometheusDatasourceSelector } from '../model/prometheus-selectors';
+import {
+  DEFAULT_PROM,
+  isDefaultPromSelector,
+  isPrometheusDatasourceSelector,
+  PROM_DATASOURCE_KIND,
+} from '../model/prometheus-selectors';
 
 export interface PrometheusAnnotationsQuerySpec {
   expr: string;

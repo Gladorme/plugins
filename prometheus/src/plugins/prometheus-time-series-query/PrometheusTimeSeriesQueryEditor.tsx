@@ -28,21 +28,21 @@ import { produce } from 'immer';
 import type { ReactElement } from 'react';
 import { useContext, useId, useMemo } from 'react';
 
-import { PromQLEditor } from '../../components';
-import type { DurationString, PrometheusClient, PrometheusDatasourceSelector } from '../../model';
+import { PromQLEditor } from '../../components/PromQLEditor';
+import type { DurationString } from '../../model/api-types';
+import type { PrometheusClient } from '../../model/prometheus-client';
+import type { PrometheusDatasourceSelector } from '../../model/prometheus-selectors';
 import {
   DEFAULT_PROM,
-  getDurationStringSeconds,
-  getPrometheusTimeRange,
-  getRangeStep,
   isDefaultPromSelector,
   isPrometheusDatasourceSelector,
   PROM_DATASOURCE_KIND,
-} from '../../model';
+} from '../../model/prometheus-selectors';
+import { getDurationStringSeconds, getPrometheusTimeRange, getRangeStep } from '../../model/time';
 import type { PrometheusDatasourceSpec } from '../types';
 import { DEFAULT_SCRAPE_INTERVAL } from '../types';
 import type { PrometheusTimeSeriesQueryEditorProps } from './query-editor-model';
-import { useQueryState, useFormatState, useMinStepState, useInstantState } from './query-editor-model';
+import { useFormatState, useInstantState, useMinStepState, useQueryState } from './query-editor-model';
 /**
  * The options editor component for editing a PrometheusTimeSeriesQuery's spec.
  */

@@ -27,7 +27,6 @@ import {
   YAxisLabel,
   useChartsTheme,
   ContentWithLegend,
-  useId,
   DEFAULT_TOOLTIP_CONFIG,
   getFormattedMultipleYAxes,
   DEFAULT_LEGEND,

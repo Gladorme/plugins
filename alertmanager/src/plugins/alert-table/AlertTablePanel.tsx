@@ -55,8 +55,8 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { SilenceForm } from '../../components/SilenceForm';
 import { StatusBadge } from '../../components/StatusBadge';
-import type { AlertManagerClient } from '../../model';
-import { extractDatasourceSelector } from '../../model';
+import type { AlertManagerClient } from '../../model/alertmanager-client';
+import { extractDatasourceSelector } from '../../model/alertmanager-selectors';
 import type { PostableSilence } from '../../model/api-types';
 import type {
   AlertAction,

@@ -64,7 +64,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import isEqual from 'lodash/isEqual';
 import merge from 'lodash/merge';
 import type { MouseEvent } from 'react';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
 import { AnnotationTooltip, buildAnnotationSeries } from './annotations/AnnotationTooltip';
 import type { TimeSeriesAnnotation } from './utils/annotation';
@@ -133,14 +133,20 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
   const isPinningEnabled = tooltipConfig.enablePinning && enablePinning;
   const chartRef = useRef<EChartsInstance>();
   const [showTooltip, setShowTooltip] = useState<boolean>(true);
-  const [tooltipPinnedCoords, setTooltipPinnedCoords] = useState<CursorCoordinates | null>(null);
-  const [pinnedCrosshair, setPinnedCrosshair] = useState<LineSeriesOption | null>(null);
+  const [localTooltipPinnedCoords, setTooltipPinnedCoords] = useState<CursorCoordinates | null>(null);
+  const [localPinnedCrosshair, setPinnedCrosshair] = useState<LineSeriesOption | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [hoveredAnnotation, setHoveredAnnotation] = useState<TimeSeriesAnnotation | null>(null);
   const [pinnedAnnotation, setPinnedAnnotation] = useState<TimeSeriesAnnotation | null>(null);
   const [pinnedAnnotationPos, setPinnedAnnotationPos] = useState<CursorCoordinates | null>(null);
   const { timeZone, formatWithUserTimeZone } = useTimeZone();
+  const pinIsSuperseded =
+    localTooltipPinnedCoords !== null &&
+    lastTooltipPinnedCoords !== null &&
+    !isEqual(lastTooltipPinnedCoords, localTooltipPinnedCoords);
+  const tooltipPinnedCoords = pinIsSuperseded ? null : localTooltipPinnedCoords;
+  const pinnedCrosshair = pinIsSuperseded ? null : localPinnedCrosshair;
 
   const getTimezoneAwareAxisFormatter = useCallback(
     (rangeMs: number): ((value: number) => string) => createTimezoneAwareAxisFormatter(rangeMs, timeZone),
@@ -340,23 +346,6 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
     getTimezoneAwareAxisFormatter,
   ]);
 
-  // Update adjacent charts so tooltip is unpinned when current chart is clicked.
-  useEffect(() => {
-    const animationFrame = requestAnimationFrame(() => {
-      // Only allow pinning one tooltip at a time. Multiple tooltips can only be pinned
-      // if Ctrl or Cmd was pressed, which leaves the shared coordinates unchanged.
-      setTooltipPinnedCoords((current) => {
-        if (current !== null && lastTooltipPinnedCoords !== null && !isEqual(lastTooltipPinnedCoords, current)) {
-          setPinnedCrosshair(null);
-          return null;
-        }
-        return current;
-      });
-    });
-
-    return (): void => cancelAnimationFrame(animationFrame);
-  }, [lastTooltipPinnedCoords, seriesMapping]);
-
   return (
     <Box
       style={{ height }}
@@ -374,14 +363,9 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
             plotCanvas: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY },
             target: e.target,
           };
-          setPinnedAnnotation((current) => {
-            if (current === hoveredAnnotation) {
-              setPinnedAnnotationPos(null);
-              return null;
-            }
-            setPinnedAnnotationPos(pinnedPos);
-            return hoveredAnnotation;
-          });
+          const shouldUnpinAnnotation = pinnedAnnotation === hoveredAnnotation;
+          setPinnedAnnotation(shouldUnpinAnnotation ? null : hoveredAnnotation);
+          setPinnedAnnotationPos(shouldUnpinAnnotation ? null : pinnedPos);
           return;
         }
 
@@ -416,26 +400,19 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
             target: e.target,
           };
 
-          setTooltipPinnedCoords((current) => {
-            if (current === null) {
-              return pinnedPos;
-            } else {
-              setPinnedCrosshair(null);
-              return null;
-            }
-          });
+          const shouldPinTooltip = tooltipPinnedCoords === null;
+          setTooltipPinnedCoords(shouldPinTooltip ? pinnedPos : null);
 
-          setPinnedCrosshair((current) => {
-            // Only add pinned crosshair line series when there is not one already in seriesMapping.
-            if (current === null) {
-              const cursorX = pointInGrid[0];
+          if (shouldPinTooltip) {
+            const cursorX = pointInGrid[0];
 
-              // Only need to loop through first dataset source since getCommonTimeScale ensures xAxis timestamps are consistent
-              const firstTimeSeriesValues = data[0]?.values;
-              const closestTimestamp = getClosestTimestamp(firstTimeSeriesValues, cursorX);
+            // Only need to loop through first dataset source since getCommonTimeScale ensures xAxis timestamps are consistent
+            const firstTimeSeriesValues = data[0]?.values;
+            const closestTimestamp = getClosestTimestamp(firstTimeSeriesValues, cursorX);
 
-              // Crosshair snaps to nearest timestamp since cursor may be slightly to left or right
-              const pinnedCrosshair = merge({}, DEFAULT_PINNED_CROSSHAIR, {
+            // Crosshair snaps to nearest timestamp since cursor may be slightly to left or right
+            setPinnedCrosshair(
+              merge({}, DEFAULT_PINNED_CROSSHAIR, {
                 markLine: {
                   data: [
                     {
@@ -443,13 +420,11 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
                     },
                   ],
                 },
-              } as LineSeriesOption);
-              return pinnedCrosshair;
-            } else {
-              // Clear previously set pinned crosshair
-              return null;
-            }
-          });
+              } as LineSeriesOption),
+            );
+          } else {
+            setPinnedCrosshair(null);
+          }
 
           if (!isControlKeyPressed) {
             setLastTooltipPinnedCoords(pinnedPos);
