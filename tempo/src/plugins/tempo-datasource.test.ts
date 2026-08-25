@@ -36,6 +36,20 @@ describe('applyTempoAttributeFilters', () => {
       ),
     ).toBe('{ resource.service.name = "payments" }');
   });
+
+  it('renders typed TraceQL intrinsic values without string quotes', () => {
+    expect(
+      applyTempoAttributeFilters(
+        '',
+        [
+          { key: 'kind', operator: '=', value: 'client' },
+          { key: 'span:status', operator: '!=', value: 'ok' },
+          { key: 'span:duration', operator: '=', value: '100ms' },
+        ],
+        [],
+      ),
+    ).toBe('{ kind = client && span:status != ok && span:duration = 100ms }');
+  });
 });
 
 describe('Tempo OTel explorer capability', () => {
@@ -57,6 +71,19 @@ describe('Tempo OTel explorer capability', () => {
           },
         },
       },
+    });
+  });
+
+  it('creates a valid kind enum filter', () => {
+    const query = TEMPO_OTEL_EXPLORER.traces.createQuery({
+      datasource: { kind: 'TempoDatasource' },
+      filters: [{ key: 'kind', operator: '=', value: 'client' }],
+    });
+
+    expect(query.spec.plugin.spec).toEqual({
+      datasource: { kind: 'TempoDatasource' },
+      limit: 20,
+      query: '{ kind = client }',
     });
   });
 

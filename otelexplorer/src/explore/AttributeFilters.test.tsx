@@ -84,7 +84,7 @@ describe('AttributeFilters', () => {
     expect(screen.getByDisplayValue('service.version')).not.toBeNull();
   });
 
-  it('loads attribute options only after the corresponding input has a value', async () => {
+  it('loads attribute names immediately and values after an attribute is selected', async () => {
     GET_ATTRIBUTE_NAMES.mockReset().mockResolvedValue(['service.name']);
     GET_ATTRIBUTE_VALUES.mockReset().mockResolvedValue(['checkout']);
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -94,14 +94,13 @@ describe('AttributeFilters', () => {
       </QueryClientProvider>,
     );
 
-    expect(GET_ATTRIBUTE_NAMES).not.toHaveBeenCalled();
     expect(GET_ATTRIBUTE_VALUES).not.toHaveBeenCalled();
+    await waitFor(() => expect(GET_ATTRIBUTE_NAMES).toHaveBeenCalledOnce());
+    fireEvent.mouseDown(screen.getByLabelText('Attribute value'));
+    expect(screen.queryByText(/Loading/)).toBeNull();
+    fireEvent.keyDown(screen.getByLabelText('Attribute value'), { key: 'Escape' });
 
     fireEvent.change(screen.getByLabelText('Attribute name'), { target: { value: 'service' } });
-    await waitFor(() => expect(GET_ATTRIBUTE_NAMES).toHaveBeenCalledOnce());
-    expect(GET_ATTRIBUTE_VALUES).not.toHaveBeenCalled();
-
-    fireEvent.change(screen.getByLabelText('Attribute value'), { target: { value: 'check' } });
     await waitFor(() => expect(GET_ATTRIBUTE_VALUES).toHaveBeenCalledOnce());
     expect(GET_ATTRIBUTE_VALUES).toHaveBeenCalledWith(expect.objectContaining({ attribute: 'service', filters: [] }));
   });

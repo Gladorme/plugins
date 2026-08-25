@@ -20,6 +20,23 @@ const SIGNAL_FIELD_TAGS: Record<string, string> = {
   'trace.span.name': 'name',
 };
 
+const TRACEQL_LITERAL_INTRINSICS = new Set([
+  'kind',
+  'span:kind',
+  'status',
+  'span:status',
+  'duration',
+  'span:duration',
+  'traceDuration',
+  'trace:duration',
+  'childCount',
+  'span:childCount',
+  'event:timeSinceStart',
+  'nestedSetLeft',
+  'nestedSetRight',
+  'nestedSetParent',
+]);
+
 export interface ExplorerAttributeFilter {
   key: string;
   operator: '=' | '!=' | '=~' | '!~';
@@ -58,6 +75,12 @@ function escapeMatcherValue(value: string): string {
 }
 
 function attributeMatcher(filter: ExplorerAttributeFilter): string {
+  if (TRACEQL_LITERAL_INTRINSICS.has(filter.key)) {
+    if (filter.operator === '=~' || filter.operator === '!~') {
+      throw new Error(`TraceQL intrinsic ${filter.key} does not support the ${filter.operator} operator.`);
+    }
+    return `${filter.key} ${filter.operator} ${filter.value.trim()}`;
+  }
   return `${filter.key} ${filter.operator} "${escapeMatcherValue(filter.value)}"`;
 }
 

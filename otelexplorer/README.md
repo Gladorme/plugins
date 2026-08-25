@@ -19,8 +19,8 @@ Each signal has a small set of queryless controls for its most common investigat
 
 Datasources may provide metric names, semantic signal-field values, attribute names, and attribute values. The
 explorer displays suggestions as free-form autocomplete inputs, so users can still enter values when a backend does not
-provide discovery APIs. Attribute name and value suggestions are loaded only after the corresponding input contains
-text, avoiding broad metadata requests for empty filter rows.
+provide discovery APIs. Attribute names load when a filter row is added; attribute values load after an attribute name
+is selected. Disabled suggestion queries do not display a loading state.
 
 ```ts
 import type { OTelExplorerDatasourcePlugin } from '@perses-dev/otel-explorer-plugin';

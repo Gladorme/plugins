@@ -84,7 +84,7 @@ function SignalFieldAutocomplete({
   value,
 }: SignalFieldAutocompleteProps): ReactElement {
   const validFilters = useMemo(() => validAttributeFilters(filters), [filters]);
-  const { data: discoveredOptions = EMPTY_OPTIONS, isLoading } = useQuery({
+  const { data: discoveredOptions = EMPTY_OPTIONS, isFetching } = useQuery({
     enabled: context !== undefined && capability.getSignalFieldValues !== undefined,
     queryKey: [
       'otelExplorer',
@@ -118,7 +118,7 @@ function SignalFieldAutocomplete({
     (params: AutocompleteRenderInputParams): ReactElement => {
       const endAdornment = (
         <InputAdornment position="end">
-          {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
+          {isFetching ? <CircularProgress color="inherit" size={20} /> : null}
           {params.InputProps.endAdornment}
         </InputAdornment>
       );
@@ -131,7 +131,7 @@ function SignalFieldAutocomplete({
         />
       );
     },
-    [isLoading, label, placeholder],
+    [isFetching, label, placeholder],
   );
 
   return (
@@ -141,7 +141,7 @@ function SignalFieldAutocomplete({
       inputValue={value}
       value={value}
       onInputChange={handleChange}
-      loading={isLoading}
+      loading={isFetching}
       sx={FIELD_SX}
       renderInput={renderInput}
     />
@@ -158,7 +158,7 @@ interface SignalControlsProps {
 
 function MetricControls({ capability, context, filters, inputs, onChange }: SignalControlsProps): ReactElement {
   const validFilters = useMemo(() => validAttributeFilters(filters), [filters]);
-  const { data: metricNames = EMPTY_OPTIONS, isLoading } = useQuery({
+  const { data: metricNames = EMPTY_OPTIONS, isFetching } = useQuery({
     enabled: context !== undefined && capability.getMetricNames !== undefined,
     queryKey: [
       'otelExplorer',
@@ -187,7 +187,7 @@ function MetricControls({ capability, context, filters, inputs, onChange }: Sign
     (params: AutocompleteRenderInputParams): ReactElement => {
       const endAdornment = (
         <InputAdornment position="end">
-          {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
+          {isFetching ? <CircularProgress color="inherit" size={20} /> : null}
           {params.InputProps.endAdornment}
         </InputAdornment>
       );
@@ -200,7 +200,7 @@ function MetricControls({ capability, context, filters, inputs, onChange }: Sign
         />
       );
     },
-    [isLoading],
+    [isFetching],
   );
 
   return (
@@ -211,7 +211,7 @@ function MetricControls({ capability, context, filters, inputs, onChange }: Sign
         inputValue={inputs.metricName}
         value={inputs.metricName}
         onInputChange={handleMetricNameChange}
-        loading={isLoading}
+        loading={isFetching}
         sx={WIDE_FIELD_SX}
         renderInput={renderMetricNameInput}
       />
