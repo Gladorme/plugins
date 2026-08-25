@@ -17,6 +17,14 @@ Need a list of options.
 
 ## Available options
 
+### EnableExemplars
+
+```golang
+timeseries.EnableExemplars()
+```
+
+Fetch and display exemplars for compatible time series queries. Disabled when this option is omitted.
+
 ### WithLegend
 
 ```golang

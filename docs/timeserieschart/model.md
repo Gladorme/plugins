@@ -3,6 +3,7 @@
 ```yaml
 kind: "TimeSeriesChart"
 spec:
+  enableExemplars: <boolean | default = false> # Optional
   legend: <Legend-with-values specification> # Optional
   tooltip: <Tooltip specification> # Optional
   yAxis: <YAxis specification> # Optional

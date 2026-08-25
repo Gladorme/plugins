@@ -11,8 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Button } from '@mui/material';
+import { Button, Switch } from '@mui/material';
 import {
+  OptionsEditorControl,
   OptionsEditorGroup,
   OptionsEditorGrid,
   OptionsEditorColumn,
@@ -21,7 +22,8 @@ import {
 } from '@perses-dev/components';
 import { LegendOptionsEditor, LegendOptionsEditorProps } from '@perses-dev/plugin-system';
 import { produce } from 'immer';
-import { ReactElement } from 'react';
+import { createElement, useCallback } from 'react';
+import type { ChangeEvent, ReactElement } from 'react';
 
 import {
   TimeSeriesChartOptions,
@@ -31,6 +33,8 @@ import {
 } from './time-series-chart-model';
 import { VisualOptionsEditor, VisualOptionsEditorProps } from './VisualOptionsEditor';
 import { YAxisOptionsEditor, YAxisOptionsEditorProps } from './YAxisOptionsEditor';
+
+const EXEMPLARS_INPUT_PROPS = { 'aria-label': 'Enable exemplars' };
 
 export function TimeSeriesChartGeneralSettings(props: TimeSeriesChartOptionsEditorProps): ReactElement {
   const { onChange, value } = props;
@@ -68,6 +72,22 @@ export function TimeSeriesChartGeneralSettings(props: TimeSeriesChartOptionsEdit
     );
   };
 
+  const handleExemplarsChange = useCallback(
+    (_event: ChangeEvent<HTMLInputElement>, checked: boolean): void => {
+      onChange(
+        produce(value, (draft: TimeSeriesChartOptions) => {
+          draft.enableExemplars = checked ? true : undefined;
+        }),
+      );
+    },
+    [onChange, value],
+  );
+  const exemplarControl = createElement(Switch, {
+    checked: value.enableExemplars ?? false,
+    onChange: handleExemplarsChange,
+    inputProps: EXEMPLARS_INPUT_PROPS,
+  });
+
   return (
     <OptionsEditorGrid>
       <OptionsEditorColumn>
@@ -79,6 +99,9 @@ export function TimeSeriesChartGeneralSettings(props: TimeSeriesChartOptionsEdit
       </OptionsEditorColumn>
       <OptionsEditorColumn>
         <ThresholdsEditor hideDefault thresholds={value.thresholds} onChange={handleThresholdsChange} />
+        <OptionsEditorGroup title="Exemplars">
+          <OptionsEditorControl label="Enable exemplars" control={exemplarControl} />
+        </OptionsEditorGroup>
         <OptionsEditorGroup title="Reset Settings">
           <Button
             variant="outlined"
@@ -91,6 +114,7 @@ export function TimeSeriesChartGeneralSettings(props: TimeSeriesChartOptionsEdit
                   draft.legend = undefined;
                   draft.visual = undefined;
                   draft.thresholds = undefined;
+                  draft.enableExemplars = undefined;
                 }),
               );
             }}

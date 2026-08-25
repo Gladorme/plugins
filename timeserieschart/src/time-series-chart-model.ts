@@ -31,6 +31,8 @@ export interface TimeSeriesChartDefinition extends Definition<TimeSeriesChartOpt
  * The Options object supported by the TimeSeriesChartPanel plugin.
  */
 export interface TimeSeriesChartOptions {
+  /** Fetch and display exemplars for compatible time series queries. Disabled by default. */
+  enableExemplars?: boolean;
   legend?: LegendSpecOptions;
   yAxis?: TimeSeriesChartYAxisOptions;
   thresholds?: ThresholdOptions;

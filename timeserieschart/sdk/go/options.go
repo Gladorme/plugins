@@ -15,6 +15,13 @@ package timeseries
 
 import "github.com/perses/perses/go-sdk/common"
 
+func EnableExemplars() Option {
+	return func(builder *Builder) error {
+		builder.EnableExemplars = true
+		return nil
+	}
+}
+
 func WithLegend(legend Legend) Option {
 	return func(builder *Builder) error {
 		builder.Legend = &legend

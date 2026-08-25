@@ -18,6 +18,16 @@ import (
 	"testing"
 )
 
+func TestEnableExemplars(t *testing.T) {
+	builder := &Builder{}
+	if err := EnableExemplars()(builder); err != nil {
+		t.Fatalf("EnableExemplars failed: %v", err)
+	}
+	if !builder.EnableExemplars {
+		t.Fatal("expected exemplars to be enabled")
+	}
+}
+
 func TestWithVisual_EmptyPalette(t *testing.T) {
 	visual := Visual{
 		Display:   LineDisplay,

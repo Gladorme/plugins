@@ -19,6 +19,7 @@ import (
 
 kind: "TimeSeriesChart"
 spec: close({
+	enableExemplars?: bool
 	legend?:        common.#legendWithValues
 	tooltip?:       #tooltip
 	yAxis?:         #yAxis

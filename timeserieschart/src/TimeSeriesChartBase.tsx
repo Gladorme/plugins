@@ -271,7 +271,10 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
 
   // Generate annotation series for ECharts markArea (range), markLine (point), and markPoint (markers under X-axis)
   const annotationSeries = useMemo(() => buildAnnotationSeries(annotations), [annotations]);
-  const exemplarSeries = useMemo(() => buildExemplarSeries(exemplars ?? [], exemplarColor), [exemplarColor, exemplars]);
+  const exemplarSeries = useMemo(
+    () => buildExemplarSeries(exemplars ?? [], exemplarColor, data),
+    [data, exemplarColor, exemplars],
+  );
 
   const { noDataOption } = chartsTheme;
 

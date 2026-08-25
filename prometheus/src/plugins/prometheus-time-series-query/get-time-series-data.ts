@@ -120,24 +120,25 @@ export const getTimeSeriesData: TimeSeriesQueryPlugin<PrometheusTimeSeriesQueryS
   // Make the request to Prom
 
   let response;
-  let exemplarResponse;
-  let exemplarRequestError: unknown;
+  let exemplarQuery:
+    | {
+        datasource: typeof selectedDatasource;
+        query: string;
+        requestOptions: typeof interpolatedOptions;
+        start: number;
+        end: number;
+      }
+    | undefined;
   // `spec.instant` is a per-query override: `true` forces instant, `false` forces range.
   // When left unset (Auto), defer to the panel-provided `context.mode`.
   const isInstant = spec.instant ?? context.mode === 'instant';
   if (isInstant) {
     response = await client.instantQuery({ query, time: end }, { ...interpolatedOptions, signal: abortSignal });
   } else {
-    // Start both independent requests together. A failed or unsupported exemplar endpoint must not hide metric data.
-    // The tracing datasource is optional: without one, the chart still displays exemplar labels such as trace/span IDs.
-    const exemplarPromise = client
-      .exemplarQuery({ query, start, end }, { ...interpolatedOptions, signal: abortSignal })
-      .catch((error: unknown) => {
-        exemplarRequestError = error;
-        return undefined;
-      });
+    // Exemplar loading is controlled by the consuming panel. Expose everything it needs to make the optional request
+    // without forcing every range query to pay for an additional API call.
+    exemplarQuery = { datasource: selectedDatasource, query, requestOptions: interpolatedOptions, start, end };
     response = await client.rangeQuery({ query, start, end, step }, { ...interpolatedOptions, signal: abortSignal });
-    exemplarResponse = await exemplarPromise;
   }
 
   // TODO: What about error responses from Prom that have a response body?
@@ -155,18 +156,6 @@ export const getTimeSeriesData: TimeSeriesQueryPlugin<PrometheusTimeSeriesQueryS
       });
     }
   }
-  if (exemplarRequestError !== undefined) {
-    notices.push({
-      type: 'warning',
-      message: `Unable to load exemplars: ${exemplarRequestError instanceof Error ? exemplarRequestError.message : 'unknown error'}`,
-    });
-  } else if (exemplarResponse?.status === 'error') {
-    notices.push({
-      type: 'warning',
-      message: `Unable to load exemplars: ${exemplarResponse.error}`,
-    });
-  }
-
   // Transform response
   const chartData: TimeSeriesData = {
     // Return the time range and step we actually used for the query
@@ -177,7 +166,7 @@ export const getTimeSeriesData: TimeSeriesQueryPlugin<PrometheusTimeSeriesQueryS
     metadata: {
       notices,
       executedQueryString: query,
-      exemplars: exemplarResponse?.status === 'success' ? exemplarResponse.data : undefined,
+      exemplarQuery,
       tracingDatasource: datasource.plugin.spec.tracingDatasource,
     },
   };

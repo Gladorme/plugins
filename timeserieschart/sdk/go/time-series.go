@@ -105,12 +105,13 @@ type YAxis struct {
 }
 
 type PluginSpec struct {
-	Legend        *Legend              `json:"legend,omitempty" yaml:"legend,omitempty"`
-	Tooltip       *Tooltip             `json:"tooltip,omitempty" yaml:"tooltip,omitempty"`
-	YAxis         *YAxis               `json:"yAxis,omitempty" yaml:"yAxis,omitempty"`
-	Thresholds    *common.Thresholds   `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
-	Visual        *Visual              `json:"visual,omitempty" yaml:"visual,omitempty"`
-	QuerySettings *[]QuerySettingsItem `json:"querySettings,omitempty" yaml:"querySettings,omitempty"`
+	EnableExemplars bool                 `json:"enableExemplars,omitempty" yaml:"enableExemplars,omitempty"`
+	Legend          *Legend              `json:"legend,omitempty" yaml:"legend,omitempty"`
+	Tooltip         *Tooltip             `json:"tooltip,omitempty" yaml:"tooltip,omitempty"`
+	YAxis           *YAxis               `json:"yAxis,omitempty" yaml:"yAxis,omitempty"`
+	Thresholds      *common.Thresholds   `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
+	Visual          *Visual              `json:"visual,omitempty" yaml:"visual,omitempty"`
+	QuerySettings   *[]QuerySettingsItem `json:"querySettings,omitempty" yaml:"querySettings,omitempty"`
 }
 
 type ColorMode string

@@ -1,6 +1,7 @@
 {
   "kind": "TimeSeriesChart",
   "spec": {
+    "enableExemplars": true,
     "yAxis": {
       "show": true,
       "label": "CPU",

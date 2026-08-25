@@ -79,11 +79,20 @@ describe('exemplars', () => {
       value: 42.5,
     };
 
-    const series = buildExemplarSeries([exemplar], '#ff0000');
+    const series = buildExemplarSeries([exemplar], '#ff0000', [
+      {
+        name: 'api',
+        labels: { service: 'api' },
+        values: [
+          [123000, 1000],
+          [124000, 2000],
+        ],
+      },
+    ]);
 
     expect(series[0]?.markPoint).toMatchObject({
       symbol: 'diamond',
-      data: [{ coord: [123250, 42.5], exemplarIndex: 0, itemStyle: { color: '#ff0000' } }],
+      data: [{ coord: [123250, 1250], exemplarIndex: 0, itemStyle: { color: '#ff0000' } }],
     });
   });
 

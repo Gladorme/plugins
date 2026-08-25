@@ -1,7 +1,8 @@
 # Prometheus Plugin
 
-Time series charts display Prometheus exemplars without additional configuration. The datasource editor can optionally
-associate a Tempo or Jaeger datasource to load trace details only when an exemplar is selected.
+Time series charts can opt in to fetching Prometheus exemplars from their panel settings. The option is disabled by
+default. The datasource editor can optionally associate a Tempo or Jaeger datasource to load trace details only when an
+exemplar is selected.
 
 ### How to install
 

@@ -206,38 +206,33 @@ describe('PrometheusTimeSeriesQuery', () => {
     expect(promStubClient.rangeQuery).not.toHaveBeenCalled();
   });
 
-  it('should request exemplars for range queries when a tracing datasource is configured', async () => {
+  it('should expose exemplar request metadata for range queries', async () => {
     datasource.tracingDatasource = { kind: 'TempoDatasource', name: 'tempo' };
 
     const results = await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());
 
-    expect(promStubClient.exemplarQuery).toHaveBeenCalledTimes(1);
-    expect(results.metadata?.exemplars).toEqual([
-      {
-        seriesLabels: { __name__: 'up' },
-        exemplars: [{ labels: { trace_id: 'abc123' }, value: '10', timestamp: 1686141338.877 }],
-      },
-    ]);
+    expect(promStubClient.exemplarQuery).not.toHaveBeenCalled();
+    expect(results.metadata?.exemplarQuery).toMatchObject({
+      datasource: { kind: 'PrometheusDatasource' },
+      query: 'up',
+    });
     expect(results.metadata?.tracingDatasource).toEqual({ kind: 'TempoDatasource', name: 'tempo' });
   });
 
-  it('should request exemplars without a tracing datasource', async () => {
+  it('should expose exemplar request metadata without a tracing datasource', async () => {
     const results = await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());
 
-    expect(promStubClient.exemplarQuery).toHaveBeenCalledTimes(1);
-    expect(results.metadata?.exemplars).toHaveLength(1);
+    expect(promStubClient.exemplarQuery).not.toHaveBeenCalled();
+    expect(results.metadata?.exemplarQuery).toMatchObject({ query: 'up' });
     expect(results.metadata?.tracingDatasource).toBeUndefined();
   });
 
-  it('should preserve metric data when the exemplar request fails', async () => {
-    (promStubClient.exemplarQuery as Mock).mockRejectedValueOnce(new Error('endpoint unavailable'));
+  it('should not expose exemplar request metadata for instant queries', async () => {
+    const results = await PrometheusTimeSeriesQuery.getTimeSeriesData(
+      { query: 'up', instant: true },
+      createStubContext(),
+    );
 
-    const results = await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());
-
-    expect(results.series).toHaveLength(1);
-    expect(results.metadata?.notices).toContainEqual({
-      type: 'warning',
-      message: 'Unable to load exemplars: endpoint unavailable',
-    });
+    expect(results.metadata?.exemplarQuery).toBeUndefined();
   });
 });

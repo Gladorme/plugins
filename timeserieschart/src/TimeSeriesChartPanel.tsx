@@ -47,6 +47,7 @@ import type { GridComponentOption } from 'echarts';
 import merge from 'lodash/merge';
 import { ReactElement, useMemo, useRef, useState } from 'react';
 
+import { useTimeSeriesExemplars } from './exemplars/useTimeSeriesExemplars';
 import {
   TimeSeriesChartOptions,
   DEFAULT_FORMAT,
@@ -63,7 +64,6 @@ import {
   getThresholdSeries,
   convertPercentThreshold,
 } from './utils/data-transform';
-import { getTimeSeriesExemplars } from './utils/exemplar';
 import { getSeriesColor } from './utils/palette-gen';
 
 export type TimeSeriesChartProps = PanelProps<TimeSeriesChartOptions, TimeSeriesData>;
@@ -79,7 +79,7 @@ export type TimeSeriesChartProps = PanelProps<TimeSeriesChartOptions, TimeSeries
 
 export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement | null {
   const {
-    spec: { thresholds, yAxis, tooltip, querySettings: querySettingsList },
+    spec: { enableExemplars, thresholds, yAxis, tooltip, querySettings: querySettingsList },
     contentDimensions,
     queryResults,
   } = props;
@@ -164,7 +164,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
     () => convertAnnotationToTimeSeriesAnnotation(annotationsWithData),
     [annotationsWithData],
   );
-  const exemplars = useMemo(() => getTimeSeriesExemplars(queryResults), [queryResults]);
+  const exemplars = useTimeSeriesExemplars(queryResults, enableExemplars ?? false);
 
   // Populate series data based on query results
   const {
@@ -305,6 +305,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
             timeChartData.push({
               name: formattedSeriesName,
               values: renderedValues,
+              labels: timeSeries.labels,
             });
           }
 

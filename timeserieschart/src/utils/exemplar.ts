@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { DatasourceSelector, TimeSeriesData } from '@perses-dev/spec';
+import type { DatasourceSelector, TimeSeries, TimeSeriesData, TimeSeriesValueTuple } from '@perses-dev/spec';
 import type { LineSeriesOption } from 'echarts';
 
 export interface TimeSeriesExemplar {
@@ -41,7 +41,7 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string');
 }
 
-function isDatasourceSelector(value: unknown): value is DatasourceSelector {
+export function isDatasourceSelector(value: unknown): value is DatasourceSelector {
   return (
     isRecord(value) && typeof value.kind === 'string' && (value.name === undefined || typeof value.name === 'string')
   );
@@ -50,38 +50,44 @@ function isDatasourceSelector(value: unknown): value is DatasourceSelector {
 export function getTimeSeriesExemplars(queryResults: TimeSeriesResult[]): TimeSeriesExemplar[] {
   return queryResults.flatMap(({ data }) => {
     const metadata = data.metadata;
-    if (!metadata || !Array.isArray(metadata.exemplars)) {
-      return [];
-    }
-    const tracingDatasource = isDatasourceSelector(metadata.tracingDatasource) ? metadata.tracingDatasource : undefined;
+    if (!metadata) return [];
+    return parseTimeSeriesExemplars(metadata.exemplars, metadata.tracingDatasource);
+  });
+}
 
-    return metadata.exemplars.flatMap((group) => {
-      if (!isRecord(group) || !isStringRecord(group.seriesLabels) || !Array.isArray(group.exemplars)) return [];
-      const seriesLabels = group.seriesLabels;
+export function parseTimeSeriesExemplars(
+  exemplarData: unknown,
+  tracingDatasourceValue?: unknown,
+): TimeSeriesExemplar[] {
+  if (!Array.isArray(exemplarData)) return [];
+  const tracingDatasource = isDatasourceSelector(tracingDatasourceValue) ? tracingDatasourceValue : undefined;
 
-      return group.exemplars.flatMap((exemplar) => {
-        if (
-          !isRecord(exemplar) ||
-          !isStringRecord(exemplar.labels) ||
-          typeof exemplar.value !== 'string' ||
-          typeof exemplar.timestamp !== 'number'
-        ) {
-          return [];
-        }
+  return exemplarData.flatMap((group) => {
+    if (!isRecord(group) || !isStringRecord(group.seriesLabels) || !Array.isArray(group.exemplars)) return [];
+    const seriesLabels = group.seriesLabels;
 
-        const value = Number(exemplar.value);
-        if (!Number.isFinite(value)) return [];
+    return group.exemplars.flatMap((exemplar) => {
+      if (
+        !isRecord(exemplar) ||
+        !isStringRecord(exemplar.labels) ||
+        typeof exemplar.value !== 'string' ||
+        typeof exemplar.timestamp !== 'number'
+      ) {
+        return [];
+      }
 
-        return [
-          {
-            labels: exemplar.labels,
-            seriesLabels,
-            timestamp: exemplar.timestamp * 1000,
-            ...(tracingDatasource ? { tracingDatasource } : {}),
-            value,
-          },
-        ];
-      });
+      const value = Number(exemplar.value);
+      if (!Number.isFinite(value)) return [];
+
+      return [
+        {
+          labels: exemplar.labels,
+          seriesLabels,
+          timestamp: exemplar.timestamp * 1000,
+          ...(tracingDatasource ? { tracingDatasource } : {}),
+          value,
+        },
+      ];
     });
   });
 }
@@ -91,8 +97,21 @@ export function getExemplarTraceId(exemplar: TimeSeriesExemplar): string | undef
 }
 
 /** Build a dedicated mark-point series so exemplar interaction does not affect metric datasets. */
-export function buildExemplarSeries(exemplars: TimeSeriesExemplar[], color: string): LineSeriesOption[] {
+export function buildExemplarSeries(
+  exemplars: TimeSeriesExemplar[],
+  color: string,
+  timeSeries: TimeSeries[] = [],
+): LineSeriesOption[] {
   if (exemplars.length === 0) return [];
+
+  const seriesByLabels = new Map<string, TimeSeries>();
+  const labeledTimeSeries: TimeSeries[] = [];
+  for (const series of timeSeries) {
+    if (series.labels) {
+      seriesByLabels.set(getLabelsKey(series.labels), series);
+      labeledTimeSeries.push(series);
+    }
+  }
 
   return [
     {
@@ -106,15 +125,78 @@ export function buildExemplarSeries(exemplars: TimeSeriesExemplar[], color: stri
         symbol: 'diamond',
         symbolSize: 12,
         label: { show: false },
-        data: exemplars.map((exemplar, exemplarIndex) => ({
-          name: getExemplarTraceId(exemplar) ?? `Exemplar ${exemplarIndex + 1}`,
-          coord: [exemplar.timestamp, exemplar.value],
-          exemplarIndex,
-          itemStyle: { color },
-        })),
+        data: exemplars.map((exemplar, exemplarIndex) => {
+          const matchingSeries = getMatchingTimeSeries(exemplar.seriesLabels, seriesByLabels, labeledTimeSeries);
+          return {
+            name: getExemplarTraceId(exemplar) ?? `Exemplar ${exemplarIndex + 1}`,
+            coord: [exemplar.timestamp, getRenderedValue(matchingSeries?.values, exemplar.timestamp) ?? exemplar.value],
+            exemplarIndex,
+            itemStyle: { color },
+          };
+        }),
       },
     },
   ];
+}
+
+function getMatchingTimeSeries(
+  exemplarLabels: Record<string, string>,
+  seriesByLabels: Map<string, TimeSeries>,
+  timeSeries: TimeSeries[],
+): TimeSeries | undefined {
+  const exactMatch = seriesByLabels.get(getLabelsKey(exemplarLabels));
+  if (exactMatch) return exactMatch;
+
+  let bestMatch: TimeSeries | undefined;
+  let bestScore = 0;
+  for (const series of timeSeries) {
+    let score = 0;
+    let conflict = false;
+    for (const [labelName, labelValue] of Object.entries(series.labels ?? {})) {
+      const exemplarValue = exemplarLabels[labelName];
+      if (exemplarValue === undefined) continue;
+      if (exemplarValue !== labelValue) {
+        conflict = true;
+        break;
+      }
+      score += 1;
+    }
+    if (!conflict && score > bestScore) {
+      bestMatch = series;
+      bestScore = score;
+    }
+  }
+
+  return bestMatch ?? timeSeries[0];
+}
+
+function getLabelsKey(labels: Record<string, string>): string {
+  return JSON.stringify(Object.entries(labels).toSorted(([left], [right]) => left.localeCompare(right)));
+}
+
+function getRenderedValue(values: TimeSeriesValueTuple[] | undefined, timestamp: number): number | undefined {
+  if (!values || values.length === 0) return undefined;
+
+  let low = 0;
+  let high = values.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    const middleTimestamp = values[middle]?.[0];
+    if (middleTimestamp !== undefined && middleTimestamp < timestamp) low = middle + 1;
+    else high = middle;
+  }
+
+  const next = values[low];
+  const previous = values[low - 1];
+  const nextValue = typeof next?.[1] === 'number' ? next[1] : undefined;
+  const previousValue = typeof previous?.[1] === 'number' ? previous[1] : undefined;
+  if (next?.[0] === timestamp) return nextValue;
+  if (previousValue === undefined) return nextValue;
+  if (nextValue === undefined || next === undefined || previous === undefined) return previousValue;
+
+  const interval = next[0] - previous[0];
+  if (interval <= 0) return previousValue;
+  return previousValue + ((nextValue - previousValue) * (timestamp - previous[0])) / interval;
 }
 
 export interface TraceClient {
