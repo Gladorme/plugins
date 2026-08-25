@@ -221,14 +221,15 @@ describe('PrometheusTimeSeriesQuery', () => {
     expect(results.metadata?.tracingDatasource).toEqual({ kind: 'TempoDatasource', name: 'tempo' });
   });
 
-  it('should not request exemplars without a tracing datasource', async () => {
-    await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());
+  it('should request exemplars without a tracing datasource', async () => {
+    const results = await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());
 
-    expect(promStubClient.exemplarQuery).not.toHaveBeenCalled();
+    expect(promStubClient.exemplarQuery).toHaveBeenCalledTimes(1);
+    expect(results.metadata?.exemplars).toHaveLength(1);
+    expect(results.metadata?.tracingDatasource).toBeUndefined();
   });
 
   it('should preserve metric data when the exemplar request fails', async () => {
-    datasource.tracingDatasource = { kind: 'TempoDatasource', name: 'tempo' };
     (promStubClient.exemplarQuery as Mock).mockRejectedValueOnce(new Error('endpoint unavailable'));
 
     const results = await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());

@@ -11,14 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Autocomplete, Box, IconButton, TextField, Typography } from '@mui/material';
-import type { AutocompleteRenderInputParams } from '@mui/material';
+import { Box, IconButton, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { QueryParamValues } from '@perses-dev/components';
-import { HTTPSettingsEditor, useListDatasourceSelectItems } from '@perses-dev/plugin-system';
-import type { DatasourceSelector, DurationString } from '@perses-dev/spec';
+import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
+import type { DurationString } from '@perses-dev/spec';
 import MinusIcon from 'mdi-material-ui/Minus';
 import PlusIcon from 'mdi-material-ui/Plus';
-import { ReactElement, SyntheticEvent, useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import type { ChangeEvent, ReactElement } from 'react';
 
 import { DEFAULT_SCRAPE_INTERVAL, PrometheusDatasourceSpec } from './types';
 
@@ -29,32 +29,8 @@ interface QueryParamEntry {
   value: string;
 }
 
-interface TracingDatasourceOption {
-  label: string;
-  selector: DatasourceSelector;
-}
-
 const TRACING_DATASOURCE_KINDS = ['TempoDatasource', 'JaegerDatasource'] as const;
 const TRACING_DATASOURCE_SX = { mt: 2 };
-
-function getTracingDatasourceOptionLabel(option: TracingDatasourceOption): string {
-  return option.label;
-}
-
-function isSameTracingDatasourceOption(option: TracingDatasourceOption, selected: TracingDatasourceOption): boolean {
-  return option.selector.kind === selected.selector.kind && option.selector.name === selected.selector.name;
-}
-
-function renderTracingDatasourceInput(params: AutocompleteRenderInputParams): ReactElement {
-  return (
-    <TextField
-      {...params}
-      size="small"
-      label="Tracing Datasource"
-      helperText="Enables exemplars and lazily retrieves the trace selected from the chart."
-    />
-  );
-}
 
 export interface PrometheusDatasourceEditorProps {
   value: PrometheusDatasourceSpec;
@@ -64,37 +40,25 @@ export interface PrometheusDatasourceEditorProps {
 
 export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProps): ReactElement {
   const { value, onChange, isReadonly } = props;
-  const { data: tempoDatasources } = useListDatasourceSelectItems(TRACING_DATASOURCE_KINDS[0]);
-  const { data: jaegerDatasources } = useListDatasourceSelectItems(TRACING_DATASOURCE_KINDS[1]);
-
-  const tracingDatasourceOptions: TracingDatasourceOption[] = useMemo(
-    () =>
-      [tempoDatasources, jaegerDatasources].flatMap((groups) =>
-        (groups ?? []).flatMap((group) =>
-          group.items.flatMap((item) =>
-            item.overridden
-              ? []
-              : [
-                  {
-                    label: `${item.name} (${item.selector.kind})`,
-                    selector: { kind: item.selector.kind, name: item.selector.name },
-                  },
-                ],
-          ),
-        ),
-      ),
-    [jaegerDatasources, tempoDatasources],
-  );
-  const selectedTracingDatasource =
-    tracingDatasourceOptions.find(
-      ({ selector }) =>
-        selector.kind === value.tracingDatasource?.kind && selector.name === value.tracingDatasource.name,
-    ) ?? null;
-  const handleTracingDatasourceChange = useCallback(
-    (_event: SyntheticEvent, option: TracingDatasourceOption | null): void => {
+  const handleTracingDatasourceKindChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>): void => {
+      const kind = event.target.value;
       onChange({
         ...value,
-        tracingDatasource: option?.selector,
+        tracingDatasource: kind === '' ? undefined : { kind, name: value.tracingDatasource?.name || undefined },
+      });
+    },
+    [onChange, value],
+  );
+  const handleTracingDatasourceNameChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>): void => {
+      if (!value.tracingDatasource) return;
+      onChange({
+        ...value,
+        tracingDatasource: {
+          ...value.tracingDatasource,
+          name: event.target.value || undefined,
+        },
       });
     },
     [onChange, value],
@@ -233,16 +197,34 @@ export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProp
         onChange={(e) => onChange({ ...value, scrapeInterval: e.target.value as DurationString })}
         helperText="Set it to match the typical scrape interval used in your Prometheus instance."
       />
-      <Autocomplete
-        sx={TRACING_DATASOURCE_SX}
-        options={tracingDatasourceOptions}
-        value={selectedTracingDatasource}
-        readOnly={isReadonly}
-        getOptionLabel={getTracingDatasourceOptionLabel}
-        isOptionEqualToValue={isSameTracingDatasourceOption}
-        onChange={handleTracingDatasourceChange}
-        renderInput={renderTracingDatasourceInput}
-      />
+      <Stack direction="row" spacing={2} sx={TRACING_DATASOURCE_SX}>
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label="Tracing Datasource"
+          value={value.tracingDatasource?.kind ?? ''}
+          disabled={isReadonly}
+          onChange={handleTracingDatasourceKindChange}
+          helperText="Optional. Select Tempo or Jaeger to load trace details lazily."
+        >
+          <MenuItem value="">None</MenuItem>
+          {TRACING_DATASOURCE_KINDS.map((kind) => (
+            <MenuItem key={kind} value={kind}>
+              {kind === 'TempoDatasource' ? 'Tempo' : 'Jaeger'}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          fullWidth
+          size="small"
+          label="Tracing Datasource Name"
+          value={value.tracingDatasource?.name ?? ''}
+          disabled={isReadonly || !value.tracingDatasource}
+          onChange={handleTracingDatasourceNameChange}
+          helperText="Leave empty to use the default datasource of the selected kind."
+        />
+      </Stack>
       <HTTPSettingsEditor
         value={value}
         onChange={onChange}

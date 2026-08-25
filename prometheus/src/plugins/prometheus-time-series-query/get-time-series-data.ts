@@ -128,16 +128,14 @@ export const getTimeSeriesData: TimeSeriesQueryPlugin<PrometheusTimeSeriesQueryS
   if (isInstant) {
     response = await client.instantQuery({ query, time: end }, { ...interpolatedOptions, signal: abortSignal });
   } else {
-    // Start both independent requests together. Exemplars are enabled by associating a tracing datasource with
-    // Prometheus, while a failed or unsupported exemplar endpoint must not hide the metric data.
-    const exemplarPromise = datasource.plugin.spec.tracingDatasource
-      ? client
-          .exemplarQuery({ query, start, end }, { ...interpolatedOptions, signal: abortSignal })
-          .catch((error: unknown) => {
-            exemplarRequestError = error;
-            return undefined;
-          })
-      : undefined;
+    // Start both independent requests together. A failed or unsupported exemplar endpoint must not hide metric data.
+    // The tracing datasource is optional: without one, the chart still displays exemplar labels such as trace/span IDs.
+    const exemplarPromise = client
+      .exemplarQuery({ query, start, end }, { ...interpolatedOptions, signal: abortSignal })
+      .catch((error: unknown) => {
+        exemplarRequestError = error;
+        return undefined;
+      });
     response = await client.rangeQuery({ query, start, end, step }, { ...interpolatedOptions, signal: abortSignal });
     exemplarResponse = await exemplarPromise;
   }

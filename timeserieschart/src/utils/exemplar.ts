@@ -18,7 +18,7 @@ export interface TimeSeriesExemplar {
   labels: Record<string, string>;
   seriesLabels: Record<string, string>;
   timestamp: number;
-  tracingDatasource: DatasourceSelector;
+  tracingDatasource?: DatasourceSelector;
   value: number;
 }
 
@@ -50,10 +50,10 @@ function isDatasourceSelector(value: unknown): value is DatasourceSelector {
 export function getTimeSeriesExemplars(queryResults: TimeSeriesResult[]): TimeSeriesExemplar[] {
   return queryResults.flatMap(({ data }) => {
     const metadata = data.metadata;
-    if (!metadata || !isDatasourceSelector(metadata.tracingDatasource) || !Array.isArray(metadata.exemplars)) {
+    if (!metadata || !Array.isArray(metadata.exemplars)) {
       return [];
     }
-    const tracingDatasource = metadata.tracingDatasource;
+    const tracingDatasource = isDatasourceSelector(metadata.tracingDatasource) ? metadata.tracingDatasource : undefined;
 
     return metadata.exemplars.flatMap((group) => {
       if (!isRecord(group) || !isStringRecord(group.seriesLabels) || !Array.isArray(group.exemplars)) return [];
@@ -77,7 +77,7 @@ export function getTimeSeriesExemplars(queryResults: TimeSeriesResult[]): TimeSe
             labels: exemplar.labels,
             seriesLabels,
             timestamp: exemplar.timestamp * 1000,
-            tracingDatasource,
+            ...(tracingDatasource ? { tracingDatasource } : {}),
             value,
           },
         ];

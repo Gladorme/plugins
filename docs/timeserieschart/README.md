@@ -9,9 +9,9 @@ The Time Series Chart plugin displays time series data as line charts in Perses 
 - **General settings**: configure legend, various visual settings, Y axis, thresholds..
 - **Query settings**: define per-query customizations to have e.g different styling or unit for different trends.
 
-Prometheus exemplars are displayed as diamond markers when the Prometheus datasource has an associated tracing
-datasource. Hover a marker to inspect its labels and lazily retrieve a trace summary from Tempo or Jaeger; click the
-marker to pin the tooltip.
+Prometheus exemplars are displayed as diamond markers. Hover a marker to inspect its labels, including trace and span
+IDs. When the Prometheus datasource has an associated Tempo or Jaeger datasource, the tooltip retrieves an additional
+trace summary lazily. Click the marker to pin the tooltip.
 
 ## References
 

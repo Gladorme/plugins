@@ -19,7 +19,7 @@ spec:
 
   scrapeInterval: <duration> # Optional
 
-  # Enables exemplars and identifies the datasource used to retrieve a selected trace lazily.
+  # Optional datasource used to retrieve additional details for a selected exemplar lazily.
   tracingDatasource:
     kind: <tracing datasource plugin kind>
     name: <datasource name> # Optional

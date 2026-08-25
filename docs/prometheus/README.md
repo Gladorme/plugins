@@ -12,8 +12,8 @@ The Prometheus data source is the base building block that enables the connectio
 
 It supports the [proxy](https://perses.dev/perses/docs/concepts/proxy/) feature of Perses that allows to restrict the access to your data source.
 
-Selecting a Tempo or Jaeger tracing datasource enables Prometheus exemplars in time series charts. Trace details are
-retrieved lazily when an exemplar is selected.
+Prometheus exemplars are displayed in time series charts without a tracing datasource. Selecting an optional Tempo or
+Jaeger datasource retrieves additional trace details lazily when an exemplar is selected.
 
 See also technical docs related to this plugin:
 

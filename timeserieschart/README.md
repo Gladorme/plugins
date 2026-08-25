@@ -1,7 +1,8 @@
 # TimeSeriesChart Panel Plugin
 
-The chart displays Prometheus exemplars as interactive diamond markers. When the Prometheus datasource is associated
-with a tracing datasource, trace details are loaded lazily from Tempo or Jaeger when a marker is selected.
+The chart displays Prometheus exemplars as interactive diamond markers. Without a tracing datasource, the tooltip shows
+the exemplar labels, including trace and span IDs. When a tracing datasource is configured, additional trace details are
+loaded lazily from Tempo or Jaeger when a marker is selected.
 
 ### How to install
 

@@ -597,7 +597,7 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
       )}
       {activeExemplar && (
         <ExemplarTooltip
-          key={`${activeExemplar.tracingDatasource.kind}:${activeExemplar.tracingDatasource.name ?? ''}:${activeExemplar.timestamp}:${Object.values(activeExemplar.labels).join(':')}`}
+          key={`${activeExemplar.tracingDatasource?.kind ?? ''}:${activeExemplar.tracingDatasource?.name ?? ''}:${activeExemplar.timestamp}:${Object.values(activeExemplar.labels).join(':')}`}
           exemplar={activeExemplar}
           color={exemplarColor}
           containerId={chartsTheme.tooltipPortalContainerId}

@@ -1,7 +1,7 @@
 # Prometheus Plugin
 
-The datasource editor can associate a Tempo or Jaeger datasource with Prometheus. This enables exemplars in time series
-charts and loads trace details only when an exemplar is selected.
+Time series charts display Prometheus exemplars without additional configuration. The datasource editor can optionally
+associate a Tempo or Jaeger datasource to load trace details only when an exemplar is selected.
 
 ### How to install
 

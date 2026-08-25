@@ -11,8 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { DatasourceSelectItemGroup } from '@perses-dev/plugin-system';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { PrometheusDatasourceEditor } from './PrometheusDatasourceEditor';
@@ -20,32 +19,34 @@ import { PrometheusDatasourceEditor } from './PrometheusDatasourceEditor';
 vi.mock('@perses-dev/plugin-system', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@perses-dev/plugin-system')>()),
   HTTPSettingsEditor: (): null => null,
-  useListDatasourceSelectItems: (kind: string): { data: DatasourceSelectItemGroup[] } => ({
-    data:
-      kind === 'TempoDatasource'
-        ? [
-            {
-              items: [
-                {
-                  name: 'tempo',
-                  selector: { kind: 'TempoDatasource', name: 'tempo' },
-                },
-              ],
-            },
-          ]
-        : [],
-  }),
 }));
 
 describe('PrometheusDatasourceEditor', () => {
-  it('selects the tracing datasource used by exemplars', async () => {
+  it('selects a tracing datasource without requiring a DatasourceStoreContext', async () => {
     const onChange = vi.fn();
     render(<PrometheusDatasourceEditor value={{ directUrl: 'http://prometheus' }} onChange={onChange} />);
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Tracing Datasource' }));
-    await userEvent.click(screen.getByRole('option', { name: 'tempo (TempoDatasource)' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Tempo' }));
 
     expect(onChange).toHaveBeenCalledWith({
+      directUrl: 'http://prometheus',
+      tracingDatasource: { kind: 'TempoDatasource' },
+    });
+  });
+
+  it('updates the optional tracing datasource name', async () => {
+    const onChange = vi.fn();
+    render(
+      <PrometheusDatasourceEditor
+        value={{ directUrl: 'http://prometheus', tracingDatasource: { kind: 'TempoDatasource' } }}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Tracing Datasource Name' }), { target: { value: 'tempo' } });
+
+    expect(onChange).toHaveBeenLastCalledWith({
       directUrl: 'http://prometheus',
       tracingDatasource: { kind: 'TempoDatasource', name: 'tempo' },
     });

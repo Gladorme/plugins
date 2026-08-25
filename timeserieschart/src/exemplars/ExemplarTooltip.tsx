@@ -56,21 +56,18 @@ const HEADER_SX: SxProps<Theme> = (theme) => ({
 const DIVIDER_SX: SxProps<Theme> = (theme) => ({ mt: 0.5, borderColor: theme.palette.grey['500'] });
 const BODY_SX: SxProps<Theme> = (theme) => ({ padding: theme.spacing(0.5, 2, 1.5) });
 
-export function ExemplarTooltip(props: ExemplarTooltipProps): JSX.Element | null {
-  const { color, containerId, exemplar, formatWithUserTimeZone, onUnpinClick, pinnedPos } = props;
+interface TraceSummaryDetailsProps {
+  datasourceKind: string;
+  datasourceName?: string;
+  traceId: string;
+}
+
+function TraceSummaryDetails(props: TraceSummaryDetailsProps): JSX.Element {
+  const { datasourceKind, datasourceName, traceId } = props;
   const datasourceStore = useDatasourceStore();
-  const mousePos = useMousePosition();
-  const { height, width, ref: tooltipRef } = useResizeObserver<HTMLDivElement>();
-  const traceId = exemplar ? getExemplarTraceId(exemplar) : undefined;
-  const datasourceKind = exemplar?.tracingDatasource.kind;
-  const datasourceName = exemplar?.tracingDatasource.name;
-  const [traceState, setTraceState] = useState<TraceState>({ loading: traceId !== undefined });
+  const [traceState, setTraceState] = useState<TraceState>({ loading: true });
 
-  useEffect((): (() => void) | undefined => {
-    if (!traceId || !datasourceKind) {
-      return;
-    }
-
+  useEffect((): (() => void) => {
     let active = true;
     datasourceStore
       .getDatasourceClient<TraceClient>({ kind: datasourceKind, name: datasourceName })
@@ -86,6 +83,46 @@ export function ExemplarTooltip(props: ExemplarTooltipProps): JSX.Element | null
       active = false;
     };
   }, [datasourceKind, datasourceName, datasourceStore, traceId]);
+
+  return (
+    <>
+      {traceState.loading && <CircularProgress size={14} sx={MARGIN_TOP_SX} aria-label="Loading trace" />}
+      {traceState.error && (
+        <Typography variant="caption" color="error" display="block" sx={MARGIN_TOP_SX}>
+          {traceState.error}
+        </Typography>
+      )}
+      {traceState.summary && (
+        <Box sx={MARGIN_TOP_SX}>
+          {traceState.summary.serviceName && (
+            <Typography variant="caption" display="block">
+              Service: {traceState.summary.serviceName}
+            </Typography>
+          )}
+          {traceState.summary.operationName && (
+            <Typography variant="caption" display="block">
+              Operation: {traceState.summary.operationName}
+            </Typography>
+          )}
+          <Typography variant="caption" display="block">
+            Spans: {traceState.summary.spanCount}
+          </Typography>
+          {traceState.summary.durationMs !== undefined && (
+            <Typography variant="caption" display="block">
+              Duration: {traceState.summary.durationMs.toLocaleString()} ms
+            </Typography>
+          )}
+        </Box>
+      )}
+    </>
+  );
+}
+
+export function ExemplarTooltip(props: ExemplarTooltipProps): JSX.Element | null {
+  const { color, containerId, exemplar, formatWithUserTimeZone, onUnpinClick, pinnedPos } = props;
+  const mousePos = useMousePosition();
+  const { height, width, ref: tooltipRef } = useResizeObserver<HTMLDivElement>();
+  const traceId = exemplar ? getExemplarTraceId(exemplar) : undefined;
 
   const containerElement = containerId ? document.querySelector(containerId) : undefined;
   const maxHeight = containerElement ? containerElement.getBoundingClientRect().height : undefined;
@@ -141,33 +178,12 @@ export function ExemplarTooltip(props: ExemplarTooltipProps): JSX.Element | null
                   {key}: {value}
                 </Typography>
               ))}
-            {traceState.loading && <CircularProgress size={14} sx={MARGIN_TOP_SX} aria-label="Loading trace" />}
-            {traceState.error && (
-              <Typography variant="caption" color="error" display="block" sx={MARGIN_TOP_SX}>
-                {traceState.error}
-              </Typography>
-            )}
-            {traceState.summary && (
-              <Box sx={MARGIN_TOP_SX}>
-                {traceState.summary.serviceName && (
-                  <Typography variant="caption" display="block">
-                    Service: {traceState.summary.serviceName}
-                  </Typography>
-                )}
-                {traceState.summary.operationName && (
-                  <Typography variant="caption" display="block">
-                    Operation: {traceState.summary.operationName}
-                  </Typography>
-                )}
-                <Typography variant="caption" display="block">
-                  Spans: {traceState.summary.spanCount}
-                </Typography>
-                {traceState.summary.durationMs !== undefined && (
-                  <Typography variant="caption" display="block">
-                    Duration: {traceState.summary.durationMs.toLocaleString()} ms
-                  </Typography>
-                )}
-              </Box>
+            {traceId && exemplar.tracingDatasource && (
+              <TraceSummaryDetails
+                datasourceKind={exemplar.tracingDatasource.kind}
+                datasourceName={exemplar.tracingDatasource.name}
+                traceId={traceId}
+              />
             )}
           </Box>
         </Stack>

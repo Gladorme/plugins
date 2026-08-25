@@ -43,6 +43,33 @@ describe('exemplars', () => {
     ]);
   });
 
+  it('extracts exemplars without a tracing datasource', () => {
+    const exemplars = getTimeSeriesExemplars([
+      {
+        data: {
+          series: [],
+          metadata: {
+            exemplars: [
+              {
+                seriesLabels: { service: 'api' },
+                exemplars: [{ labels: { trace_id: 'abc', span_id: 'def' }, value: '42.5', timestamp: 123.25 }],
+              },
+            ],
+          },
+        },
+      },
+    ]);
+
+    expect(exemplars).toEqual([
+      {
+        labels: { trace_id: 'abc', span_id: 'def' },
+        seriesLabels: { service: 'api' },
+        timestamp: 123250,
+        value: 42.5,
+      },
+    ]);
+  });
+
   it('builds an interactive diamond marker for each exemplar', () => {
     const exemplar = {
       labels: { trace_id: 'abc' },
