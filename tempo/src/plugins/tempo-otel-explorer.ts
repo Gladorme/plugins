@@ -13,6 +13,13 @@
 
 import { DatasourceSelector, QueryDefinition } from '@perses-dev/spec';
 
+import type { TempoClient } from '../model';
+
+const SIGNAL_FIELD_TAGS: Record<string, string> = {
+  'trace.service.name': 'resource.service.name',
+  'trace.span.name': 'name',
+};
+
 export interface ExplorerAttributeFilter {
   key: string;
   operator: '=' | '!=' | '=~' | '!~';
@@ -22,6 +29,28 @@ export interface ExplorerAttributeFilter {
 export interface ExplorerFilterArgs {
   datasource: DatasourceSelector;
   filters: ExplorerAttributeFilter[];
+  traceMaxDuration?: string;
+  traceMinDuration?: string;
+  traceServiceName?: string;
+  traceSpanName?: string;
+  traceStatus?: '' | 'unset' | 'ok' | 'error';
+}
+
+export interface ExplorerSuggestionArgs extends ExplorerFilterArgs {
+  abortSignal?: AbortSignal;
+  client: TempoClient;
+  end: Date;
+  metricName?: string;
+  metricsQueryMode?: 'range' | 'instant';
+  start: Date;
+}
+
+export interface ExplorerAttributeValueSuggestionArgs extends ExplorerSuggestionArgs {
+  attribute: string;
+}
+
+export interface ExplorerSignalFieldSuggestionArgs extends ExplorerSuggestionArgs {
+  field: string;
 }
 
 function escapeMatcherValue(value: string): string {
@@ -71,15 +100,49 @@ export function applyTempoAttributeFilters(
   throw new Error('Attribute filters require a TraceQL query that starts with a spanset selector.');
 }
 
-function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): QueryDefinition {
+const DURATION_PATTERN = /^(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:ns|us|ms|s|m|h)$/;
+
+function createTraceQuery(args: ExplorerFilterArgs, excludedField?: string): string {
+  const matchers = args.filters
+    .filter(
+      (filter) =>
+        !(args.traceServiceName?.trim() && filter.key === 'resource.service.name') &&
+        !(args.traceSpanName?.trim() && filter.key === 'name'),
+    )
+    .map(attributeMatcher);
+  if (excludedField !== 'trace.service.name' && args.traceServiceName?.trim()) {
+    matchers.push(`resource.service.name = "${escapeMatcherValue(args.traceServiceName.trim())}"`);
+  }
+  if (excludedField !== 'trace.span.name' && args.traceSpanName?.trim()) {
+    matchers.push(`name = "${escapeMatcherValue(args.traceSpanName.trim())}"`);
+  }
+  if (args.traceStatus) {
+    matchers.push(`status = ${args.traceStatus}`);
+  }
+  if (args.traceMinDuration?.trim()) {
+    if (!DURATION_PATTERN.test(args.traceMinDuration.trim())) {
+      throw new Error('Minimum trace duration must use a value such as 100ms, 1.5s, or 2m.');
+    }
+    matchers.push(`duration >= ${args.traceMinDuration.trim()}`);
+  }
+  if (args.traceMaxDuration?.trim()) {
+    if (!DURATION_PATTERN.test(args.traceMaxDuration.trim())) {
+      throw new Error('Maximum trace duration must use a value such as 100ms, 1.5s, or 2m.');
+    }
+    matchers.push(`duration <= ${args.traceMaxDuration.trim()}`);
+  }
+  return matchers.length > 0 ? `{ ${matchers.join(' && ')} }` : '{}';
+}
+
+function createExplorerQuery(args: ExplorerFilterArgs): QueryDefinition {
   return {
     kind: 'TraceQuery',
     spec: {
       plugin: {
         kind: 'TempoTraceQuery',
         spec: {
-          datasource,
-          query: applyTempoAttributeFilters('', filters, []),
+          datasource: args.datasource,
+          query: createTraceQuery(args),
           limit: 20,
         },
       },
@@ -87,8 +150,57 @@ function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): Query
   };
 }
 
+function toUnixSeconds(value: Date): number {
+  return value.getTime() / 1000;
+}
+
+function createSuggestionQuery(args: ExplorerSuggestionArgs, excludedField?: string): string {
+  return createTraceQuery(args, excludedField);
+}
+
+async function getAttributeNames(args: ExplorerSuggestionArgs): Promise<string[]> {
+  const { client, end, start } = args;
+  const response = await client.searchTags({
+    end: toUnixSeconds(end),
+    q: createSuggestionQuery(args),
+    start: toUnixSeconds(start),
+  });
+  const dedicatedFields = new Set(['resource.service.name', 'name', 'status', 'duration']);
+  return [...new Set(response.scopes.flatMap((scope) => scope.tags))]
+    .filter((tag) => !dedicatedFields.has(tag))
+    .toSorted();
+}
+
+async function getAttributeValues(args: ExplorerAttributeValueSuggestionArgs): Promise<string[]> {
+  const { attribute, client, end, start } = args;
+  const response = await client.searchTagValues({
+    end: toUnixSeconds(end),
+    q: createSuggestionQuery(args),
+    start: toUnixSeconds(start),
+    tag: attribute,
+  });
+  return response.tagValues.flatMap(({ value }) => (value === undefined ? [] : [value])).toSorted();
+}
+
+async function getSignalFieldValues(args: ExplorerSignalFieldSuggestionArgs): Promise<string[]> {
+  const tag = SIGNAL_FIELD_TAGS[args.field];
+  if (!tag) {
+    return [];
+  }
+  const response = await args.client.searchTagValues({
+    end: toUnixSeconds(args.end),
+    q: createSuggestionQuery(args, args.field),
+    start: toUnixSeconds(args.start),
+    tag,
+  });
+  return response.tagValues.flatMap(({ value }) => (value === undefined ? [] : [value])).toSorted();
+}
+
 export const TEMPO_OTEL_EXPLORER = {
   traces: {
     createQuery: createExplorerQuery,
+    getAttributeNames,
+    getAttributeValues,
+    getSignalFieldValues,
   },
 } as const;

@@ -13,6 +13,8 @@
 
 import { DatasourceSelector, QueryDefinition } from '@perses-dev/spec';
 
+import type { PrometheusClient } from '../model';
+
 export interface ExplorerAttributeFilter {
   key: string;
   operator: '=' | '!=' | '=~' | '!~';
@@ -22,6 +24,19 @@ export interface ExplorerAttributeFilter {
 export interface ExplorerFilterArgs {
   datasource: DatasourceSelector;
   filters: ExplorerAttributeFilter[];
+  metricName?: string;
+  metricsQueryMode?: 'range' | 'instant';
+}
+
+export interface ExplorerSuggestionArgs extends ExplorerFilterArgs {
+  abortSignal?: AbortSignal;
+  client: PrometheusClient;
+  end: Date;
+  start: Date;
+}
+
+export interface ExplorerAttributeValueSuggestionArgs extends ExplorerSuggestionArgs {
+  attribute: string;
 }
 
 function escapeMatcherValue(value: string): string {
@@ -77,11 +92,17 @@ export function applyPrometheusAttributeFilters(
   return expression;
 }
 
-function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): QueryDefinition {
-  const query = applyPrometheusAttributeFilters('', filters, []);
-  if (query === '') {
-    throw new Error('Add at least one attribute filter before running a metrics query.');
-  }
+function createSelector(metricName: string | undefined, filters: ExplorerAttributeFilter[]): string {
+  return applyPrometheusAttributeFilters(metricName?.trim() ?? '', filters, []) || '{__name__=~".+"}';
+}
+
+function createExplorerQuery({
+  datasource,
+  filters,
+  metricName,
+  metricsQueryMode,
+}: ExplorerFilterArgs): QueryDefinition {
+  const query = createSelector(metricName, filters);
 
   return {
     kind: 'TimeSeriesQuery',
@@ -90,6 +111,7 @@ function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): Query
         kind: 'PrometheusTimeSeriesQuery',
         spec: {
           datasource,
+          instant: metricsQueryMode === 'instant',
           query,
         },
       },
@@ -97,8 +119,68 @@ function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): Query
   };
 }
 
+function toUnixSeconds(value: Date): number {
+  return value.getTime() / 1000;
+}
+
+async function getAttributeNames({
+  abortSignal,
+  client,
+  end,
+  filters,
+  metricName,
+  start,
+}: ExplorerSuggestionArgs): Promise<string[]> {
+  const response = await client.labelNames(
+    {
+      'match[]': [createSelector(metricName, filters)],
+      end: toUnixSeconds(end),
+      start: toUnixSeconds(start),
+    },
+    { signal: abortSignal },
+  );
+  return (response.data ?? []).filter((name) => name !== '__name__');
+}
+
+async function getAttributeValues({
+  abortSignal,
+  attribute,
+  client,
+  end,
+  filters,
+  metricName,
+  start,
+}: ExplorerAttributeValueSuggestionArgs): Promise<string[]> {
+  const response = await client.labelValues(
+    {
+      'match[]': [createSelector(metricName, filters)],
+      end: toUnixSeconds(end),
+      labelName: attribute,
+      start: toUnixSeconds(start),
+    },
+    { signal: abortSignal },
+  );
+  return response.data ?? [];
+}
+
+async function getMetricNames({ abortSignal, client, end, filters, start }: ExplorerSuggestionArgs): Promise<string[]> {
+  const response = await client.labelValues(
+    {
+      ...(filters.length > 0 ? { 'match[]': [createSelector(undefined, filters)] } : {}),
+      end: toUnixSeconds(end),
+      labelName: '__name__',
+      start: toUnixSeconds(start),
+    },
+    { signal: abortSignal },
+  );
+  return response.data ?? [];
+}
+
 export const PROMETHEUS_OTEL_EXPLORER = {
   metrics: {
     createQuery: createExplorerQuery,
+    getAttributeNames,
+    getAttributeValues,
+    getMetricNames,
   },
 } as const;

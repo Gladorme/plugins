@@ -13,6 +13,13 @@
 
 import { DatasourceSelector, QueryDefinition } from '@perses-dev/spec';
 
+import type { LokiClient } from '../../model';
+
+const SIGNAL_FIELD_LABELS: Record<string, string> = {
+  'log.service.name': 'service_name',
+  'log.severity': 'detected_level',
+};
+
 export interface ExplorerAttributeFilter {
   key: string;
   operator: '=' | '!=' | '=~' | '!~';
@@ -22,6 +29,26 @@ export interface ExplorerAttributeFilter {
 export interface ExplorerFilterArgs {
   datasource: DatasourceSelector;
   filters: ExplorerAttributeFilter[];
+  logSearch?: string;
+  logServiceName?: string;
+  logSeverity?: string;
+}
+
+export interface ExplorerSuggestionArgs extends ExplorerFilterArgs {
+  abortSignal?: AbortSignal;
+  client: LokiClient;
+  end: Date;
+  metricName?: string;
+  metricsQueryMode?: 'range' | 'instant';
+  start: Date;
+}
+
+export interface ExplorerAttributeValueSuggestionArgs extends ExplorerSuggestionArgs {
+  attribute: string;
+}
+
+export interface ExplorerSignalFieldSuggestionArgs extends ExplorerSuggestionArgs {
+  field: string;
 }
 
 function escapeMatcherValue(value: string): string {
@@ -71,11 +98,39 @@ export function applyLokiAttributeFilters(
   throw new Error('Attribute filters require a Loki query that starts with a stream selector.');
 }
 
-function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): QueryDefinition {
-  const query = applyLokiAttributeFilters('', filters, []);
-  if (query === '') {
-    throw new Error('Add at least one attribute filter before running a logs query.');
+function withServiceFilter(
+  filters: ExplorerAttributeFilter[],
+  serviceName: string | undefined,
+): ExplorerAttributeFilter[] {
+  if (!serviceName?.trim()) {
+    return filters;
   }
+  return [
+    ...filters.filter((filter) => filter.key !== 'service_name'),
+    { key: 'service_name', operator: '=', value: serviceName.trim() },
+  ];
+}
+
+function createExplorerQuery({
+  datasource,
+  filters,
+  logSearch,
+  logServiceName,
+  logSeverity,
+}: ExplorerFilterArgs): QueryDefinition {
+  const selector = applyLokiAttributeFilters('', withServiceFilter(filters, logServiceName), []);
+  if (selector === '') {
+    throw new Error('Select a service or add at least one attribute filter before running a logs query.');
+  }
+  const search = logSearch?.trim();
+  const severity = logSeverity?.trim();
+  const query = [
+    selector,
+    search ? `|= "${escapeMatcherValue(search)}"` : undefined,
+    severity ? `| detected_level = "${escapeMatcherValue(severity)}"` : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return {
     kind: 'LogQuery',
@@ -91,8 +146,79 @@ function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): Query
   };
 }
 
+function toUnixSeconds(value: Date): string {
+  return Math.floor(value.getTime() / 1000).toString();
+}
+
+function createSuggestionQuery(filters: ExplorerAttributeFilter[]): string | undefined {
+  return applyLokiAttributeFilters('', filters, []) || undefined;
+}
+
+function createExplorerSuggestionQuery(
+  filters: ExplorerAttributeFilter[],
+  logServiceName: string | undefined,
+): string | undefined {
+  return createSuggestionQuery(withServiceFilter(filters, logServiceName));
+}
+
+async function getAttributeNames({
+  client,
+  end,
+  filters,
+  logServiceName,
+  start,
+}: ExplorerSuggestionArgs): Promise<string[]> {
+  const response = await client.labels({
+    end: toUnixSeconds(end),
+    query: createExplorerSuggestionQuery(filters, logServiceName),
+    start: toUnixSeconds(start),
+  });
+  return response.data.filter((name) => name !== 'service_name' && name !== 'detected_level');
+}
+
+async function getAttributeValues({
+  attribute,
+  client,
+  end,
+  filters,
+  logServiceName,
+  start,
+}: ExplorerAttributeValueSuggestionArgs): Promise<string[]> {
+  const response = await client.labelValues({
+    end: toUnixSeconds(end),
+    labelName: attribute,
+    query: createExplorerSuggestionQuery(filters, logServiceName),
+    start: toUnixSeconds(start),
+  });
+  return response.data;
+}
+
+async function getSignalFieldValues({
+  client,
+  end,
+  field,
+  filters,
+  logServiceName,
+  start,
+}: ExplorerSignalFieldSuggestionArgs): Promise<string[]> {
+  const labelName = SIGNAL_FIELD_LABELS[field];
+  if (!labelName) {
+    return [];
+  }
+  const response = await client.labelValues({
+    end: toUnixSeconds(end),
+    labelName,
+    query: createExplorerSuggestionQuery(filters, field === 'log.service.name' ? undefined : logServiceName),
+    start: toUnixSeconds(start),
+  });
+  return response.data;
+}
+
 export const LOKI_OTEL_EXPLORER = {
   logs: {
     createQuery: createExplorerQuery,
+    getAttributeNames,
+    getAttributeValues,
+    getSignalFieldValues,
   },
 } as const;

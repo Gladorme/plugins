@@ -12,4 +12,4 @@
 // limitations under the License.
 
 export * from './AttributeFilters';
-export * from './OTelExplorer';
+export { OTelExplorer } from './OTelExplorer';

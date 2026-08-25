@@ -15,6 +15,7 @@ import { DatasourcePlugin } from '@perses-dev/plugin-system';
 
 import {
   createOTelAttributeFilter,
+  isValidOTelDuration,
   isOTelExplorerDatasourcePlugin,
   OTelExplorerDatasourcePlugin,
   validAttributeFilters,
@@ -43,6 +44,18 @@ describe('OTel explorer model', () => {
     expect(isOTelExplorerDatasourcePlugin({ ...datasource, otelExplorer: { metrics: {} } } as DatasourcePlugin)).toBe(
       false,
     );
+    expect(
+      isOTelExplorerDatasourcePlugin({
+        ...otelDatasource,
+        otelExplorer: { metrics: { createQuery: () => ({}), getMetricNames: [] } },
+      } as unknown as DatasourcePlugin),
+    ).toBe(false);
+    expect(
+      isOTelExplorerDatasourcePlugin({
+        ...otelDatasource,
+        otelExplorer: { logs: { createQuery: () => ({}), getSignalFieldValues: 'invalid' } },
+      } as unknown as DatasourcePlugin),
+    ).toBe(false);
   });
 
   it('creates an empty equality filter and removes incomplete filters', () => {
@@ -51,5 +64,12 @@ describe('OTel explorer model', () => {
     expect(validAttributeFilters([filter, { ...filter, id: 'two', key: 'service.name', value: 'checkout' }])).toEqual([
       { id: 'two', key: 'service.name', operator: '=', value: 'checkout' },
     ]);
+  });
+
+  it('validates trace duration inputs', () => {
+    expect(isValidOTelDuration('')).toBe(true);
+    expect(isValidOTelDuration('100ms')).toBe(true);
+    expect(isValidOTelDuration('1.5s')).toBe(true);
+    expect(isValidOTelDuration('100')).toBe(false);
   });
 });

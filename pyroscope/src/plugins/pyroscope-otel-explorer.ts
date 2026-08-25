@@ -13,6 +13,7 @@
 
 import { DatasourceSelector, QueryDefinition } from '@perses-dev/spec';
 
+import type { PyroscopeClient } from '../model';
 import { LabelFilter } from '../utils/types';
 
 export interface ExplorerAttributeFilter {
@@ -24,7 +25,28 @@ export interface ExplorerAttributeFilter {
 export interface ExplorerFilterArgs {
   datasource: DatasourceSelector;
   filters: ExplorerAttributeFilter[];
+  profileServiceName?: string;
+  profileType?: string;
 }
+
+export interface ExplorerSuggestionArgs extends ExplorerFilterArgs {
+  abortSignal?: AbortSignal;
+  client: PyroscopeClient;
+  end: Date;
+  metricName?: string;
+  metricsQueryMode?: 'range' | 'instant';
+  start: Date;
+}
+
+export interface ExplorerAttributeValueSuggestionArgs extends ExplorerSuggestionArgs {
+  attribute: string;
+}
+
+export interface ExplorerSignalFieldSuggestionArgs extends ExplorerSuggestionArgs {
+  field: string;
+}
+
+const JSON_HEADERS = { 'content-type': 'application/json' };
 
 function toPyroscopeFilter(filter: ExplorerAttributeFilter): LabelFilter {
   return { labelName: filter.key, labelValue: filter.value, operator: filter.operator };
@@ -46,13 +68,23 @@ export function applyPyroscopeAttributeFilters(
   return [...manualFilters, ...filters.map(toPyroscopeFilter)];
 }
 
-function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): QueryDefinition {
+function createExplorerQuery({
+  datasource,
+  filters,
+  profileServiceName,
+  profileType,
+}: ExplorerFilterArgs): QueryDefinition {
   const profileTypeFilter = filters.find((filter) => filter.key === 'profile.type' && filter.operator === '=');
-  if (!profileTypeFilter) {
-    throw new Error('Add a profile.type equality filter before running a profiles query.');
+  const selectedProfileType = profileType?.trim() || profileTypeFilter?.value;
+  if (!selectedProfileType) {
+    throw new Error('Select a profile type before running a profiles query.');
   }
 
-  const attributeFilters = filters.filter((filter) => filter !== profileTypeFilter);
+  const serviceFilter = filters.find((filter) => filter.key === 'service_name' && filter.operator === '=');
+  const selectedService = profileServiceName?.trim() || '';
+  const attributeFilters = filters.filter(
+    (filter) => filter !== profileTypeFilter && (!selectedService || filter !== serviceFilter),
+  );
   return {
     kind: 'ProfileQuery',
     spec: {
@@ -60,8 +92,8 @@ function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): Query
         kind: 'PyroscopeProfileQuery',
         spec: {
           datasource,
-          profileType: profileTypeFilter.value,
-          service: '',
+          profileType: selectedProfileType,
+          service: selectedService,
           maxNodes: 0,
           filters: applyPyroscopeAttributeFilters(undefined, attributeFilters, []),
         },
@@ -70,8 +102,55 @@ function createExplorerQuery({ datasource, filters }: ExplorerFilterArgs): Query
   };
 }
 
+function createSuggestionBody(start: Date, end: Date): Record<string, string | number> {
+  return { start: start.getTime(), end: end.getTime() };
+}
+
+async function getAttributeNames({ client, end, start }: ExplorerSuggestionArgs): Promise<string[]> {
+  const response = await client.searchLabelNames({}, JSON_HEADERS, createSuggestionBody(start, end));
+  return response.names.filter((name) => name !== 'profile.type' && name !== 'service_name');
+}
+
+async function getAttributeValues({
+  attribute,
+  client,
+  end,
+  start,
+}: ExplorerAttributeValueSuggestionArgs): Promise<string[]> {
+  if (attribute === 'profile.type') {
+    const response = await client.searchProfileTypes({}, JSON_HEADERS, createSuggestionBody(start, end));
+    return response.profileTypes.map((profileType) => profileType.ID);
+  }
+
+  const response = await client.searchLabelValues({}, JSON_HEADERS, {
+    name: attribute,
+    ...createSuggestionBody(start, end),
+  });
+  return response.names;
+}
+
+async function getSignalFieldValues({
+  client,
+  end,
+  field,
+  start,
+}: ExplorerSignalFieldSuggestionArgs): Promise<string[]> {
+  if (field === 'profile.type') {
+    const response = await client.searchProfileTypes({}, JSON_HEADERS, createSuggestionBody(start, end));
+    return response.profileTypes.map((profileType) => profileType.ID);
+  }
+  if (field === 'profile.service.name') {
+    const response = await client.searchServices({}, JSON_HEADERS, createSuggestionBody(start, end));
+    return response.names;
+  }
+  return [];
+}
+
 export const PYROSCOPE_OTEL_EXPLORER = {
   profiles: {
     createQuery: createExplorerQuery,
+    getAttributeNames,
+    getAttributeValues,
+    getSignalFieldValues,
   },
 } as const;

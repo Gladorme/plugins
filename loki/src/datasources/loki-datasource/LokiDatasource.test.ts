@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import type { LokiClient } from '../../model';
 import { applyLokiAttributeFilters, LOKI_OTEL_EXPLORER } from './loki-otel-explorer';
 
 const serviceFilter = {
@@ -52,5 +53,45 @@ describe('Loki OTel explorer capability', () => {
         },
       },
     });
+  });
+
+  it('translates the dedicated log controls without rendering a Loki editor', () => {
+    const query = LOKI_OTEL_EXPLORER.logs.createQuery({
+      datasource: { kind: 'LokiDatasource' },
+      filters: [],
+      logSearch: 'request failed',
+      logServiceName: 'checkout',
+      logSeverity: 'error',
+    });
+
+    expect(query.spec.plugin.spec).toEqual({
+      datasource: { kind: 'LokiDatasource' },
+      query: '{service_name="checkout"} |= "request failed" | detected_level = "error"',
+    });
+  });
+
+  it('discovers service and severity values for the dedicated controls', async () => {
+    const labelValues = vi.fn().mockResolvedValue({ status: 'success', data: ['checkout'] });
+    const args = {
+      client: { labelValues } as unknown as LokiClient,
+      datasource: { kind: 'LokiDatasource' },
+      end: new Date(2_000),
+      filters: [],
+      start: new Date(1_000),
+    };
+
+    await expect(LOKI_OTEL_EXPLORER.logs.getSignalFieldValues({ ...args, field: 'log.service.name' })).resolves.toEqual(
+      ['checkout'],
+    );
+    await LOKI_OTEL_EXPLORER.logs.getSignalFieldValues({ ...args, field: 'log.severity' });
+
+    expect(labelValues).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ labelName: 'service_name', query: undefined }),
+    );
+    expect(labelValues).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ labelName: 'detected_level', query: undefined }),
+    );
   });
 });

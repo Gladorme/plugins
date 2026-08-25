@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import type { PrometheusClient } from '../model';
 import { applyPrometheusAttributeFilters, PROMETHEUS_OTEL_EXPLORER } from './prometheus-otel-explorer';
 
 const serviceFilter = {
@@ -51,10 +52,82 @@ describe('Prometheus OTel explorer capability', () => {
           kind: 'PrometheusTimeSeriesQuery',
           spec: {
             datasource: { kind: 'PrometheusDatasource', name: 'prometheusdemo' },
+            instant: false,
             query: '{service_name="checkout"}',
           },
         },
       },
     });
+  });
+
+  it('supports an empty metric name and creates an instant query', () => {
+    expect(
+      PROMETHEUS_OTEL_EXPLORER.metrics.createQuery({
+        datasource: { kind: 'PrometheusDatasource' },
+        filters: [],
+        metricName: '',
+        metricsQueryMode: 'instant',
+      }),
+    ).toEqual({
+      kind: 'TimeSeriesQuery',
+      spec: {
+        plugin: {
+          kind: 'PrometheusTimeSeriesQuery',
+          spec: {
+            datasource: { kind: 'PrometheusDatasource' },
+            instant: true,
+            query: '{__name__=~".+"}',
+          },
+        },
+      },
+    });
+  });
+
+  it('combines a metric name with attribute filters', () => {
+    const query = PROMETHEUS_OTEL_EXPLORER.metrics.createQuery({
+      datasource: { kind: 'PrometheusDatasource' },
+      filters: [serviceFilter],
+      metricName: 'http_requests_total',
+      metricsQueryMode: 'range',
+    });
+
+    expect(query.spec.plugin.spec).toEqual({
+      datasource: { kind: 'PrometheusDatasource' },
+      instant: false,
+      query: 'http_requests_total{service_name="checkout"}',
+    });
+  });
+
+  it('loads metric and attribute suggestions for the active selector', async () => {
+    const labelNames = vi.fn().mockResolvedValue({ status: 'success', data: ['__name__', 'service_name'] });
+    const labelValues = vi.fn().mockResolvedValue({ status: 'success', data: ['checkout'] });
+    const client = { labelNames, labelValues } as unknown as PrometheusClient;
+    const suggestionArgs = {
+      client,
+      datasource: { kind: 'PrometheusDatasource' },
+      end: new Date(2_000),
+      filters: [serviceFilter],
+      metricName: 'http_requests_total',
+      start: new Date(1_000),
+    };
+
+    await expect(PROMETHEUS_OTEL_EXPLORER.metrics.getAttributeNames(suggestionArgs)).resolves.toEqual(['service_name']);
+    await expect(
+      PROMETHEUS_OTEL_EXPLORER.metrics.getAttributeValues({ ...suggestionArgs, attribute: 'service_name' }),
+    ).resolves.toEqual(['checkout']);
+    await expect(PROMETHEUS_OTEL_EXPLORER.metrics.getMetricNames(suggestionArgs)).resolves.toEqual(['checkout']);
+
+    expect(labelNames).toHaveBeenCalledWith(
+      {
+        'match[]': ['http_requests_total{service_name="checkout"}'],
+        end: 2,
+        start: 1,
+      },
+      { signal: undefined },
+    );
+    expect(labelValues).toHaveBeenCalledWith(
+      expect.objectContaining({ labelName: '__name__', 'match[]': ['{service_name="checkout"}'] }),
+      { signal: undefined },
+    );
   });
 });

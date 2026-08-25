@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 
 import { OTelAttributeFilter } from '../model';
@@ -33,7 +33,13 @@ describe('AttributeFilters', () => {
     expect(screen.getByDisplayValue('service.name')).not.toBeNull();
     expect(screen.getByDisplayValue('checkout')).not.toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Delete service.name filter' }));
+    const valueInput = screen.getByLabelText('Attribute value');
+    const valueInputRoot = valueInput.closest('.MuiAutocomplete-root');
+    if (!(valueInputRoot instanceof HTMLElement)) {
+      throw new Error('Attribute value autocomplete root was not rendered.');
+    }
+    const deleteButton = within(valueInputRoot).getByRole('button', { name: 'Delete service.name filter' });
+    fireEvent.click(deleteButton);
     expect(screen.queryByLabelText('Attribute name')).toBeNull();
   });
 

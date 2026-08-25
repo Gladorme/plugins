@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import type { PyroscopeClient } from '../model';
 import { applyPyroscopeAttributeFilters, PYROSCOPE_OTEL_EXPLORER } from './pyroscope-otel-explorer';
 
 const serviceFilter = {
@@ -65,5 +66,41 @@ describe('Pyroscope OTel explorer capability', () => {
         },
       },
     });
+  });
+
+  it('uses the dedicated service and profile type controls', () => {
+    const query = PYROSCOPE_OTEL_EXPLORER.profiles.createQuery({
+      datasource: { kind: 'PyroscopeDatasource' },
+      filters: [],
+      profileServiceName: 'checkout',
+      profileType: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds',
+    });
+
+    expect(query.spec.plugin.spec).toEqual({
+      datasource: { kind: 'PyroscopeDatasource' },
+      filters: [],
+      maxNodes: 0,
+      profileType: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds',
+      service: 'checkout',
+    });
+  });
+
+  it('discovers profile types and services for the dedicated controls', async () => {
+    const searchProfileTypes = vi.fn().mockResolvedValue({ profileTypes: [{ ID: 'cpu' }] });
+    const searchServices = vi.fn().mockResolvedValue({ names: ['checkout'] });
+    const args = {
+      client: { searchProfileTypes, searchServices } as unknown as PyroscopeClient,
+      datasource: { kind: 'PyroscopeDatasource' },
+      end: new Date(2_000),
+      filters: [],
+      start: new Date(1_000),
+    };
+
+    await expect(
+      PYROSCOPE_OTEL_EXPLORER.profiles.getSignalFieldValues({ ...args, field: 'profile.type' }),
+    ).resolves.toEqual(['cpu']);
+    await expect(
+      PYROSCOPE_OTEL_EXPLORER.profiles.getSignalFieldValues({ ...args, field: 'profile.service.name' }),
+    ).resolves.toEqual(['checkout']);
   });
 });

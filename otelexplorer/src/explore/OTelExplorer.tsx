@@ -14,7 +14,6 @@
 import {
   Alert,
   Box,
-  Button,
   FormControl,
   InputLabel,
   MenuItem,
@@ -45,14 +44,16 @@ import {
   OTelExplorerDatasourcePlugin,
   OTelSignal,
   OTelSignalCapability,
+  OTelSignalInputs,
+  OTEL_SIGNALS,
   validAttributeFilters,
 } from '../model';
-import { AttributeFilters } from './AttributeFilters';
+import { OTelQueryControls } from './OTelQueryControls';
 
 type SignalQueries = Partial<Record<OTelSignal, QueryDefinition[]>>;
 type SignalDatasources = Partial<Record<OTelSignal, DatasourceSelector>>;
 
-interface OTelExplorerQueryParams {
+interface OTelExplorerQueryParams extends Partial<OTelSignalInputs> {
   signal?: OTelSignal;
   filters?: OTelAttributeFilter[];
   queries?: SignalQueries;
@@ -77,7 +78,21 @@ const TABS_SX = { borderBottom: 1, borderColor: 'divider' };
 const PROVIDER_STACK_DIRECTION = { xs: 'column' as const, md: 'row' as const };
 const PROVIDER_CONTROL_SX = { minWidth: 280 };
 const DATASOURCE_CONTROL_SX = { minWidth: 360 };
-const RUN_BUTTON_SX = { alignSelf: 'flex-end' };
+
+const DEFAULT_SIGNAL_INPUTS: OTelSignalInputs = {
+  logSearch: '',
+  logServiceName: '',
+  logSeverity: '',
+  metricName: '',
+  metricsQueryMode: 'range',
+  profileServiceName: '',
+  profileType: '',
+  traceMaxDuration: '',
+  traceMinDuration: '',
+  traceServiceName: '',
+  traceSpanName: '',
+  traceStatus: '',
+};
 
 const SIGNAL_LABELS: Record<OTelSignal, string> = {
   metrics: 'Metrics',
@@ -214,9 +229,61 @@ function ProviderSelector({
   );
 }
 
+interface SignalNavigationProps {
+  signal: OTelSignal;
+  onChange: (event: SyntheticEvent, signal: OTelSignal) => void;
+}
+
+export function SignalNavigation({ signal, onChange }: SignalNavigationProps): ReactElement {
+  return (
+    <Tabs
+      aria-label="OpenTelemetry signals"
+      value={signal}
+      onChange={onChange}
+      variant="scrollable"
+      selectionFollowsFocus
+      sx={TABS_SX}
+    >
+      {OTEL_SIGNALS.map((value) => (
+        <Tab key={value} value={value} label={SIGNAL_LABELS[value]} />
+      ))}
+    </Tabs>
+  );
+}
+
 export function OTelExplorer(): ReactElement {
   const { data, setData } = useExplorerManagerContext<OTelExplorerQueryParams>();
   const { signal = 'metrics', filters = EMPTY_FILTERS, queries = {}, datasources = {} } = data;
+  const inputs = useMemo<OTelSignalInputs>(
+    () => ({
+      logSearch: data.logSearch ?? DEFAULT_SIGNAL_INPUTS.logSearch,
+      logServiceName: data.logServiceName ?? DEFAULT_SIGNAL_INPUTS.logServiceName,
+      logSeverity: data.logSeverity ?? DEFAULT_SIGNAL_INPUTS.logSeverity,
+      metricName: data.metricName ?? DEFAULT_SIGNAL_INPUTS.metricName,
+      metricsQueryMode: data.metricsQueryMode ?? DEFAULT_SIGNAL_INPUTS.metricsQueryMode,
+      profileServiceName: data.profileServiceName ?? DEFAULT_SIGNAL_INPUTS.profileServiceName,
+      profileType: data.profileType ?? DEFAULT_SIGNAL_INPUTS.profileType,
+      traceMaxDuration: data.traceMaxDuration ?? DEFAULT_SIGNAL_INPUTS.traceMaxDuration,
+      traceMinDuration: data.traceMinDuration ?? DEFAULT_SIGNAL_INPUTS.traceMinDuration,
+      traceServiceName: data.traceServiceName ?? DEFAULT_SIGNAL_INPUTS.traceServiceName,
+      traceSpanName: data.traceSpanName ?? DEFAULT_SIGNAL_INPUTS.traceSpanName,
+      traceStatus: data.traceStatus ?? DEFAULT_SIGNAL_INPUTS.traceStatus,
+    }),
+    [
+      data.logSearch,
+      data.logServiceName,
+      data.logSeverity,
+      data.metricName,
+      data.metricsQueryMode,
+      data.profileServiceName,
+      data.profileType,
+      data.traceMaxDuration,
+      data.traceMinDuration,
+      data.traceServiceName,
+      data.traceSpanName,
+      data.traceStatus,
+    ],
+  );
   const [applyError, setApplyError] = useState<string>();
 
   const { data: datasourceMetadata = EMPTY_DATASOURCE_METADATA } = useListPluginMetadata(DATASOURCE_PLUGIN_TYPES);
@@ -279,7 +346,7 @@ export function OTelExplorer(): ReactElement {
 
     const nextFilters = validAttributeFilters(filters);
     try {
-      const nextQueries = [capability.createQuery({ datasource, filters: nextFilters })];
+      const nextQueries = [capability.createQuery({ ...inputs, datasource, filters: nextFilters })];
       setApplyError(undefined);
       updateData({
         queries: { ...queries, [signal]: nextQueries },
@@ -288,7 +355,7 @@ export function OTelExplorer(): ReactElement {
     } catch (error) {
       setApplyError(error instanceof Error ? error.message : 'The datasource could not create the query.');
     }
-  }, [capability, datasource, datasources, filters, queries, signal, updateData]);
+  }, [capability, datasource, datasources, filters, inputs, queries, signal, updateData]);
   const handleSignalChange = useCallback(
     (_: SyntheticEvent, next: OTelSignal): void => {
       setApplyError(undefined);
@@ -300,13 +367,10 @@ export function OTelExplorer(): ReactElement {
     (next: OTelAttributeFilter[]): void => updateData({ filters: next }),
     [updateData],
   );
+  const handleInputsChange = useCallback((next: Partial<OTelSignalInputs>): void => updateData(next), [updateData]);
   return (
     <Stack gap={2} sx={EXPLORER_SX}>
-      <Tabs value={signal} onChange={handleSignalChange} variant="scrollable" sx={TABS_SX}>
-        {Object.entries(SIGNAL_LABELS).map(([value, label]) => (
-          <Tab key={value} value={value} label={label} />
-        ))}
-      </Tabs>
+      <SignalNavigation signal={signal} onChange={handleSignalChange} />
 
       {signalProviders.length === 0 || !selectedProvider || !datasource || !capability ? (
         <Alert severity="info">
@@ -322,11 +386,17 @@ export function OTelExplorer(): ReactElement {
             onProviderChange={handleProviderChange}
             onDatasourceChange={handleDatasourceChange}
           />
-          <AttributeFilters value={filters} onChange={handleFiltersChange} />
+          <OTelQueryControls
+            capability={capability}
+            datasource={datasource}
+            filters={filters}
+            inputs={inputs}
+            onFiltersChange={handleFiltersChange}
+            onInputsChange={handleInputsChange}
+            onQueryRun={handleQueryRun}
+            signal={signal}
+          />
           {applyError && <Alert severity="error">{applyError}</Alert>}
-          <Button variant="contained" onClick={handleQueryRun} sx={RUN_BUTTON_SX}>
-            Run query
-          </Button>
           <SignalResults signal={signal} queries={executedQueries} />
         </Stack>
       )}
