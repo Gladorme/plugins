@@ -96,6 +96,38 @@ describe('exemplars', () => {
     });
   });
 
+  it('dims other markers when an exemplar tooltip is active', () => {
+    const activeExemplar = {
+      labels: { trace_id: 'second' },
+      seriesLabels: { service: 'api' },
+      timestamp: 123750,
+      value: 42.5,
+    };
+    const exemplars = [
+      {
+        labels: { trace_id: 'first' },
+        seriesLabels: { service: 'api' },
+        timestamp: 123250,
+        value: 42.5,
+      },
+      activeExemplar,
+    ];
+
+    // Use an equivalent copy to cover a pinned tooltip surviving refreshed query data.
+    const series = buildExemplarSeries(exemplars, '#ff0000', [], {
+      ...activeExemplar,
+      labels: { ...activeExemplar.labels },
+      seriesLabels: { ...activeExemplar.seriesLabels },
+    });
+
+    expect(series[0]?.markPoint).toMatchObject({
+      data: [
+        { exemplarIndex: 0, itemStyle: { color: '#ff0000', opacity: 0.3 } },
+        { exemplarIndex: 1, itemStyle: { color: '#ff0000', opacity: 1 } },
+      ],
+    });
+  });
+
   it('loads a Tempo trace summary through the query client method', async () => {
     const summary = await loadTraceSummary(
       {

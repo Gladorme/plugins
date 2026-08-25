@@ -33,6 +33,8 @@ interface TimeSeriesResult {
   data: TimeSeriesData;
 }
 
+const DIMMED_EXEMPLAR_OPACITY = 0.3;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -101,6 +103,7 @@ export function buildExemplarSeries(
   exemplars: TimeSeriesExemplar[],
   color: string,
   timeSeries: TimeSeries[] = [],
+  activeExemplar?: TimeSeriesExemplar | null,
 ): LineSeriesOption[] {
   if (exemplars.length === 0) return [];
 
@@ -112,6 +115,7 @@ export function buildExemplarSeries(
       labeledTimeSeries.push(series);
     }
   }
+  const activeExemplarIndex = getActiveExemplarIndex(exemplars, activeExemplar);
 
   return [
     {
@@ -131,12 +135,34 @@ export function buildExemplarSeries(
             name: getExemplarTraceId(exemplar) ?? `Exemplar ${exemplarIndex + 1}`,
             coord: [exemplar.timestamp, getRenderedValue(matchingSeries?.values, exemplar.timestamp) ?? exemplar.value],
             exemplarIndex,
-            itemStyle: { color },
+            itemStyle: {
+              color,
+              ...(activeExemplarIndex >= 0
+                ? { opacity: exemplarIndex === activeExemplarIndex ? 1 : DIMMED_EXEMPLAR_OPACITY }
+                : {}),
+            },
           };
         }),
       },
     },
   ];
+}
+
+function getActiveExemplarIndex(
+  exemplars: TimeSeriesExemplar[],
+  activeExemplar: TimeSeriesExemplar | null | undefined,
+): number {
+  if (!activeExemplar) return -1;
+
+  const referenceIndex = exemplars.findIndex((exemplar) => exemplar === activeExemplar);
+  if (referenceIndex >= 0) return referenceIndex;
+
+  const activeKey = getExemplarKey(activeExemplar);
+  return exemplars.findIndex((exemplar) => getExemplarKey(exemplar) === activeKey);
+}
+
+function getExemplarKey(exemplar: TimeSeriesExemplar): string {
+  return `${exemplar.timestamp}:${exemplar.value}:${getLabelsKey(exemplar.seriesLabels)}:${getLabelsKey(exemplar.labels)}`;
 }
 
 function getMatchingTimeSeries(

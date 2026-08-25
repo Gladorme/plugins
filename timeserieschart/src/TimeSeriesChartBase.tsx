@@ -269,11 +269,13 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
     };
   }, [annotations, exemplars, onDataZoom]);
 
+  const activeExemplar = pinnedExemplar ?? hoveredExemplar;
+
   // Generate annotation series for ECharts markArea (range), markLine (point), and markPoint (markers under X-axis)
   const annotationSeries = useMemo(() => buildAnnotationSeries(annotations), [annotations]);
   const exemplarSeries = useMemo(
-    () => buildExemplarSeries(exemplars ?? [], exemplarColor, data),
-    [data, exemplarColor, exemplars],
+    () => buildExemplarSeries(exemplars ?? [], exemplarColor, data, activeExemplar),
+    [activeExemplar, data, exemplarColor, exemplars],
   );
 
   const { noDataOption } = chartsTheme;
@@ -384,7 +386,6 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastTooltipPinnedCoords, seriesMapping]);
 
-  const activeExemplar = pinnedExemplar ?? hoveredExemplar;
   const handleExemplarUnpin = useCallback((): void => {
     setPinnedExemplar(null);
     setPinnedExemplarPos(null);

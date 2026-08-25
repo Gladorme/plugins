@@ -12,7 +12,7 @@ The Time Series Chart plugin displays time series data as line charts in Perses 
 Enable exemplars in the panel's general settings to fetch and display diamond markers. The setting is disabled by
 default. Hover a marker to inspect its labels, including trace and span IDs. When the Prometheus datasource has an
 associated Tempo or Jaeger datasource, the tooltip retrieves an additional trace summary lazily. Click the marker to pin
-the tooltip.
+the tooltip. While a marker is hovered or pinned, the other exemplar points are dimmed.
 
 ## References
 
