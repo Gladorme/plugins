@@ -120,13 +120,26 @@ export const getTimeSeriesData: TimeSeriesQueryPlugin<PrometheusTimeSeriesQueryS
   // Make the request to Prom
 
   let response;
+  let exemplarResponse;
+  let exemplarRequestError: unknown;
   // `spec.instant` is a per-query override: `true` forces instant, `false` forces range.
   // When left unset (Auto), defer to the panel-provided `context.mode`.
   const isInstant = spec.instant ?? context.mode === 'instant';
   if (isInstant) {
     response = await client.instantQuery({ query, time: end }, { ...interpolatedOptions, signal: abortSignal });
   } else {
+    // Start both independent requests together. Exemplars are enabled by associating a tracing datasource with
+    // Prometheus, while a failed or unsupported exemplar endpoint must not hide the metric data.
+    const exemplarPromise = datasource.plugin.spec.tracingDatasource
+      ? client
+          .exemplarQuery({ query, start, end }, { ...interpolatedOptions, signal: abortSignal })
+          .catch((error: unknown) => {
+            exemplarRequestError = error;
+            return undefined;
+          })
+      : undefined;
     response = await client.rangeQuery({ query, start, end, step }, { ...interpolatedOptions, signal: abortSignal });
+    exemplarResponse = await exemplarPromise;
   }
 
   // TODO: What about error responses from Prom that have a response body?
@@ -144,6 +157,17 @@ export const getTimeSeriesData: TimeSeriesQueryPlugin<PrometheusTimeSeriesQueryS
       });
     }
   }
+  if (exemplarRequestError !== undefined) {
+    notices.push({
+      type: 'warning',
+      message: `Unable to load exemplars: ${exemplarRequestError instanceof Error ? exemplarRequestError.message : 'unknown error'}`,
+    });
+  } else if (exemplarResponse?.status === 'error') {
+    notices.push({
+      type: 'warning',
+      message: `Unable to load exemplars: ${exemplarResponse.error}`,
+    });
+  }
 
   // Transform response
   const chartData: TimeSeriesData = {
@@ -155,6 +179,8 @@ export const getTimeSeriesData: TimeSeriesQueryPlugin<PrometheusTimeSeriesQueryS
     metadata: {
       notices,
       executedQueryString: query,
+      exemplars: exemplarResponse?.status === 'success' ? exemplarResponse.data : undefined,
+      tracingDatasource: datasource.plugin.spec.tracingDatasource,
     },
   };
 

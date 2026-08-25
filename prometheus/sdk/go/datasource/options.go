@@ -14,6 +14,7 @@
 package datasource
 
 import (
+	sdkDatasource "github.com/perses/perses/go-sdk/datasource"
 	"github.com/perses/perses/go-sdk/http"
 )
 
@@ -48,6 +49,17 @@ func QueryParam(key, value string) Option {
 			builder.QueryParams = make(map[string]string)
 		}
 		builder.QueryParams[key] = value
+		return nil
+	}
+}
+
+// TracingDatasource configures the datasource used to retrieve traces referenced by exemplars.
+func TracingDatasource(kind, name string) Option {
+	return func(builder *Builder) error {
+		builder.TracingDatasource = &sdkDatasource.Selector{
+			Kind: kind,
+			Name: name,
+		}
 		return nil
 	}
 }

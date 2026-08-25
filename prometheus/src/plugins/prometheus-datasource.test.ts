@@ -66,4 +66,24 @@ describe('PrometheusDatasource query parameters', () => {
 
     mockFetch.mockClear();
   });
+
+  it('should query the Prometheus exemplar endpoint', async () => {
+    const client = PrometheusDatasource.createClient({ directUrl: 'http://localhost:9090' }, {});
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ status: 'success', data: [] }),
+    });
+    global.fetch = mockFetch;
+
+    await client.exemplarQuery({ query: 'up', start: 10, end: 20 });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:9090/api/v1/query_exemplars',
+      expect.objectContaining({
+        method: 'POST',
+        body: new URLSearchParams({ query: 'up', start: '10', end: '20' }),
+      }),
+    );
+  });
 });

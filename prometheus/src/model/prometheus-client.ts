@@ -16,6 +16,8 @@ import { QueryParamValues } from '@perses-dev/components';
 import { DatasourceClient } from '@perses-dev/plugin-system';
 
 import {
+  ExemplarQueryRequestParameters,
+  ExemplarQueryResponse,
   InstantQueryRequestParameters,
   InstantQueryResponse,
   LabelNamesRequestParameters,
@@ -48,6 +50,7 @@ export interface PrometheusClient extends DatasourceClient {
   options: PrometheusClientOptions;
   instantQuery(params: InstantQueryRequestParameters, options?: ClientRequestOptions): Promise<InstantQueryResponse>;
   rangeQuery(params: RangeQueryRequestParameters, options?: ClientRequestOptions): Promise<RangeQueryResponse>;
+  exemplarQuery(params: ExemplarQueryRequestParameters, options?: ClientRequestOptions): Promise<ExemplarQueryResponse>;
   labelNames(params: LabelNamesRequestParameters, options?: ClientRequestOptions): Promise<LabelNamesResponse>;
   labelValues(params: LabelValuesRequestParameters, options?: ClientRequestOptions): Promise<LabelValuesResponse>;
   metricMetadata(
@@ -131,6 +134,20 @@ export function rangeQuery(
   queryOptions: QueryOptions,
 ): Promise<RangeQueryResponse> {
   return fetchWithPost<RangeQueryRequestParameters, RangeQueryResponse>('/api/v1/query_range', params, queryOptions);
+}
+
+/**
+ * Calls the `/api/v1/query_exemplars` endpoint to get exemplars for a PromQL expression.
+ */
+export function exemplarQuery(
+  params: ExemplarQueryRequestParameters,
+  queryOptions: QueryOptions,
+): Promise<ExemplarQueryResponse> {
+  return fetchWithPost<ExemplarQueryRequestParameters, ExemplarQueryResponse>(
+    '/api/v1/query_exemplars',
+    params,
+    queryOptions,
+  );
 }
 
 /**

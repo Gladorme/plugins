@@ -18,6 +18,11 @@ spec:
   proxy: <HTTP Proxy specification> # Optional
 
   scrapeInterval: <duration> # Optional
+
+  # Enables exemplars and identifies the datasource used to retrieve a selected trace lazily.
+  tracingDatasource:
+    kind: <tracing datasource plugin kind>
+    name: <datasource name> # Optional
 ```
 
 ### HTTP Proxy specification
@@ -67,6 +72,8 @@ spec:
             - endpointPattern: "/api/v1/query"
               method: "POST"
             - endpointPattern: "/api/v1/query_range"
+              method: "POST"
+            - endpointPattern: "/api/v1/query_exemplars"
               method: "POST"
             - endpointPattern: "/api/v1/label/([a-zA-Z0-9_-]+)/values"
               method: "GET"

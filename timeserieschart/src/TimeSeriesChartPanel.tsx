@@ -63,6 +63,7 @@ import {
   getThresholdSeries,
   convertPercentThreshold,
 } from './utils/data-transform';
+import { getTimeSeriesExemplars } from './utils/exemplar';
 import { getSeriesColor } from './utils/palette-gen';
 
 export type TimeSeriesChartProps = PanelProps<TimeSeriesChartOptions, TimeSeriesData>;
@@ -163,6 +164,7 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
     () => convertAnnotationToTimeSeriesAnnotation(annotationsWithData),
     [annotationsWithData],
   );
+  const exemplars = useMemo(() => getTimeSeriesExemplars(queryResults), [queryResults]);
 
   // Populate series data based on query results
   const {
@@ -520,6 +522,8 @@ export function TimeSeriesChartPanel(props: TimeSeriesChartProps): ReactElement 
                 data={timeChartData}
                 seriesMapping={timeSeriesMapping}
                 annotations={annotations}
+                exemplars={exemplars}
+                exemplarColor={muiTheme.palette.warning.main}
                 timeScale={timeScale}
                 yAxis={multipleYAxes ?? echartsYAxis}
                 format={format}

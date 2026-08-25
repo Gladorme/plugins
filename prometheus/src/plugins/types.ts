@@ -13,7 +13,7 @@
 
 import { QueryParamValues } from '@perses-dev/components';
 import { DatasourceSelectValue } from '@perses-dev/plugin-system';
-import { DurationString, HTTPProxy } from '@perses-dev/spec';
+import type { DatasourceSelector, DurationString, HTTPProxy } from '@perses-dev/spec';
 
 import { PrometheusDatasourceSelector } from '../model';
 
@@ -24,6 +24,8 @@ export interface PrometheusDatasourceSpec {
   proxy?: HTTPProxy;
   scrapeInterval?: DurationString; // default to 1m
   queryParams?: QueryParamValues;
+  /** Datasource used to lazily load traces referenced by Prometheus exemplars. */
+  tracingDatasource?: DatasourceSelector;
 }
 
 export interface PrometheusVariableOptionsBase {

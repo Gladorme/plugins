@@ -11,26 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package datasource
 
-import (
-	"github.com/perses/shared/cue/common"
-	"github.com/perses/spec/cue/datasource"
-)
+import "testing"
 
-kind: #kind
-spec: {
-	datasource.#HTTPDatasourceSpec
-	scrapeInterval?: =~#durationRegex
-	queryParams?: {[string]: string}
-	tracingDatasource?: {
-		kind:  string
-		name?: string
+func TestTracingDatasource(t *testing.T) {
+	builder, err := create(TracingDatasource("TempoDatasource", "tempo"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if builder.TracingDatasource == nil {
+		t.Fatal("expected a tracing datasource selector")
+	}
+	if builder.TracingDatasource.Kind != "TempoDatasource" || builder.TracingDatasource.Name != "tempo" {
+		t.Fatalf("unexpected selector: %#v", builder.TracingDatasource)
 	}
 }
-
-#kind: "PrometheusDatasource"
-
-#durationRegex: "^(\\d+y)?(\\d+w)?(\\d+d)?(\\d+h)?(\\d+m)?(\\d+s)?(\\d+ms)?$"
-
-#selector: common.#datasourceSelector & {_kind: #kind}

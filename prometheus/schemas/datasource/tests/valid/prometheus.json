@@ -2,6 +2,10 @@
   "kind": "PrometheusDatasource",
   "spec": {
     "directUrl": "http://localhost:9090",
-    "scrapeInterval": "15s"
+    "scrapeInterval": "15s",
+    "tracingDatasource": {
+      "kind": "TempoDatasource",
+      "name": "tempo"
+    }
   }
 }

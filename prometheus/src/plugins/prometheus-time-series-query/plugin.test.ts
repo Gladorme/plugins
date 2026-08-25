@@ -19,7 +19,7 @@ import { TimeSeriesQueryContext } from '@perses-dev/plugin-system';
 import { DatasourceSpec } from '@perses-dev/spec';
 import type { Mock } from 'vitest';
 
-import { RangeQueryResponse, InstantQueryResponse } from '../../model';
+import { ExemplarQueryResponse, RangeQueryResponse, InstantQueryResponse } from '../../model';
 import { PrometheusDatasource } from '../prometheus-datasource';
 import { PrometheusDatasourceSpec } from '../types';
 import { PrometheusTimeSeriesQuery } from './';
@@ -69,6 +69,19 @@ promStubClient.instantQuery = vi.fn(async () => {
   return stubResponse;
 });
 
+promStubClient.exemplarQuery = vi.fn(async () => {
+  const stubResponse: ExemplarQueryResponse = {
+    status: 'success',
+    data: [
+      {
+        seriesLabels: { __name__: 'up' },
+        exemplars: [{ labels: { trace_id: 'abc123' }, value: '10', timestamp: 1686141338.877 }],
+      },
+    ],
+  };
+  return stubResponse;
+});
+
 const getDatasourceClient: Mock = vi.fn(() => {
   return promStubClient;
 });
@@ -104,6 +117,11 @@ const createStubContext = (): TimeSeriesQueryContext => {
 };
 
 describe('PrometheusTimeSeriesQuery', () => {
+  beforeEach(() => {
+    delete datasource.tracingDatasource;
+    (promStubClient.exemplarQuery as Mock).mockClear();
+  });
+
   it('should properly resolve variable dependencies', () => {
     if (!PrometheusTimeSeriesQuery.dependsOn) throw new Error('dependsOn is not defined');
     const { variables } = PrometheusTimeSeriesQuery.dependsOn(
@@ -186,5 +204,39 @@ describe('PrometheusTimeSeriesQuery', () => {
 
     expect(promStubClient.instantQuery).toHaveBeenCalledTimes(1);
     expect(promStubClient.rangeQuery).not.toHaveBeenCalled();
+  });
+
+  it('should request exemplars for range queries when a tracing datasource is configured', async () => {
+    datasource.tracingDatasource = { kind: 'TempoDatasource', name: 'tempo' };
+
+    const results = await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());
+
+    expect(promStubClient.exemplarQuery).toHaveBeenCalledTimes(1);
+    expect(results.metadata?.exemplars).toEqual([
+      {
+        seriesLabels: { __name__: 'up' },
+        exemplars: [{ labels: { trace_id: 'abc123' }, value: '10', timestamp: 1686141338.877 }],
+      },
+    ]);
+    expect(results.metadata?.tracingDatasource).toEqual({ kind: 'TempoDatasource', name: 'tempo' });
+  });
+
+  it('should not request exemplars without a tracing datasource', async () => {
+    await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());
+
+    expect(promStubClient.exemplarQuery).not.toHaveBeenCalled();
+  });
+
+  it('should preserve metric data when the exemplar request fails', async () => {
+    datasource.tracingDatasource = { kind: 'TempoDatasource', name: 'tempo' };
+    (promStubClient.exemplarQuery as Mock).mockRejectedValueOnce(new Error('endpoint unavailable'));
+
+    const results = await PrometheusTimeSeriesQuery.getTimeSeriesData({ query: 'up' }, createStubContext());
+
+    expect(results.series).toHaveLength(1);
+    expect(results.metadata?.notices).toContainEqual({
+      type: 'warning',
+      message: 'Unable to load exemplars: endpoint unavailable',
+    });
   });
 });

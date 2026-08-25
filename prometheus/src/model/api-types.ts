@@ -101,6 +101,25 @@ export interface RangeQueryRequestParameters {
 
 export type RangeQueryResponse = ApiResponse<MatrixData>;
 
+export interface ExemplarQueryRequestParameters {
+  query: string;
+  start: UnixTimestampSeconds;
+  end: UnixTimestampSeconds;
+}
+
+export interface Exemplar {
+  labels: Metric;
+  value: string;
+  timestamp: UnixTimestampSeconds;
+}
+
+export interface ExemplarData {
+  seriesLabels: Metric;
+  exemplars: Exemplar[];
+}
+
+export type ExemplarQueryResponse = ApiResponse<ExemplarData[]>;
+
 export interface SeriesRequestParameters {
   'match[]': string[];
   start?: UnixTimestampSeconds;

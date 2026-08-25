@@ -58,6 +58,17 @@ Configure query parameters to be appended to all Prometheus API requests. This i
 - Resolution control (`max_source_resolution=0s`)
 - Any custom query parameters required by your Prometheus setup
 
+#### Tracing Datasource
+
+```golang
+import "github.com/perses/plugins/prometheus/sdk/go/datasource"
+
+datasource.TracingDatasource("TempoDatasource", "tempo")
+```
+
+Configure the tracing datasource used to retrieve traces referenced by Prometheus exemplars. The trace is loaded only
+when its exemplar is selected in a time series chart.
+
 ## Examples
 
 ```golang

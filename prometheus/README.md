@@ -1,5 +1,8 @@
 # Prometheus Plugin
 
+The datasource editor can associate a Tempo or Jaeger datasource with Prometheus. This enables exemplars in time series
+charts and loads trace details only when an exemplar is selected.
+
 ### How to install
 
 This plugin requires react and react-dom 18

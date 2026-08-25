@@ -18,6 +18,7 @@ import { BuiltinVariableDefinition } from '@perses-dev/spec';
 
 import {
   ClientRequestOptions,
+  exemplarQuery,
   healthCheck,
   instantQuery,
   labelNames,
@@ -71,6 +72,7 @@ const createClient: DatasourcePlugin<PrometheusDatasourceSpec, PrometheusClient>
     healthCheck: healthCheck({ datasourceUrl, headers: specHeaders, queryParams }),
     instantQuery: wrapClientMethod(instantQuery, datasourceUrl, specHeaders, queryParams),
     rangeQuery: wrapClientMethod(rangeQuery, datasourceUrl, specHeaders, queryParams),
+    exemplarQuery: wrapClientMethod(exemplarQuery, datasourceUrl, specHeaders, queryParams),
     labelNames: wrapClientMethod(labelNames, datasourceUrl, specHeaders, queryParams),
     labelValues: wrapClientMethod(labelValues, datasourceUrl, specHeaders, queryParams),
     metricMetadata: wrapClientMethod(metricMetadata, datasourceUrl, specHeaders, queryParams),

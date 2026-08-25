@@ -1,5 +1,8 @@
 # TimeSeriesChart Panel Plugin
 
+The chart displays Prometheus exemplars as interactive diamond markers. When the Prometheus datasource is associated
+with a tracing datasource, trace details are loaded lazily from Tempo or Jaeger when a marker is selected.
+
 ### How to install
 
 This plugin requires react and react-dom 18
