@@ -15,7 +15,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { OTelSignal, OTelSignalCapability, OTelSignalInputs } from '../model';
-import { SignalNavigation } from './OTelExplorer';
+import { createSignalChangeData, getSignalPanelKind, SignalNavigation } from './OTelExplorer';
 import { OTelQueryControls } from './OTelQueryControls';
 
 vi.mock('@perses-dev/plugin-system', async (importOriginal) => ({
@@ -81,6 +81,7 @@ describe('OTelQueryControls', () => {
     expect(screen.getByLabelText('Status')).not.toBeNull();
     expect(screen.getByLabelText('Min duration')).not.toBeNull();
     expect(screen.getByLabelText('Max duration')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Run query' }).classList.contains('MuiButton-fullWidth')).toBe(true);
   });
 
   it('renders profile type and service controls', () => {
@@ -109,5 +110,19 @@ describe('SignalNavigation', () => {
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Metrics', 'Logs', 'Traces', 'Profiles']);
     fireEvent.click(screen.getByRole('tab', { name: 'Traces' }));
     expect(onChange).toHaveBeenCalledWith(expect.anything(), 'traces');
+  });
+
+  it('keeps common attributes when changing signal', () => {
+    const filters = [{ id: 'service', key: 'service.name', operator: '=' as const, value: 'checkout' }];
+    const next = createSignalChangeData({ filters, metricName: 'requests_total', signal: 'metrics' }, 'logs', filters);
+
+    expect(next).toEqual({ filters, metricName: 'requests_total', signal: 'logs' });
+    expect(next.filters).toBe(filters);
+  });
+
+  it('uses a time series table for instant metric results', () => {
+    expect(getSignalPanelKind('metrics', 'range')).toBe('TimeSeriesChart');
+    expect(getSignalPanelKind('metrics', 'instant')).toBe('TimeSeriesTable');
+    expect(getSignalPanelKind('logs', 'instant')).toBe('LogsTable');
   });
 });

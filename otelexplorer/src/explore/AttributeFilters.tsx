@@ -199,13 +199,13 @@ function SuggestedAttributeFilterRow({
     otherFilters,
   ];
   const { data: nameOptions = EMPTY_OPTIONS, isLoading: isNameLoading } = useQuery({
-    enabled: capability.getAttributeNames !== undefined,
+    enabled: filter.key.trim() !== '' && capability.getAttributeNames !== undefined,
     queryKey: [...queryKey, 'attributeNames'],
     queryFn: ({ signal }) => capability.getAttributeNames!({ ...context, abortSignal: signal, filters: otherFilters }),
     staleTime: SUGGESTIONS_STALE_TIME,
   });
   const { data: valueOptions = EMPTY_OPTIONS, isLoading: isValueLoading } = useQuery({
-    enabled: filter.key.trim() !== '' && capability.getAttributeValues !== undefined,
+    enabled: filter.key.trim() !== '' && filter.value.trim() !== '' && capability.getAttributeValues !== undefined,
     queryKey: [...queryKey, 'attributeValues', filter.key],
     queryFn: ({ signal }) =>
       capability.getAttributeValues!({

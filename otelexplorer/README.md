@@ -11,14 +11,16 @@ boundary while the explorer owns the complete filtering experience.
 
 Each signal has a small set of queryless controls for its most common investigation workflow:
 
-- Metrics: optional metric name and Range/Instant query mode.
+- Metrics: optional metric name and Range/Instant query mode. Range results use a time series chart; Instant results use
+  a time series table.
 - Logs: optional service, log-line text, and severity filters.
 - Traces: optional service, span, status, and minimum/maximum duration filters.
 - Profiles: optional service and required profile type.
 
 Datasources may provide metric names, semantic signal-field values, attribute names, and attribute values. The
 explorer displays suggestions as free-form autocomplete inputs, so users can still enter values when a backend does not
-provide discovery APIs.
+provide discovery APIs. Attribute name and value suggestions are loaded only after the corresponding input contains
+text, avoiding broad metadata requests for empty filter rows.
 
 ```ts
 import type { OTelExplorerDatasourcePlugin } from '@perses-dev/otel-explorer-plugin';

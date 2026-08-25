@@ -53,7 +53,7 @@ import { OTelQueryControls } from './OTelQueryControls';
 type SignalQueries = Partial<Record<OTelSignal, QueryDefinition[]>>;
 type SignalDatasources = Partial<Record<OTelSignal, DatasourceSelector>>;
 
-interface OTelExplorerQueryParams extends Partial<OTelSignalInputs> {
+export interface OTelExplorerQueryParams extends Partial<OTelSignalInputs> {
   signal?: OTelSignal;
   filters?: OTelAttributeFilter[];
   queries?: SignalQueries;
@@ -72,6 +72,7 @@ const EMPTY_DATASOURCE_METADATA: PluginMetadataWithModule[] = [];
 const DATASOURCE_PLUGIN_TYPES = ['Datasource' as const];
 const PANEL_HEIGHT = 700;
 const RANGE_QUERY_OPTIONS = { mode: 'range' as const };
+const INSTANT_QUERY_OPTIONS = { mode: 'instant' as const };
 const PANEL_OPTIONS = { hideHeader: true };
 const EXPLORER_SX = { width: '100%' };
 const TABS_SX = { borderBottom: 1, borderColor: 'divider' };
@@ -108,6 +109,28 @@ const PANEL_KINDS: Record<OTelSignal, string> = {
   profiles: 'FlameChart',
 };
 
+export function getSignalPanelKind(signal: OTelSignal, metricsQueryMode: OTelSignalInputs['metricsQueryMode']): string {
+  return signal === 'metrics' && metricsQueryMode === 'instant' ? 'TimeSeriesTable' : PANEL_KINDS[signal];
+}
+
+function getSignalQueryOptions(
+  signal: OTelSignal,
+  metricsQueryMode: OTelSignalInputs['metricsQueryMode'],
+): typeof RANGE_QUERY_OPTIONS | typeof INSTANT_QUERY_OPTIONS | undefined {
+  if (signal !== 'metrics') {
+    return undefined;
+  }
+  return metricsQueryMode === 'instant' ? INSTANT_QUERY_OPTIONS : RANGE_QUERY_OPTIONS;
+}
+
+export function createSignalChangeData(
+  data: OTelExplorerQueryParams,
+  signal: OTelSignal,
+  filters: OTelAttributeFilter[],
+): OTelExplorerQueryParams {
+  return { ...data, signal, filters };
+}
+
 const PANEL_SPECS: Record<OTelSignal, UnknownSpec> = {
   metrics: {},
   logs: {},
@@ -135,18 +158,27 @@ function toProviders(
   });
 }
 
-function SignalResults({ signal, queries }: { signal: OTelSignal; queries: QueryDefinition[] }): ReactElement | null {
-  const resetKeys = useMemo(() => [signal, queries], [queries, signal]);
+function SignalResults({
+  signal,
+  queries,
+  metricsQueryMode,
+}: {
+  signal: OTelSignal;
+  queries: QueryDefinition[];
+  metricsQueryMode: OTelSignalInputs['metricsQueryMode'];
+}): ReactElement | null {
+  const resetKeys = useMemo(() => [signal, metricsQueryMode, queries], [metricsQueryMode, queries, signal]);
+  const queryOptions = getSignalQueryOptions(signal, metricsQueryMode);
   const definition = useMemo(
     () => ({
       kind: 'Panel' as const,
       spec: {
         queries,
         display: { name: '' },
-        plugin: { kind: PANEL_KINDS[signal], spec: PANEL_SPECS[signal] },
+        plugin: { kind: getSignalPanelKind(signal, metricsQueryMode), spec: PANEL_SPECS[signal] },
       },
     }),
-    [queries, signal],
+    [metricsQueryMode, queries, signal],
   );
 
   if (queries.length === 0) {
@@ -155,7 +187,7 @@ function SignalResults({ signal, queries }: { signal: OTelSignal; queries: Query
 
   return (
     <ErrorBoundary FallbackComponent={ErrorAlert} resetKeys={resetKeys}>
-      <DataQueriesProvider definitions={queries} options={signal === 'metrics' ? RANGE_QUERY_OPTIONS : undefined}>
+      <DataQueriesProvider definitions={queries} options={queryOptions}>
         <Box height={PANEL_HEIGHT}>
           <Panel panelOptions={PANEL_OPTIONS} definition={definition} />
         </Box>
@@ -359,9 +391,9 @@ export function OTelExplorer(): ReactElement {
   const handleSignalChange = useCallback(
     (_: SyntheticEvent, next: OTelSignal): void => {
       setApplyError(undefined);
-      updateData({ signal: next });
+      setData(createSignalChangeData(data, next, filters));
     },
-    [updateData],
+    [data, filters, setData],
   );
   const handleFiltersChange = useCallback(
     (next: OTelAttributeFilter[]): void => updateData({ filters: next }),
@@ -397,7 +429,7 @@ export function OTelExplorer(): ReactElement {
             signal={signal}
           />
           {applyError && <Alert severity="error">{applyError}</Alert>}
-          <SignalResults signal={signal} queries={executedQueries} />
+          <SignalResults signal={signal} queries={executedQueries} metricsQueryMode={inputs.metricsQueryMode} />
         </Stack>
       )}
     </Stack>

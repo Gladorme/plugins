@@ -11,15 +11,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { useMemo, useState } from 'react';
 
-import { OTelAttributeFilter } from '../model';
+import { OTelAttributeFilter, OTelSignalCapability } from '../model';
 import { AttributeFilters } from './AttributeFilters';
+
+const SUGGESTION_CONTEXT = {
+  client: {},
+  datasource: { kind: 'TestDatasource' },
+  end: new Date(2_000),
+  start: new Date(1_000),
+};
+const GET_ATTRIBUTE_NAMES = vi.fn();
+const GET_ATTRIBUTE_VALUES = vi.fn();
+const SUGGESTION_CAPABILITY = {
+  createQuery: vi.fn(),
+  getAttributeNames: GET_ATTRIBUTE_NAMES,
+  getAttributeValues: GET_ATTRIBUTE_VALUES,
+};
 
 function TestFilters(): JSX.Element {
   const [filters, setFilters] = useState<OTelAttributeFilter[]>([]);
   return <AttributeFilters value={filters} onChange={setFilters} />;
+}
+
+function SuggestedTestFilters({ capability }: { capability: OTelSignalCapability }): JSX.Element {
+  const [filters, setFilters] = useState<OTelAttributeFilter[]>([
+    { id: 'attribute', key: '', operator: '=', value: '' },
+  ]);
+  const suggestions = useMemo(() => ({ capability, context: SUGGESTION_CONTEXT }), [capability]);
+  return <AttributeFilters value={filters} onChange={setFilters} suggestions={suggestions} />;
 }
 
 describe('AttributeFilters', () => {
@@ -59,5 +82,27 @@ describe('AttributeFilters', () => {
 
     expect(screen.getByDisplayValue('deployment.environment.name')).not.toBeNull();
     expect(screen.getByDisplayValue('service.version')).not.toBeNull();
+  });
+
+  it('loads attribute options only after the corresponding input has a value', async () => {
+    GET_ATTRIBUTE_NAMES.mockReset().mockResolvedValue(['service.name']);
+    GET_ATTRIBUTE_VALUES.mockReset().mockResolvedValue(['checkout']);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SuggestedTestFilters capability={SUGGESTION_CAPABILITY} />
+      </QueryClientProvider>,
+    );
+
+    expect(GET_ATTRIBUTE_NAMES).not.toHaveBeenCalled();
+    expect(GET_ATTRIBUTE_VALUES).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Attribute name'), { target: { value: 'service' } });
+    await waitFor(() => expect(GET_ATTRIBUTE_NAMES).toHaveBeenCalledOnce());
+    expect(GET_ATTRIBUTE_VALUES).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Attribute value'), { target: { value: 'check' } });
+    await waitFor(() => expect(GET_ATTRIBUTE_VALUES).toHaveBeenCalledOnce());
+    expect(GET_ATTRIBUTE_VALUES).toHaveBeenCalledWith(expect.objectContaining({ attribute: 'service', filters: [] }));
   });
 });

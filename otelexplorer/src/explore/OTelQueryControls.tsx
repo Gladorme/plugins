@@ -54,7 +54,6 @@ const CONTROLS_DIRECTION = { xs: 'column' as const, md: 'row' as const };
 const FIELD_SX = { minWidth: 240, flex: 1 };
 const WIDE_FIELD_SX = { minWidth: 320, flex: 2 };
 const DURATION_FIELD_SX = { minWidth: 150, flex: 1 };
-const RUN_BUTTON_SX = { alignSelf: 'flex-end' };
 const SUGGESTIONS_STALE_TIME = 60_000;
 
 function createInputSlotProps(params: AutocompleteRenderInputParams, endAdornment: ReactNode): object {
@@ -446,7 +445,7 @@ export function OTelQueryControls({
         <Typography variant="subtitle2">Attributes</Typography>
         <AttributeFilters value={filters} onChange={onFiltersChange} suggestions={suggestions} />
       </Stack>
-      <Button variant="contained" onClick={onQueryRun} disabled={queryDisabled} sx={RUN_BUTTON_SX}>
+      <Button fullWidth variant="contained" onClick={onQueryRun} disabled={queryDisabled}>
         Run query
       </Button>
     </Stack>
