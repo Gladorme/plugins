@@ -28,12 +28,14 @@ import {
   VICTORIALOGS_DATASOURCE_KIND,
   VictoriaLogsDatasourceSelector,
 } from '../../model';
+import { useVictoriaLogsFieldValuesVariableValidation } from '../../schema';
 import { VictoriaLogsFieldValuesVariableOptions } from '../types';
 import { useFieldNames } from '../utils';
 
 export function VictoriaLogsFieldValuesVariableEditor(
   props: OptionsEditorProps<VictoriaLogsFieldValuesVariableOptions>,
 ): ReactElement {
+  useVictoriaLogsFieldValuesVariableValidation();
   const {
     onChange,
     value,

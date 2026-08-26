@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useJaegerDatasourceValidation } from '../schema';
 import { JaegerDatasourceSpec } from './jaeger-datasource-types';
 
 export interface JaegerDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface JaegerDatasourceEditorProps {
 }
 
 export function JaegerDatasourceEditor(props: JaegerDatasourceEditorProps): ReactElement {
+  useJaegerDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: JaegerDatasourceSpec = {

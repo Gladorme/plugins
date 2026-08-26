@@ -32,8 +32,10 @@ import {
   LOG_BASE_CONFIG,
   LOG_BASE_OPTIONS,
 } from '../heat-map-chart-model';
+import { useHeatMapChartValidation } from '../schema';
 
 export function HeatMapChartOptionsEditorSettings(props: HeatMapChartOptionsEditorProps): ReactElement {
+  useHeatMapChartValidation();
   const { onChange, value } = props;
 
   const handleYAxisFormatChange: FormatControlsProps['onChange'] = (newFormat) => {

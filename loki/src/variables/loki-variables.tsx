@@ -34,6 +34,11 @@ import {
   LokiClient,
   LokiStreamResult,
 } from '../model';
+import {
+  useLokiLabelNamesVariableValidation,
+  useLokiLabelValuesVariableValidation,
+  useLokiLogQLVariableValidation,
+} from '../schema';
 import { MatcherEditor } from './MatcherEditor';
 import {
   LokiLabelNamesVariableOptions,
@@ -66,6 +71,7 @@ function useLokiDatasourceChangeHandler<T extends LokiVariableOptionsBase>(
 }
 
 export function LokiLabelValuesVariableEditor(props: OptionsEditorProps<LokiLabelValuesVariableOptions>): ReactElement {
+  useLokiLabelValuesVariableValidation();
   const {
     onChange,
     value,
@@ -130,6 +136,7 @@ export function LokiLabelValuesVariableEditor(props: OptionsEditorProps<LokiLabe
 }
 
 export function LokiLabelNamesVariableEditor(props: OptionsEditorProps<LokiLabelNamesVariableOptions>): ReactElement {
+  useLokiLabelNamesVariableValidation();
   const {
     onChange,
     value,
@@ -172,6 +179,7 @@ export function LokiLabelNamesVariableEditor(props: OptionsEditorProps<LokiLabel
 }
 
 export function LokiLogQLVariableEditor(props: OptionsEditorProps<LokiLogQLVariableOptions>): ReactElement {
+  useLokiLogQLVariableValidation();
   const {
     onChange,
     value,

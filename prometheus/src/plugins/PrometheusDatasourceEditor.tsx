@@ -19,6 +19,7 @@ import MinusIcon from 'mdi-material-ui/Minus';
 import PlusIcon from 'mdi-material-ui/Plus';
 import { ReactElement, useRef, useState } from 'react';
 
+import { usePrometheusDatasourceValidation } from '../schema';
 import { DEFAULT_SCRAPE_INTERVAL, PrometheusDatasourceSpec } from './types';
 
 interface QueryParamEntry {
@@ -35,6 +36,7 @@ export interface PrometheusDatasourceEditorProps {
 }
 
 export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProps): ReactElement {
+  usePrometheusDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   // Counter for generating unique IDs

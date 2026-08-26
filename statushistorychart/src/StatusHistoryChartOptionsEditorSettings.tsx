@@ -24,9 +24,11 @@ import { LegendOptionsEditor, LegendOptionsEditorProps } from '@perses-dev/plugi
 import { produce } from 'immer';
 import { ReactElement } from 'react';
 
+import { useStatusHistoryChartValidation } from './schema';
 import { StatusHistoryChartOptions, StatusHistroyChartEditorProps } from './status-history-model.js';
 
 export function StatusHistoryChartOptionsEditorSettings(props: StatusHistroyChartEditorProps): ReactElement {
+  useStatusHistoryChartValidation();
   const { onChange, value } = props;
 
   const handleLegendChange: LegendOptionsEditorProps['onChange'] = (newLegend) => {

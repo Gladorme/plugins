@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useSplunkDatasourceValidation } from '../../schema';
 import { SplunkDatasourceSpec } from './splunk-datasource-types';
 
 export interface SplunkDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface SplunkDatasourceEditorProps {
 }
 
 export function SplunkDatasourceEditor(props: SplunkDatasourceEditorProps): ReactElement {
+  useSplunkDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: SplunkDatasourceSpec = {

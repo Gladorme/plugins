@@ -17,6 +17,8 @@ import { VariablePlugin, VariableOption, OptionsEditorProps } from '@perses-dev/
 import PlusCircleIcon from 'mdi-material-ui/PlusCircle';
 import { ReactElement, useCallback, useState } from 'react';
 
+import { useStaticListVariableValidation } from './schema';
+
 type StaticListOption = string | VariableOption;
 
 type StaticListVariableOptions = {
@@ -24,6 +26,7 @@ type StaticListVariableOptions = {
 };
 
 function StaticListVariableOptionEditor(props: OptionsEditorProps<StaticListVariableOptions>): ReactElement {
+  useStaticListVariableValidation();
   const {
     value: { values: variables = [] },
     onChange,

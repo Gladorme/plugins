@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useGreptimeDBDatasourceValidation } from '../../schema';
 import { GreptimeDBDatasourceSpec } from './greptimedb-datasource-types';
 
 export interface GreptimeDBDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface GreptimeDBDatasourceEditorProps {
 }
 
 export function GreptimeDBDatasourceEditor(props: GreptimeDBDatasourceEditorProps): ReactElement {
+  useGreptimeDBDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: GreptimeDBDatasourceSpec = {

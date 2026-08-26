@@ -39,8 +39,10 @@ import {
   LOG_BASE_CONFIG,
   LOG_BASE_OPTIONS,
 } from '../histogram-chart-model';
+import { useHistogramChartValidation } from '../schema';
 
 export function HistogramChartOptionsEditorSettings(props: HistogramChartOptionsEditorProps): ReactElement {
+  useHistogramChartValidation();
   const { onChange, value } = props;
 
   const handleUnitChange: FormatControlsProps['onChange'] = (newFormat) => {

@@ -15,6 +15,8 @@ import { Autocomplete, TextField } from '@mui/material';
 import { OptionsEditorProps, useListPluginMetadata, VariablePlugin } from '@perses-dev/plugin-system';
 import { ReactElement, useEffect, useMemo } from 'react';
 
+import { useDatasourceVariableValidation } from './schema';
+
 type StaticListVariableOptions = {
   datasourcePluginKind: string;
 };
@@ -22,6 +24,7 @@ type StaticListVariableOptions = {
 const EMPTY_SELECTED_KIND = { label: '', value: '' };
 
 export const DatasourceVariableOptionEditor = (props: OptionsEditorProps<StaticListVariableOptions>): ReactElement => {
+  useDatasourceVariableValidation();
   const { onChange, value } = props;
   const { datasourcePluginKind } = value;
   const { data: datasourcePlugins } = useListPluginMetadata(['Datasource']);

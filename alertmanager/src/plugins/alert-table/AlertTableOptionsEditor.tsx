@@ -17,6 +17,7 @@ import { OptionsEditorProps } from '@perses-dev/plugin-system';
 import { produce } from 'immer';
 import { ChangeEvent, ReactElement, SyntheticEvent, useCallback } from 'react';
 
+import { useAlertTableValidation } from '../../schema';
 import { AlertAction, AlertTableOptions, ALL_ALERT_ACTIONS } from './alert-table-model';
 
 const ACTION_LABELS: Record<AlertAction, string> = {
@@ -25,6 +26,7 @@ const ACTION_LABELS: Record<AlertAction, string> = {
 };
 
 export function AlertTableOptionsEditor(props: OptionsEditorProps<AlertTableOptions>): ReactElement {
+  useAlertTableValidation();
   const { value, onChange } = props;
   const effectiveActions = value.allowedActions ?? ALL_ALERT_ACTIONS;
   const groupBy = value.defaultGroupBy ?? ['alertname'];

@@ -34,6 +34,11 @@ import {
   PrometheusDatasourceSelector,
   VectorData,
 } from '../model';
+import {
+  usePrometheusLabelNamesVariableValidation,
+  usePrometheusLabelValuesVariableValidation,
+  usePrometheusPromQLVariableValidation,
+} from '../schema';
 import { MatcherEditor } from './MatcherEditor';
 import {
   PrometheusLabelNamesVariableOptions,
@@ -44,6 +49,7 @@ import {
 export function PrometheusLabelValuesVariableEditor(
   props: OptionsEditorProps<PrometheusLabelValuesVariableOptions>,
 ): ReactElement {
+  usePrometheusLabelValuesVariableValidation();
   const {
     onChange,
     value,
@@ -125,6 +131,7 @@ export function PrometheusLabelValuesVariableEditor(
 export function PrometheusLabelNamesVariableEditor(
   props: OptionsEditorProps<PrometheusLabelNamesVariableOptions>,
 ): ReactElement {
+  usePrometheusLabelNamesVariableValidation();
   const {
     onChange,
     value,
@@ -184,6 +191,7 @@ export function PrometheusLabelNamesVariableEditor(
 export function PrometheusPromQLVariableEditor(
   props: OptionsEditorProps<PrometheusPromQLVariableOptions>,
 ): ReactElement {
+  usePrometheusPromQLVariableValidation();
   const {
     onChange,
     value,

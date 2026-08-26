@@ -79,6 +79,10 @@ export function createConfigForPlugin(options: PluginConfigOptions) {
   const mfConfig: ModuleFederationOptions = {
     ...getBaseModuleFederationConfig(name), // base config first
     ...moduleFederation, // then any user config overrides
+    shared: {
+      zod: { singleton: true },
+      ...moduleFederation.shared,
+    },
   };
 
   const baseConfig: RsbuildConfig = getRsbuildConfig(name);

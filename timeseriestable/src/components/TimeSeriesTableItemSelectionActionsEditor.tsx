@@ -15,11 +15,13 @@ import { ActionOptions, ItemSelectionActionsEditor, SelectionOptions } from '@pe
 import { ReactElement } from 'react';
 
 import { TimeSeriesTableSettingsEditorProps } from '../model';
+import { useTimeSeriesTableValidation } from '../schema';
 
 export function TimeSeriesTableItemSelectionActionsEditor({
   value,
   onChange,
 }: TimeSeriesTableSettingsEditorProps): ReactElement {
+  useTimeSeriesTableValidation();
   function handleActionsChange(actions: ActionOptions | undefined): void {
     onChange({ ...value, actions: actions });
   }

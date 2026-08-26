@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import React, { ReactElement } from 'react';
 
+import { usePyroscopeDatasourceValidation } from '../schema';
 import { PyroscopeDatasourceSpec } from './pyroscope-datasource-types';
 
 export interface PyroscopeDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface PyroscopeDatasourceEditorProps {
 }
 
 export function PyroscopeDatasourceEditor(props: PyroscopeDatasourceEditorProps): ReactElement {
+  usePyroscopeDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: PyroscopeDatasourceSpec = {

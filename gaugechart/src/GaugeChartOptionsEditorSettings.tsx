@@ -34,8 +34,10 @@ import {
   GaugeChartOptions,
   GaugeChartOptionsEditorProps,
 } from './gauge-chart-model';
+import { useGaugeChartValidation } from './schema';
 
 export function GaugeChartOptionsEditorSettings(props: GaugeChartOptionsEditorProps): ReactElement {
+  useGaugeChartValidation();
   const { onChange, value } = props;
   /* If legend setting doesn't exist (because it is optional), the legend should show by default
      This is for the records before the legend option was added

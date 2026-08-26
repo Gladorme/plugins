@@ -64,11 +64,13 @@ import {
   DEFAULT_GROUP_BY,
   DEFAULT_VISUAL,
 } from './bar-chart-model';
+import { useBarChartValidation } from './schema';
 
 const DEFAULT_COLOR_VALUE = '#555';
 
 export function BarChartOptionsEditorSettings(props: BarChartOptionsEditorProps): ReactElement {
   const { onChange, value } = props;
+  useBarChartValidation();
 
   const handleCalculationChange: CalculationSelectorProps['onChange'] = (newCalculation: CalculationType) => {
     onChange(

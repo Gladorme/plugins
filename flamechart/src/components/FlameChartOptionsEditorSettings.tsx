@@ -21,6 +21,7 @@ import {
 import { ReactElement } from 'react';
 
 import { FlameChartOptionsEditorProps } from '../flame-chart-model';
+import { useFlameChartValidation } from '../schema';
 import {
   usePaletteState,
   useShowSettingsState,
@@ -34,6 +35,7 @@ import { PaletteSelector } from './PaletteSelector';
 import { SwitchSelector } from './SwitchSelector';
 
 export function FlameChartOptionsEditorSettings(props: FlameChartOptionsEditorProps): ReactElement {
+  useFlameChartValidation();
   const { value } = props;
 
   const { handlePaletteChange } = usePaletteState(props);

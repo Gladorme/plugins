@@ -25,6 +25,7 @@ import {
 import { ChangeEvent, ReactElement } from 'react';
 
 import { TableSettingsEditorProps } from '../models';
+import { useTableValidation } from '../schema';
 
 interface DefaultColumnsDimensionsControlProps {
   label: string;
@@ -70,6 +71,7 @@ function DefaultColumnsDimensionsControl({
 }
 
 export function TableSettingsEditor({ onChange, value }: TableSettingsEditorProps): ReactElement {
+  useTableValidation();
   function handleDensityChange(density: TableDensity): void {
     onChange({ ...value, density: density });
   }

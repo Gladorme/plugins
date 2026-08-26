@@ -16,6 +16,7 @@ import { OptionsEditorProps } from '@perses-dev/plugin-system';
 import { ChangeEvent, ReactElement } from 'react';
 
 import { MarkdownPanelOptions } from './markdown-panel-model';
+import { useMarkdownValidation } from './schema';
 
 export type MarkdownPanelOptionsEditorProps = OptionsEditorProps<MarkdownPanelOptions>;
 
@@ -23,6 +24,7 @@ const MARKDOWN_GUIDE_URL = 'https://commonmark.org/help/';
 const TEXT_INPUT_NUM_ROWS = 20;
 
 export function MarkdownPanelOptionsEditor(props: MarkdownPanelOptionsEditorProps): ReactElement {
+  useMarkdownValidation();
   const {
     onChange,
     value: { text },

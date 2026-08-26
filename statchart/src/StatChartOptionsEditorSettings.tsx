@@ -37,6 +37,7 @@ import { produce } from 'immer';
 import merge from 'lodash/merge';
 import { ReactElement, useCallback, useMemo } from 'react';
 
+import { useStatChartValidation } from './schema';
 import {
   COLOR_MODE_LABELS,
   ColorModeLabelItem,
@@ -49,6 +50,7 @@ import {
 const DEFAULT_FORMAT: FormatOptions = { unit: 'percent-decimal' };
 
 export function StatChartOptionsEditorSettings(props: StatChartOptionsEditorProps): ReactElement {
+  useStatChartValidation();
   const { onChange, value } = props;
 
   // ensures decimalPlaces defaults to correct value

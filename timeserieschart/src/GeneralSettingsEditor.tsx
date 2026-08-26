@@ -23,6 +23,7 @@ import { LegendOptionsEditor, LegendOptionsEditorProps } from '@perses-dev/plugi
 import { produce } from 'immer';
 import { ReactElement } from 'react';
 
+import { useTimeSeriesChartValidation } from './schema';
 import {
   TimeSeriesChartOptions,
   DEFAULT_VISUAL,
@@ -33,6 +34,7 @@ import { VisualOptionsEditor, VisualOptionsEditorProps } from './VisualOptionsEd
 import { YAxisOptionsEditor, YAxisOptionsEditorProps } from './YAxisOptionsEditor';
 
 export function TimeSeriesChartGeneralSettings(props: TimeSeriesChartOptionsEditorProps): ReactElement {
+  useTimeSeriesChartValidation();
   const { onChange, value } = props;
 
   const handleLegendChange: LegendOptionsEditorProps['onChange'] = (newLegend) => {

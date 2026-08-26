@@ -19,11 +19,13 @@ import {
 } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useTraceTableValidation } from './schema';
 import { TraceTableOptions } from './trace-table-model';
 
 type TraceTableItemSelectionActionsEditorProps = OptionsEditorProps<TraceTableOptions>;
 
 export function TraceTableItemSelectionActionsEditor(props: TraceTableItemSelectionActionsEditorProps): ReactElement {
+  useTraceTableValidation();
   const { onChange, value } = props;
 
   const handleActionsChange = (actions?: ActionOptions): void => {

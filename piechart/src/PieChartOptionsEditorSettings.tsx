@@ -54,8 +54,10 @@ import omit from 'lodash/omit';
 import { ReactElement, useMemo } from 'react';
 
 import { PieChartOptions, PieChartOptionsEditorProps, DEFAULT_FORMAT } from './pie-chart-model';
+import { usePieChartValidation } from './schema';
 
 export function PieChartOptionsEditorSettings(props: PieChartOptionsEditorProps): ReactElement {
+  usePieChartValidation();
   const { onChange, value } = props;
 
   const handleCalculationChange: CalculationSelectorProps['onChange'] = (newCalculation: CalculationType) => {

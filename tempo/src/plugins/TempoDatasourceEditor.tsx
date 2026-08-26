@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import React, { ReactElement } from 'react';
 
+import { useTempoDatasourceValidation } from '../schema';
 import { TempoDatasourceSpec } from './tempo-datasource-types';
 
 export interface TempoDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface TempoDatasourceEditorProps {
 }
 
 export function TempoDatasourceEditor(props: TempoDatasourceEditorProps): ReactElement {
+  useTempoDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: TempoDatasourceSpec = {

@@ -33,6 +33,7 @@ import {
   PrometheusClient,
   PrometheusDatasourceSelector,
 } from '../model';
+import { usePrometheusPromQLAnnotationValidation } from '../schema';
 
 export interface PrometheusAnnotationsQuerySpec {
   expr: string;
@@ -45,6 +46,7 @@ export interface PrometheusAnnotationsQuerySpec {
 export type PrometheusAnnotationsQueryEditorProps = OptionsEditorProps<PrometheusAnnotationsQuerySpec>;
 
 export function PrometheusPromQLAnnotationOptionEditor(props: PrometheusAnnotationsQueryEditorProps): ReactElement {
+  usePrometheusPromQLAnnotationValidation();
   const {
     onChange,
     value,

@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useLokiDatasourceValidation } from '../../schema';
 import { LokiDatasourceSpec } from './loki-datasource-types';
 
 export interface LokiDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface LokiDatasourceEditorProps {
 }
 
 export function LokiDatasourceEditor(props: LokiDatasourceEditorProps): ReactElement {
+  useLokiDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: LokiDatasourceSpec = {

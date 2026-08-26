@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useAlertManagerDatasourceValidation } from '../schema';
 import { AlertManagerDatasourceSpec } from './types';
 
 export interface AlertManagerDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface AlertManagerDatasourceEditorProps {
 }
 
 export function AlertManagerDatasourceEditor(props: AlertManagerDatasourceEditorProps): ReactElement {
+  useAlertManagerDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: AlertManagerDatasourceSpec = {

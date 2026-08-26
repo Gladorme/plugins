@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useVictoriaLogsDatasourceValidation } from '../../schema';
 import { VictoriaLogsDatasourceSpec } from './types';
 
 export interface VictoriaLogsDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface VictoriaLogsDatasourceEditorProps {
 }
 
 export function VictoriaLogsDatasourceEditor(props: VictoriaLogsDatasourceEditorProps): ReactElement {
+  useVictoriaLogsDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: VictoriaLogsDatasourceSpec = {

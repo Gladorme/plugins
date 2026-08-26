@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useOpenSearchDatasourceValidation } from '../../schema';
 import { OpenSearchDatasourceSpec } from './opensearch-datasource-types';
 
 export interface OpenSearchDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface OpenSearchDatasourceEditorProps {
 }
 
 export function OpenSearchDatasourceEditor(props: OpenSearchDatasourceEditorProps): ReactElement {
+  useOpenSearchDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: OpenSearchDatasourceSpec = {

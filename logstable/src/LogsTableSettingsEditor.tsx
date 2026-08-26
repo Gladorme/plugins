@@ -21,10 +21,12 @@ import { LegendOptionsEditor, LegendOptionsEditorProps, OptionsEditorProps } fro
 import { ReactElement } from 'react';
 
 import { LogsTableOptions } from './model';
+import { useLogsTableValidation } from './schema';
 
 type LogsTableSettingsEditorProps = OptionsEditorProps<LogsTableOptions>;
 
 export function LogsTableSettingsEditor(props: LogsTableSettingsEditorProps): ReactElement {
+  useLogsTableValidation();
   const { onChange, value } = props;
 
   const handleLegendChange: LegendOptionsEditorProps['onChange'] = (newLegend) => {

@@ -14,6 +14,7 @@
 import { HTTPSettingsEditor } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
 
+import { useClickHouseDatasourceValidation } from '../../schema';
 import { ClickHouseDatasourceSpec } from './click-house-datasource-types';
 
 export interface ClickHouseDatasourceEditorProps {
@@ -23,6 +24,7 @@ export interface ClickHouseDatasourceEditorProps {
 }
 
 export function ClickHouseDatasourceEditor(props: ClickHouseDatasourceEditorProps): ReactElement {
+  useClickHouseDatasourceValidation();
   const { value, onChange, isReadonly } = props;
 
   const initialSpecDirect: ClickHouseDatasourceSpec = {
