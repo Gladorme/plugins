@@ -4,5 +4,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["./vite.shared.ts", "**/vite.config.ts"]
+  "include": ["./vite.shared.ts", "./vite.lib.config.ts", "**/vite.config.ts"]
 }
