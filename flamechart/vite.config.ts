@@ -11,19 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'StatusHistoryChart',
-  rsbuildConfig: {
-    server: { port: 3013 },
-    plugins: [pluginReact()],
+  name: 'FlameChart',
+  viteConfig: {
+    server: { port: 3021 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './StatusHistoryChart': './src/StatusHistoryChart.ts',
+      './FlameChart': './src/FlameChart.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
@@ -37,8 +37,6 @@ export default createConfigForPlugin({
       '@emotion/react': { requiredVersion: '^11.11.3', singleton: true },
       '@emotion/styled': { singleton: true },
       '@hookform/resolvers': { singleton: true },
-      '@tanstack/react-query': { singleton: true },
-      'react-hook-form': { singleton: true },
     },
   },
 });

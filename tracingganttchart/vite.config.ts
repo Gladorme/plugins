@@ -11,19 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'FlameChart',
-  rsbuildConfig: {
-    server: { port: 3021 },
-    plugins: [pluginReact()],
+  name: 'TracingGanttChart',
+  viteConfig: {
+    server: { port: 3019 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './FlameChart': './src/FlameChart.ts',
+      './TracingGanttChart': './src/TracingGanttChart.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },

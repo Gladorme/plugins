@@ -11,27 +11,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'Splunk',
-  rsbuildConfig: {
-    server: { port: 3120 },
-    plugins: [pluginReact()],
+  name: 'StatusHistoryChart',
+  viteConfig: {
+    server: { port: 3013 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './SplunkDatasource': './src/datasources/splunk-datasource',
-      './SplunkTimeSeriesQuery': './src/queries/splunk-time-series-query',
-      './SplunkLogQuery': './src/queries/splunk-log-query',
+      './StatusHistoryChart': './src/StatusHistoryChart.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
-      immer: { singleton: true },
+      'react-dom': { requiredVersion: '18.2.0', singleton: true },
+      echarts: { singleton: true },
+      'date-fns': { singleton: true },
+      'date-fns-tz': { singleton: true },
+      lodash: { singleton: true },
       '@perses-dev/components': { singleton: true },
       '@perses-dev/plugin-system': { singleton: true },
+      '@emotion/react': { requiredVersion: '^11.11.3', singleton: true },
+      '@emotion/styled': { singleton: true },
+      '@hookform/resolvers': { singleton: true },
+      '@tanstack/react-query': { singleton: true },
+      'react-hook-form': { singleton: true },
     },
   },
 });

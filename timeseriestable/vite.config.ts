@@ -11,38 +11,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'AlertManager',
-  rsbuildConfig: {
-    server: { port: 3015 },
-    plugins: [pluginReact()],
+  name: 'TimeSeriesTable',
+  viteConfig: {
+    server: { port: 3017 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './AlertManagerDatasource': './src/plugins/alertmanager-datasource.tsx',
-      './AlertManagerAlertsQuery': './src/plugins/alertmanager-alerts-query/AlertManagerAlertsQuery.ts',
-      './AlertManagerSilencesQuery': './src/plugins/alertmanager-silences-query/AlertManagerSilencesQuery.ts',
-      './AlertTable': './src/plugins/alert-table/AlertTable.ts',
-      './SilenceTable': './src/plugins/silence-table/SilenceTable.ts',
-      './AlertManagerAlertsExplorer': './src/explore/AlertManagerAlertsExplorer.tsx',
-      './AlertManagerSilencesExplorer': './src/explore/AlertManagerSilencesExplorer.tsx',
+      './TimeSeriesTable': './src/TimeSeriesTable.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
       'react-dom': { requiredVersion: '18.2.0', singleton: true },
+      echarts: { singleton: true },
       'date-fns': { singleton: true },
+      'date-fns-tz': { singleton: true },
       lodash: { singleton: true },
+      '@perses-dev/spec': { singleton: true },
       '@perses-dev/components': { singleton: true },
-      '@perses-dev/plugin-system': { singleton: true },
-      '@perses-dev/explore': { singleton: true },
       '@perses-dev/dashboards': { singleton: true },
+      '@perses-dev/plugin-system': { singleton: true },
       '@emotion/react': { requiredVersion: '^11.11.3', singleton: true },
       '@emotion/styled': { singleton: true },
-      '@tanstack/react-query': { singleton: true },
+      '@hookform/resolvers': { singleton: true },
+      'use-resize-observer': { requiredVersion: '^9.1.0', singleton: true },
     },
   },
 });

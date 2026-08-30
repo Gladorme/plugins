@@ -11,39 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'ClickHouse',
-  rsbuildConfig: {
-    server: { port: 3119 },
-    plugins: [pluginReact()],
+  name: 'HeatMapChart',
+  viteConfig: {
+    server: { port: 3021 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './ClickHouseDatasource': './src/datasources/click-house-datasource',
-      './ClickHouseTimeSeriesQuery': './src/queries/click-house-time-series-query',
-      './ClickHouseLogQuery': './src/queries/click-house-log-query',
+      './HeatMapChart': './src/HeatMapChart.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
       'react-dom': { requiredVersion: '18.2.0', singleton: true },
       echarts: { singleton: true },
-      'date-fns': { singleton: true },
-      'date-fns-tz': { singleton: true },
       lodash: { singleton: true },
+      '@perses-dev/spec': { singleton: true },
       '@perses-dev/components': { singleton: true },
       '@perses-dev/plugin-system': { singleton: true },
-      '@perses-dev/explore': { singleton: true },
-      '@perses-dev/dashboards': { singleton: true },
-      '@emotion/react': { requiredVersion: '^11.11.3', singleton: true },
-      '@emotion/styled': { singleton: true },
-      '@hookform/resolvers': { singleton: true },
-      '@tanstack/react-query': { singleton: true },
-      'react-hook-form': { singleton: true },
-      'react-router-dom': { singleton: true },
+      immer: { singleton: true },
     },
   },
 });

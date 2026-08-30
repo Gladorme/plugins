@@ -11,15 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
   name: 'LogExplorer',
-  rsbuildConfig: {
+  viteConfig: {
     server: { port: 3009 },
-    plugins: [pluginReact()],
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {

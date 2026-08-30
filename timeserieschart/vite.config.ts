@@ -11,25 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'Prometheus',
-  rsbuildConfig: {
-    server: { port: 3009 },
-    plugins: [pluginReact()],
+  name: 'TimeSeriesChart',
+  viteConfig: {
+    server: { port: 3016 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './PrometheusDatasource': './src/plugins/prometheus-datasource.tsx',
-      './PrometheusTimeSeriesQuery': './src/plugins/prometheus-time-series-query/PrometheusTimeSeriesQuery.ts',
-      './PrometheusLabelValuesVariable': './src/plugins/PrometheusLabelValuesVariable.tsx',
-      './PrometheusLabelNamesVariable': './src/plugins/PrometheusLabelNamesVariable.tsx',
-      './PrometheusPromQLVariable': './src/plugins/PrometheusPromQLVariable.tsx',
-      './PrometheusExplorer': './src/explore/PrometheusExplorer.tsx',
-      './PrometheusPromQLAnnotation': './src/annotations/PrometheusPromQLAnnotation.tsx',
+      './TimeSeriesChart': './src/TimeSeriesChart.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
@@ -39,15 +33,11 @@ export default createConfigForPlugin({
       'date-fns-tz': { singleton: true },
       lodash: { singleton: true },
       '@perses-dev/components': { singleton: true },
-      '@perses-dev/plugin-system': { singleton: true },
-      '@perses-dev/explore': { singleton: true },
       '@perses-dev/dashboards': { singleton: true },
+      '@perses-dev/plugin-system': { singleton: true },
       '@emotion/react': { requiredVersion: '^11.11.3', singleton: true },
       '@emotion/styled': { singleton: true },
       '@hookform/resolvers': { singleton: true },
-      '@tanstack/react-query': { singleton: true },
-      'react-hook-form': { singleton: true },
-      'react-router-dom': { singleton: true },
     },
   },
 });

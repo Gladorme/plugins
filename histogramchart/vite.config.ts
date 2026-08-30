@@ -11,19 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'HeatMapChart',
-  rsbuildConfig: {
-    server: { port: 3021 },
-    plugins: [pluginReact()],
+  name: 'HistogramChart',
+  viteConfig: {
+    server: { port: 3020 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './HeatMapChart': './src/HeatMapChart.ts',
+      './HistogramChart': './src/HistogramChart.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },

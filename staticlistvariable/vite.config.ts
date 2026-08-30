@@ -11,19 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'TracingGanttChart',
-  rsbuildConfig: {
-    server: { port: 3019 },
-    plugins: [pluginReact()],
+  name: 'StaticListVariable',
+  viteConfig: {
+    server: { port: 3012 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './TracingGanttChart': './src/TracingGanttChart.ts',
+      './StaticListVariable': './src/StaticListVariable.tsx',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },

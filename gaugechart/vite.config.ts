@@ -11,22 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'GreptimeDB',
-  rsbuildConfig: {
-    server: { port: 3119 },
-    plugins: [pluginReact()],
+  name: 'GaugeChart',
+  viteConfig: {
+    server: { port: 3006 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './GreptimeDBDatasource': './src/datasources/greptimedb-datasource',
-      './GreptimeDBTimeSeriesQuery': './src/queries/greptimedb-time-series-query',
-      './GreptimeDBLogQuery': './src/queries/greptimedb-log-query',
-      './GreptimeDBTraceQuery': './src/queries/greptimedb-trace-query',
+      './GaugeChart': './src/GaugeChart.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
@@ -37,13 +34,12 @@ export default createConfigForPlugin({
       lodash: { singleton: true },
       '@perses-dev/components': { singleton: true },
       '@perses-dev/plugin-system': { singleton: true },
-      '@perses-dev/dashboards': { singleton: true },
       '@emotion/react': { requiredVersion: '^11.11.3', singleton: true },
       '@emotion/styled': { singleton: true },
       '@hookform/resolvers': { singleton: true },
-      '@tanstack/react-query': { singleton: true },
-      'react-hook-form': { singleton: true },
-      'react-router-dom': { singleton: true },
+      'use-resize-observer': { requiredVersion: '9.1.0', singleton: true },
+      'mdi-material-ui': { requiredVersion: '7.4.0', singleton: true },
+      immer: { singleton: true },
     },
   },
 });

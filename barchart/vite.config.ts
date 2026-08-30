@@ -11,23 +11,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'ScatterChart',
-  rsbuildConfig: {
-    server: { port: 3010 },
-    plugins: [pluginReact()],
+  name: 'BarChart',
+  viteConfig: {
+    server: { port: 3005 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './ScatterChart': './src/ScatterChart.ts',
+      './BarChart': './src/BarChart.ts',
     },
     shared: {
-      react: { requiredVersion: '18.2.0', singleton: true },
-      'react-dom': { requiredVersion: '18.2.0', singleton: true },
+      react: { requiredVersion: '^18.2.0', singleton: true },
+      'react-dom': { requiredVersion: '^18.2.0', singleton: true },
       echarts: { singleton: true },
       'date-fns': { singleton: true },
       'date-fns-tz': { singleton: true },
@@ -37,6 +37,9 @@ export default createConfigForPlugin({
       '@emotion/react': { requiredVersion: '^11.11.3', singleton: true },
       '@emotion/styled': { singleton: true },
       '@hookform/resolvers': { singleton: true },
+      'use-resize-observer': { requiredVersion: '^9.1.0', singleton: true },
+      'mdi-material-ui': { requiredVersion: '^7.4.0', singleton: true },
+      immer: { singleton: true },
     },
   },
 });

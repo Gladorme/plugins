@@ -1,7 +1,8 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["./rsbuild.shared.ts", "**/rsbuild.config.ts"]
+  "include": ["./vite.shared.ts", "**/vite.config.ts"]
 }

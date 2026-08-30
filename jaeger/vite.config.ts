@@ -1,33 +1,30 @@
 // Copyright The Perses Authors
-// Licensed under the Apache License, Version 2.0 (the \"License\");
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an \"AS IS\" BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'VictoriaLogs',
-  rsbuildConfig: {
-    server: { port: 3121 },
-    plugins: [pluginReact()],
+  name: 'Jaeger',
+  viteConfig: {
+    server: { port: 3021 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './VictoriaLogsDatasource': './src/datasources/victorialogs-datasource',
-      './VictoriaLogsTimeSeriesQuery': './src/queries/victorialogs-time-series-query',
-      './VictoriaLogsLogQuery': './src/queries/victorialogs-log-query',
-      './VictoriaLogsFieldNamesVariable': './src/variables/victorialogs-field-names',
-      './VictoriaLogsFieldValuesVariable': './src/variables/victorialogs-field-values',
+      './JaegerDatasource': './src/plugins/jaeger-datasource.tsx',
+      './JaegerTraceQuery': './src/plugins/JaegerTraceQuery.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
@@ -45,7 +42,6 @@ export default createConfigForPlugin({
       '@hookform/resolvers': { singleton: true },
       '@tanstack/react-query': { singleton: true },
       'react-hook-form': { singleton: true },
-      'react-router-dom': { singleton: true },
     },
   },
 });

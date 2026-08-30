@@ -11,19 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { pluginReact } from '@rsbuild/plugin-react';
+import react from '@vitejs/plugin-react';
 
-import { createConfigForPlugin } from '../rsbuild.shared';
+import { createConfigForPlugin } from '../vite.shared.ts';
 
 export default createConfigForPlugin({
-  name: 'StatChart',
-  rsbuildConfig: {
-    server: { port: 3011 },
-    plugins: [pluginReact()],
+  name: 'Markdown',
+  viteConfig: {
+    server: { port: 3007 },
+    plugins: [react()],
   },
   moduleFederation: {
     exposes: {
-      './StatChart': './src/StatChart.ts',
+      './Markdown': './src/Markdown.ts',
     },
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
