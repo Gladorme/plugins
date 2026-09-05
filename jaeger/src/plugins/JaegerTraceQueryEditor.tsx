@@ -199,11 +199,14 @@ interface LazyTextFieldProps extends Omit<TextFieldProps, 'value' | 'onChange'> 
 
 function LazyTextField(props: LazyTextFieldProps): ReactElement {
   const { value, onCommit, ...textFieldProps } = props;
-  const [draftValue, setDraftValue] = useState(value ?? '');
+  const nextValue = value ?? '';
+  const [draftValue, setDraftValue] = useState(nextValue);
+  const [previousValue, setPreviousValue] = useState(nextValue);
 
-  useEffect(() => {
-    setDraftValue(value ?? '');
-  }, [value]);
+  if (nextValue !== previousValue) {
+    setPreviousValue(nextValue);
+    setDraftValue(nextValue);
+  }
 
   const handleChange = useCallback((event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     setDraftValue(event.target.value);
@@ -224,11 +227,14 @@ interface LazyAutocompleteTextFieldProps extends Omit<TextFieldProps, 'value' | 
 
 function LazyAutocompleteTextField(props: LazyAutocompleteTextFieldProps): ReactElement {
   const { value, options, onCommit, ...textFieldProps } = props;
-  const [draftValue, setDraftValue] = useState(value ?? '');
+  const nextValue = value ?? '';
+  const [draftValue, setDraftValue] = useState(nextValue);
+  const [previousValue, setPreviousValue] = useState(nextValue);
 
-  useEffect(() => {
-    setDraftValue(value ?? '');
-  }, [value]);
+  if (nextValue !== previousValue) {
+    setPreviousValue(nextValue);
+    setDraftValue(nextValue);
+  }
 
   const commitValue = useCallback(
     (nextValue: string): void => {
@@ -269,13 +275,12 @@ function LazyAutocompleteTextField(props: LazyAutocompleteTextFieldProps): React
 }
 
 function useServiceOptions(client: JaegerClient | undefined): string[] {
-  const [serviceOptions, setServiceOptions] = useState<string[]>([]);
+  const [serviceState, setServiceState] = useState<{ client: JaegerClient; options: string[] }>();
 
   useEffect(() => {
     let ignore = false;
 
     if (!client) {
-      setServiceOptions([]);
       return;
     }
 
@@ -286,11 +291,11 @@ function useServiceOptions(client: JaegerClient | undefined): string[] {
           return;
         }
 
-        setServiceOptions(toSortedUniqueOptions(response.data ?? []));
+        setServiceState({ client, options: toSortedUniqueOptions(response.data ?? []) });
       })
       .catch(() => {
         if (!ignore) {
-          setServiceOptions([]);
+          setServiceState({ client, options: [] });
         }
       });
 
@@ -299,18 +304,21 @@ function useServiceOptions(client: JaegerClient | undefined): string[] {
     };
   }, [client]);
 
-  return serviceOptions;
+  return client && serviceState?.client === client ? serviceState.options : [];
 }
 
 function useOperationOptions(client: JaegerClient | undefined, service: string | undefined): string[] {
-  const [operationOptions, setOperationOptions] = useState<string[]>([]);
+  const [operationState, setOperationState] = useState<{
+    client: JaegerClient;
+    service: string;
+    options: string[];
+  }>();
   const normalizedService = useMemo(() => service?.trim(), [service]);
 
   useEffect(() => {
     let ignore = false;
 
     if (!client || normalizedService === undefined || normalizedService === '') {
-      setOperationOptions([]);
       return;
     }
 
@@ -321,11 +329,15 @@ function useOperationOptions(client: JaegerClient | undefined, service: string |
           return;
         }
 
-        setOperationOptions(toSortedUniqueOptions((response.data ?? []).map((operation) => operation.name)));
+        setOperationState({
+          client,
+          service: normalizedService,
+          options: toSortedUniqueOptions((response.data ?? []).map((operation) => operation.name)),
+        });
       })
       .catch(() => {
         if (!ignore) {
-          setOperationOptions([]);
+          setOperationState({ client, service: normalizedService, options: [] });
         }
       });
 
@@ -334,7 +346,9 @@ function useOperationOptions(client: JaegerClient | undefined, service: string |
     };
   }, [client, normalizedService]);
 
-  return operationOptions;
+  return client && operationState?.client === client && operationState.service === normalizedService
+    ? operationState.options
+    : [];
 }
 
 function toOptionalString(value: string): string | undefined {

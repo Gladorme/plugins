@@ -19,7 +19,7 @@ import type { DurationString } from '@perses-dev/spec';
 import MinusIcon from 'mdi-material-ui/Minus';
 import PlusIcon from 'mdi-material-ui/Plus';
 import type { ReactElement } from 'react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import type { PrometheusDatasourceSpec } from './types';
 import { DEFAULT_SCRAPE_INTERVAL } from './types';
@@ -36,15 +36,12 @@ export type PrometheusDatasourceEditorProps = DatasourceEditorProps<PrometheusDa
 export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProps): ReactElement {
   const { value, onChange, isReadonly, testConnection } = props;
 
-  // Counter for generating unique IDs
-  const nextIdRef = useRef(0);
-
   // Use local state to maintain an array of entries during editing, instead of
   // manipulating a map directly which causes weird UX.
   const [entries, setEntries] = useState<QueryParamEntry[]>(() => {
     const queryParams: QueryParamValues = value.queryParams ?? {};
-    return Object.entries(queryParams).map(([key, val]) => ({
-      id: String(nextIdRef.current++),
+    return Object.entries(queryParams).map(([key, val], index) => ({
+      id: String(index),
       key,
       value: Array.isArray(val) ? val.join(',') : val,
     }));
@@ -92,7 +89,8 @@ export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProp
   };
 
   const addQueryParam = (): void => {
-    const newEntries = [...entries, { id: String(nextIdRef.current++), key: '', value: '' }];
+    const nextId = entries.reduce((maxId, entry) => Math.max(maxId, Number(entry.id)), -1) + 1;
+    const newEntries = [...entries, { id: String(nextId), key: '', value: '' }];
     setEntries(newEntries);
     syncToParent(newEntries);
   };

@@ -25,7 +25,7 @@ import {
 import type { DatasourceSelector } from '@perses-dev/spec';
 import DeleteIcon from 'mdi-material-ui/Delete';
 import type { HTMLAttributes, ReactElement, SyntheticEvent } from 'react';
-import { cloneElement, forwardRef, useMemo, useRef, useState } from 'react';
+import { cloneElement, forwardRef, useMemo, useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
 import type { LabelFilter, Operator } from '../types';
@@ -75,17 +75,16 @@ export function LabelFilterInput({
 export const ListboxComponent = forwardRef<HTMLUListElement, HTMLAttributes<HTMLUListElement>>(
   ({ children, ...rest }, ref) => {
     const data = children as ReactElement[];
-    const localRef = useRef<string>('500px');
-
+    const [maxHeight, setMaxHeight] = useState('500px');
     const [height, setHeight] = useState(0);
 
     return (
       <ul
         style={{ overflow: 'hidden', padding: '0', height: height ? `min(40vh, ${height}px)` : '40vh' }}
         ref={(reference) => {
-          const maxHeight = reference ? getComputedStyle(reference).maxHeight : null;
-          if (maxHeight && maxHeight !== localRef.current) {
-            localRef.current = maxHeight;
+          const computedMaxHeight = reference ? getComputedStyle(reference).maxHeight : null;
+          if (computedMaxHeight) {
+            setMaxHeight(computedMaxHeight);
           }
 
           if (typeof ref === 'function') {
@@ -95,7 +94,7 @@ export const ListboxComponent = forwardRef<HTMLUListElement, HTMLAttributes<HTML
         {...rest}
       >
         <Virtuoso
-          style={{ height: localRef.current, padding: '10px 0' }}
+          style={{ height: maxHeight, padding: '10px 0' }}
           data={data}
           totalListHeightChanged={setHeight}
           itemContent={(index, child) => {

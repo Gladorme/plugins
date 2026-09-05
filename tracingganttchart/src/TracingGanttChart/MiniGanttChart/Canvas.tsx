@@ -46,7 +46,6 @@ export function Canvas(props: CanvasProps): ReactElement {
   // the <canvas> element must have an absolute width and height to avoid rendering problems
   // the wrapper box is required to get the available dimensions for the <canvas> element
   const { width, ref: wrapperRef } = useResizeObserver();
-  const height = CANVAS_HEIGHT;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mouseState, setMouseState] = useState<MouseState>({ type: 'none' });
 
@@ -60,13 +59,13 @@ export function Canvas(props: CanvasProps): ReactElement {
   );
 
   useEffect(() => {
-    if (!canvasRef.current || !width || !height) return;
+    if (!canvasRef.current || !width) return;
 
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    drawSpans(ctx, width, height, trace, spanColorGenerator);
-  }, [width, height, trace, spanColorGenerator]);
+    drawSpans(ctx, width, CANVAS_HEIGHT, trace, spanColorGenerator);
+  }, [width, trace, spanColorGenerator]);
 
   const translateCursorToTime = (e: ReactMouseEvent | MouseEvent): number => {
     if (!canvasRef.current || !width) return 0;
@@ -185,8 +184,8 @@ export function Canvas(props: CanvasProps): ReactElement {
   }, [mouseState, handleMouseMove, handleMouseUp]);
 
   return (
-    <Box ref={wrapperRef} sx={{ position: 'relative', height }} onMouseDown={handleMouseDown}>
-      <canvas ref={canvasRef} width={width} height={height} style={{ position: 'absolute' }} />
+    <Box ref={wrapperRef} sx={{ position: 'relative', height: CANVAS_HEIGHT }} onMouseDown={handleMouseDown}>
+      <canvas ref={canvasRef} width={width} height={CANVAS_HEIGHT} style={{ position: 'absolute' }} />
       <Ticks />
       <CutoffBox data-elem="cutoffBox" style={{ left: 0, width: `${relativeCutoffLeft * 100}%` }} />
       <Resizer data-elem="resizerLeft" style={{ left: `${relativeCutoffLeft * 100}%` }} />

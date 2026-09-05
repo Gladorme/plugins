@@ -33,12 +33,19 @@ export const DatasourceVariableOptionEditor = (props: OptionsEditorProps<StaticL
     [datasourcePlugins],
   );
 
-  const options = Array.from(datasourcePluginKindSet).map((kind) => ({
-    label: kind,
-    value: kind,
-  }));
+  const options = useMemo(
+    () =>
+      Array.from(datasourcePluginKindSet).map((kind) => ({
+        label: kind,
+        value: kind,
+      })),
+    [datasourcePluginKindSet],
+  );
 
-  const selectedKind = options.find((option) => option.label === datasourcePluginKind) ?? EMPTY_SELECTED_KIND;
+  const selectedKind = useMemo(
+    () => options.find((option) => option.label === datasourcePluginKind) ?? EMPTY_SELECTED_KIND,
+    [datasourcePluginKind, options],
+  );
 
   // If there is no selected kind and there are available options, select the first one
   useEffect(() => {
@@ -50,7 +57,7 @@ export const DatasourceVariableOptionEditor = (props: OptionsEditorProps<StaticL
     ) {
       onChange({ datasourcePluginKind: datasourcePluginKindArray[0] });
     }
-  }, [selectedKind, datasourcePluginKind, onChange, datasourcePluginKindSet]);
+  }, [selectedKind, onChange, datasourcePluginKindSet]);
 
   return (
     <Autocomplete

@@ -391,9 +391,9 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     variableState: allVariables,
   });
 
-  const filteredDataRef = useRef<Array<Record<string, unknown>>>([]);
-  // Refs used to keep the filter row in sync with the table's horizontal
-  const panelContainerRef = useRef<HTMLDivElement>(null);
+  // DOM handles used to keep the filter row in sync with the table's horizontal position.
+  // The container uses state so effects rerun when it is mounted after dimensions become available.
+  const [panelContainerEl, setPanelContainerEl] = useState<HTMLDivElement | null>(null);
   const filterRowInnerRef = useRef<HTMLDivElement>(null);
   const filterCellRefs = useRef<Array<HTMLDivElement | null>>([]);
 
@@ -405,27 +405,6 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     });
     return result;
   }, [selectionMap]);
-
-  const handleRowSelectionChange = useCallback(
-    (newRowSelection: RowSelectionState) => {
-      const newSelection: Array<{ id: string; item: Record<string, unknown> }> = [];
-      for (const [id, isSelected] of Object.entries(newRowSelection)) {
-        if (isSelected) {
-          const index = parseInt(id, 10);
-          if (filteredDataRef.current[index] !== undefined) {
-            newSelection.push({ id, item: filteredDataRef.current[index] });
-          }
-        }
-      }
-
-      if (newSelection.length === 0) {
-        clearSelection();
-      } else {
-        setSelection(newSelection);
-      }
-    },
-    [setSelection, clearSelection],
-  );
 
   // TODO: handle other query types
   const rawData: Array<Record<string, unknown>> = useMemo(() => {
@@ -599,6 +578,27 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     });
   }, [data, columnFilters, spec.enableFiltering]);
 
+  const handleRowSelectionChange = useCallback(
+    (newRowSelection: RowSelectionState) => {
+      const newSelection: Array<{ id: string; item: Record<string, unknown> }> = [];
+      for (const [id, isSelected] of Object.entries(newRowSelection)) {
+        if (isSelected) {
+          const item = filteredData[parseInt(id, 10)];
+          if (item !== undefined) {
+            newSelection.push({ id, item });
+          }
+        }
+      }
+
+      if (newSelection.length === 0) {
+        clearSelection();
+      } else {
+        setSelection(newSelection);
+      }
+    },
+    [filteredData, setSelection, clearSelection],
+  );
+
   // Generate cell settings that will be used by the table to render cells (text color, background color, ...)
   const cellConfigs: TableCellConfigs = useMemo(() => {
     // If there are no cell settings globally or per column, return an empty object
@@ -697,10 +697,10 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     setOpenFilterColumn(columnId);
   };
 
-  const handleFilterClose = (): void => {
+  const handleFilterClose = useCallback((): void => {
     setFilterAnchorEl({});
     setOpenFilterColumn(null);
-  };
+  }, []);
 
   // Close filter when clicking outside
   useEffect(() => {
@@ -721,23 +721,15 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
       clearTimeout(timer);
       document.removeEventListener('click', handleClick);
     };
-  }, [openFilterColumn]);
+  }, [openFilterColumn, handleFilterClose]);
 
-  // Keep ref in sync with filtered data for use in selection handler
-  filteredDataRef.current = filteredData;
-
-  const [pagination, setPagination] = useState<PaginationState | undefined>(
-    spec.pagination ? { pageIndex: 0, pageSize: 10 } : undefined,
-  );
-
-  useEffect(() => {
-    // If the pagination setting changes from no pagination to pagination, but the pagination state is undefined, update the pagination state
-    if (spec.pagination && !pagination) {
-      setPagination({ pageIndex: 0, pageSize: 10 });
-    } else if (!spec.pagination && pagination) {
-      setPagination(undefined);
-    }
-  }, [spec.pagination, pagination]);
+  const paginationEnabled = Boolean(spec.pagination);
+  const [previousPaginationEnabled, setPreviousPaginationEnabled] = useState(paginationEnabled);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  if (paginationEnabled !== previousPaginationEnabled) {
+    setPreviousPaginationEnabled(paginationEnabled);
+    setPagination({ pageIndex: 0, pageSize: 10 });
+  }
 
   // Sync the filter row's horizontal position with the table scroll.
   useEffect(() => {
@@ -745,7 +737,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
       return;
     }
 
-    const scrollContainer = panelContainerRef.current?.querySelector<HTMLElement>('.MuiTableContainer-root');
+    const scrollContainer = panelContainerEl?.querySelector<HTMLElement>('.MuiTableContainer-root');
     const filterRowInner = filterRowInnerRef.current;
 
     if (!scrollContainer || !filterRowInner) {
@@ -765,7 +757,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     return (): void => {
       scrollContainer.removeEventListener('scroll', syncFilterRowScroll);
     };
-  }, [spec.enableFiltering, columns, contentDimensions]);
+  }, [spec.enableFiltering, panelContainerEl]);
 
   // Sync filter cell widths with the actual rendered table column widths to keep them aligned.
   useEffect(() => {
@@ -773,7 +765,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
       return;
     }
 
-    const scrollContainer = panelContainerRef.current?.querySelector<HTMLElement>('.MuiTableContainer-root');
+    const scrollContainer = panelContainerEl?.querySelector<HTMLElement>('.MuiTableContainer-root');
     if (!scrollContainer) {
       return;
     }
@@ -811,7 +803,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     return (): void => {
       resizeObserver.disconnect();
     };
-  }, [spec.enableFiltering, columns, contentDimensions, selectionEnabled, actionButtons]);
+  }, [spec.enableFiltering, columns, panelContainerEl]);
 
   if (contentDimensions === undefined) {
     return null;
@@ -833,7 +825,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
   }
 
   return (
-    <div ref={panelContainerRef} style={{ display: 'contents' }}>
+    <div ref={setPanelContainerEl} style={{ display: 'contents' }}>
       {confirmDialog}
       {spec.enableFiltering && (
         <div
@@ -958,8 +950,8 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
         defaultColumnHeight={spec.defaultColumnHeight}
         sorting={sorting}
         onSortingChange={setSorting}
-        pagination={pagination}
-        onPaginationChange={setPagination}
+        pagination={paginationEnabled ? pagination : undefined}
+        onPaginationChange={paginationEnabled ? setPagination : undefined}
         checkboxSelection={selectionEnabled}
         rowSelection={rowSelection}
         onRowSelectionChange={handleRowSelectionChange}

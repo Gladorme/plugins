@@ -16,7 +16,7 @@ import { ToolbarIconButton, InfoTooltip } from '@perses-dev/components';
 import PaletteIcon from 'mdi-material-ui/Palette';
 import RefreshIcon from 'mdi-material-ui/Refresh';
 import type { ReactElement } from 'react';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 
 import type { FlameChartOptions } from '../flame-chart-model';
 import { TOOLTIP_TEXT } from '../utils/ui-text';
@@ -64,17 +64,16 @@ export function Settings(props: SettingsProps): ReactElement {
   const isBothSelected = (): boolean => selectedView === 'both';
 
   // Update selected view based on the value of showTable and showFlameGraph
-  const selectedView: 'table' | 'flame-graph' | 'both' | 'none' = useMemo(() => {
-    if (!value.showTable && !value.showFlameGraph) {
-      return 'none';
-    } else if (value.showTable && value.showFlameGraph) {
-      return 'both';
-    } else if (value.showTable) {
-      return 'table';
-    } else {
-      return 'flame-graph';
-    }
-  }, [value.showTable, value.showFlameGraph]);
+  let selectedView: 'table' | 'flame-graph' | 'both' | 'none';
+  if (!value.showTable && !value.showFlameGraph) {
+    selectedView = 'none';
+  } else if (value.showTable && value.showFlameGraph) {
+    selectedView = 'both';
+  } else if (value.showTable) {
+    selectedView = 'table';
+  } else {
+    selectedView = 'flame-graph';
+  }
 
   return (
     <Stack spacing="10px" direction="row" justifyContent="center" alignItems="center">
