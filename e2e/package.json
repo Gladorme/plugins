@@ -17,7 +17,8 @@
     "test:install": "npx playwright install --with-deps",
     "test:local": "npx playwright test --ui",
     "build": "echo 'Skipping build for e2e tests'",
-    "lint": "oxlint src"
+    "lint": "oxlint src",
+    "test:tracegraph": "playwright test --config tracegraph.playwright.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

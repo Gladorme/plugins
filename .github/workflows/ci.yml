@@ -85,6 +85,8 @@ jobs:
         working-directory: e2e
       - name: run e2e tests
         run: npm run test:ci --prefix e2e -- src/tests
+      - name: run Trace Graph browser tests
+        run: npm run test:tracegraph -w e2e
 
   release:
     name: 'release'
