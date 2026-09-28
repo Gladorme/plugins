@@ -11,12 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Box, Chip, IconButton, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Chip, IconButton, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { useSelectionItemActions } from '@perses-dev/dashboards';
+import type { ItemAction } from '@perses-dev/plugin-system';
+import { useAllVariableValues } from '@perses-dev/plugin-system';
 import CloseIcon from 'mdi-material-ui/Close';
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { CustomLinks } from '../../gantt-chart-model';
+import { getSpanActionData } from '../span-actions';
 import type { Span, Trace } from '../trace';
 import { TraceAttributes } from './Attributes';
 import { SpanEventList } from './SpanEvents';
@@ -26,6 +30,8 @@ export interface DetailPaneProps {
   customLinks?: CustomLinks;
   trace: Trace;
   span: Span;
+  /** item actions executed with the data of the span */
+  actions?: ItemAction[];
   onCloseBtnClick: () => void;
 }
 
@@ -33,7 +39,13 @@ export interface DetailPaneProps {
  * DetailPane renders a sidebar showing the span attributes etc.
  */
 export function DetailPane(props: DetailPaneProps): ReactElement {
-  const { customLinks, trace, span, onCloseBtnClick } = props;
+  const { customLinks, trace, span, actions, onCloseBtnClick } = props;
+  const variableValues = useAllVariableValues();
+  const { getItemActionButtons, confirmDialog } = useSelectionItemActions({ actions, variableState: variableValues });
+  const actionButtons = useMemo(
+    () => (actions?.length ? getItemActionButtons({ id: span.spanId, data: getSpanActionData(trace, span) }) : []),
+    [actions, getItemActionButtons, trace, span],
+  );
   const [tab, setTab] = useState<'attributes' | 'events' | 'links'>('attributes');
 
   // if the events tab is selected, and then a span without events is clicked,
@@ -48,9 +60,13 @@ export function DetailPane(props: DetailPaneProps): ReactElement {
 
   return (
     <Box>
-      <IconButton sx={{ float: 'right' }} onClick={onCloseBtnClick}>
-        <CloseIcon />
-      </IconButton>
+      <Stack direction="row" alignItems="center" sx={{ float: 'right' }}>
+        {actionButtons}
+        <IconButton onClick={onCloseBtnClick} aria-label="close">
+          <CloseIcon />
+        </IconButton>
+      </Stack>
+      {confirmDialog}
       <Typography sx={{ wordBreak: 'break-word' }}>{span.resource.serviceName}</Typography>
       <Typography variant="h2" sx={{ wordBreak: 'break-word' }}>
         {span.name}

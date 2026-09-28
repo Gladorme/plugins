@@ -23,6 +23,7 @@ import { GanttTableProvider } from './GanttTable/GanttTableProvider';
 import { ResizableDivider } from './GanttTable/ResizableDivider';
 import { MiniGanttChart } from './MiniGanttChart/MiniGanttChart';
 import { useSpanSearch } from './Search';
+import { useSpanSelection } from './span-actions';
 import type { Span } from './trace';
 import { getTraceModel } from './trace';
 import { TraceHeaderBar } from './TraceHeaderBar';
@@ -58,6 +59,11 @@ export function TracingGanttChart(props: TracingGanttChartProps): ReactElement {
     options.selectedSpanId ? trace.spanById.get(options.selectedSpanId) : undefined,
   );
   const search = useSpanSearch(trace);
+
+  const itemActions =
+    options.actions?.enabled && options.actions.displayWithItem ? options.actions.actionsList : undefined;
+
+  useSpanSelection(trace, selectedSpan, options.selection?.enabled ?? false);
 
   const ganttChart = useRef<HTMLDivElement>(null);
   // tableWidth only comes to effect if the detail pane is visible.
@@ -98,6 +104,7 @@ export function TracingGanttChart(props: TracingGanttChartProps): ReactElement {
               customLinks={customLinks}
               trace={trace}
               span={selectedSpan}
+              actions={itemActions}
               onCloseBtnClick={() => setSelectedSpan(undefined)}
             />
           </Box>
