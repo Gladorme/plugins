@@ -322,6 +322,19 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
 
   const { noDataOption } = chartsTheme;
 
+  // The ECharts axis tooltip (content hidden) drives the crosshair and syncs it across charts, using the first
+  // involved series as a sample. On each mouse move it searches the nearest point of every involved series, in every
+  // synced chart, although the custom tooltip finds the nearby series itself. Only keep the first series involved.
+  const axisTooltipSeriesMapping = useMemo(
+    () =>
+      isStackedBar
+        ? seriesMapping
+        : seriesMapping.map((series, index) =>
+            index === 0 ? series : { ...series, tooltip: { ...series.tooltip, show: false } },
+          ),
+    [seriesMapping, isStackedBar],
+  );
+
   // Reuse the dataset when pinning a crosshair or updating annotations/axes.
   const dataset = useMemo<DatasetOption[]>(
     () =>
@@ -341,8 +354,8 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
 
     const updatedSeriesMapping =
       enablePinning && pinnedCrosshair !== null
-        ? [...seriesMapping, pinnedCrosshair, ...annotationSeries, ...exemplarSeries]
-        : [...seriesMapping, ...annotationSeries, ...exemplarSeries];
+        ? [...axisTooltipSeriesMapping, pinnedCrosshair, ...annotationSeries, ...exemplarSeries]
+        : [...axisTooltipSeriesMapping, ...annotationSeries, ...exemplarSeries];
 
     const option: EChartsCoreOption = {
       dataset: dataset,
@@ -397,7 +410,7 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
   }, [
     data,
     dataset,
-    seriesMapping,
+    axisTooltipSeriesMapping,
     annotationSeries,
     exemplarSeries,
     timeScale,
