@@ -18,6 +18,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ECharts } from 'echarts/core';
 import { init } from 'echarts/core';
 import type { ReactElement } from 'react';
+import { StrictMode } from 'react';
 import useResizeObserver from 'use-resize-observer';
 
 import type { TimeChartProps } from './TimeSeriesChartBase';
@@ -181,5 +182,51 @@ describe('TimeSeriesChartBase performance', () => {
       value: [1000, 3],
       exemplar: { labels: { trace_id: 'trace-2' } },
     });
+  });
+});
+
+function pinnableChartElement(): ReactElement {
+  return (
+    <StrictMode>
+      <ChartsProvider chartsTheme={testChartsTheme} enablePinning={true}>
+        <TimeSeriesChartBase height={300} data={DATA} seriesMapping={SERIES_MAPPING} timeScale={TIME_SCALE} />
+      </ChartsProvider>
+    </StrictMode>
+  );
+}
+
+function hasPinnedCrosshair(chart: ReturnType<typeof mockChart>): boolean {
+  const option = chart.setOption.mock.calls.at(-1)?.[0];
+  return option.series.some((series: { markLine?: unknown }) => series.markLine !== undefined);
+}
+
+describe('TimeSeriesChartBase tooltip pinning', () => {
+  it('toggles the pinned crosshair with the pinned tooltip, including under StrictMode', () => {
+    const chart = mockChart();
+    Object.assign(chart, {
+      containPixel: (): boolean => true,
+      convertFromPixel: (): number[] => [1000, 2],
+    });
+    const { container } = render(pinnableChartElement());
+    const wrapper = container.firstElementChild;
+    if (!(wrapper instanceof HTMLElement)) throw new Error('Chart wrapper is missing');
+    const canvas = document.createElement('canvas');
+    wrapper.appendChild(canvas);
+    expect(hasPinnedCrosshair(chart)).toBe(false);
+
+    fireEvent.click(canvas);
+    expect(hasPinnedCrosshair(chart)).toBe(true);
+
+    fireEvent.click(canvas);
+    expect(hasPinnedCrosshair(chart)).toBe(false);
+
+    fireEvent.click(canvas);
+    expect(hasPinnedCrosshair(chart)).toBe(true);
+
+    // Double click unpins the tooltip and removes its crosshair, the next click pins both again.
+    fireEvent.doubleClick(canvas);
+    expect(hasPinnedCrosshair(chart)).toBe(false);
+    fireEvent.click(canvas);
+    expect(hasPinnedCrosshair(chart)).toBe(true);
   });
 });

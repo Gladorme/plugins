@@ -497,14 +497,11 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
             plotCanvas: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY },
             target: e.target,
           };
-          setPinnedAnnotation((current) => {
-            if (current === hoveredAnnotation) {
-              setPinnedAnnotationPos(null);
-              return null;
-            }
-            setPinnedAnnotationPos(pinnedPos);
-            return hoveredAnnotation;
-          });
+          // Compute the next state from the current render and call the setters separately: updater
+          // functions may run more than once (e.g. StrictMode), so they must stay side-effect free.
+          const isUnpinClick = pinnedAnnotation === hoveredAnnotation;
+          setPinnedAnnotation(isUnpinClick ? null : hoveredAnnotation);
+          setPinnedAnnotationPos(isUnpinClick ? null : pinnedPos);
           return;
         }
 
@@ -533,26 +530,19 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
             target: e.target,
           };
 
-          setTooltipPinnedCoords((current) => {
-            if (current === null) {
-              return pinnedPos;
-            } else {
-              setPinnedCrosshair(null);
-              return null;
-            }
-          });
+          // Pinning adds a crosshair at the clicked timestamp, unpinning removes it. The next state is computed from
+          // the current render, since updater functions with side effects may run more than once (e.g. StrictMode).
+          if (tooltipPinnedCoords === null) {
+            const cursorX = pointInGrid[0];
 
-          setPinnedCrosshair((current) => {
-            // Only add pinned crosshair line series when there is not one already in seriesMapping.
-            if (current === null) {
-              const cursorX = pointInGrid[0];
+            // Only need to loop through first dataset source since getCommonTimeScale ensures xAxis timestamps are consistent
+            const firstTimeSeriesValues = data[0]?.values;
+            const closestTimestamp = getClosestTimestamp(firstTimeSeriesValues, cursorX);
 
-              // Only need to loop through first dataset source since getCommonTimeScale ensures xAxis timestamps are consistent
-              const firstTimeSeriesValues = data[0]?.values;
-              const closestTimestamp = getClosestTimestamp(firstTimeSeriesValues, cursorX);
-
-              // Crosshair snaps to nearest timestamp since cursor may be slightly to left or right
-              const pinnedCrosshair = merge({}, DEFAULT_PINNED_CROSSHAIR, {
+            setTooltipPinnedCoords(pinnedPos);
+            // Crosshair snaps to nearest timestamp since cursor may be slightly to left or right
+            setPinnedCrosshair(
+              merge({}, DEFAULT_PINNED_CROSSHAIR, {
                 markLine: {
                   data: [
                     {
@@ -560,13 +550,12 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
                     },
                   ],
                 },
-              } as LineSeriesOption);
-              return pinnedCrosshair;
-            } else {
-              // Clear previously set pinned crosshair
-              return null;
-            }
-          });
+              } as LineSeriesOption),
+            );
+          } else {
+            setTooltipPinnedCoords(null);
+            setPinnedCrosshair(null);
+          }
 
           if (!isControlKeyPressed) {
             setLastTooltipPinnedCoords(pinnedPos);
@@ -635,6 +624,7 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
       }}
       onDoubleClick={(e) => {
         setTooltipPinnedCoords(null);
+        setPinnedCrosshair(null);
         // either dispatch ECharts restore action to return to orig state or allow consumer to define behavior
         if (onDoubleClick === undefined) {
           if (chartRef.current !== undefined) {
