@@ -509,6 +509,18 @@ function TimeSeriesChartPanelComponent(props: TimeSeriesChartProps): ReactElemen
     [setTimeRange],
   );
 
+  // Stable legend props so the memoized legend items do not re-render with the panel.
+  const handleLegendItemMouseOver: NonNullable<LegendProps['onItemMouseOver']> = useCallback((_e, { id }): void => {
+    chartRef.current?.highlightSeries({ name: id });
+  }, []);
+  const handleLegendItemMouseOut = useCallback((): void => {
+    chartRef.current?.clearHighlightedSeries();
+  }, []);
+  const legendTableProps = useMemo(
+    () => ({ columns: legendColumns, sorting: legendSorting, onSortingChange: setLegendSorting }),
+    [legendColumns, legendSorting],
+  );
+
   if (adjustedContentDimensions === undefined) {
     return null;
   }
@@ -546,17 +558,9 @@ function TimeSeriesChartPanelComponent(props: TimeSeriesChartProps): ReactElemen
             data: legendItems || [],
             selectedItems: selectedLegendItems,
             onSelectedItemsChange: setSelectedLegendItems,
-            tableProps: {
-              columns: legendColumns,
-              sorting: legendSorting,
-              onSortingChange: setLegendSorting,
-            },
-            onItemMouseOver: (e, { id }): void => {
-              chartRef.current?.highlightSeries({ name: id });
-            },
-            onItemMouseOut: (): void => {
-              chartRef.current?.clearHighlightedSeries();
-            },
+            tableProps: legendTableProps,
+            onItemMouseOver: handleLegendItemMouseOver,
+            onItemMouseOut: handleLegendItemMouseOut,
           }
         }
       >

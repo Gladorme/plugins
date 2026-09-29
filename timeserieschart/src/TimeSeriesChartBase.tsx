@@ -211,7 +211,8 @@ export const TimeSeriesChartBase = forwardRef<ChartInstance, TimeChartProps>(fun
           return;
         }
 
-        chartRef.current.dispatchAction({ type: 'highlight', seriesId: name });
+        // Series ids are unique per chart, so the action must not be replayed on the charts of the sync group.
+        chartRef.current.dispatchAction({ type: 'highlight', seriesId: name, escapeConnect: true });
       },
       clearHighlightedSeries: (): void => {
         if (!chartRef.current) {
