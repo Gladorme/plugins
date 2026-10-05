@@ -24,6 +24,11 @@ test-schemas-plugins:
 	@echo ">> Test schemas of all plugins"
 	$(GO) run ./scripts/test-schemas-plugins/test-schemas-plugins.go
 
+.PHONY: test-go-plugins
+test-go-plugins:
+	@echo ">> Run the Go tests of all plugins"
+	$(GO) run ./scripts/test-go-plugins/test-go-plugins.go
+
 .PHONY: tidy-modules
 tidy-modules:
 	@echo ">> Tidy CUE module for all plugins"
@@ -51,7 +56,7 @@ build:
 	$(GO) run ./scripts/build-plugins/build-plugins.go
 
 .PHONY: test
-test:
+test: test-go-plugins
 	@echo ">> Run all tests"
 	$(GO) test -count=1 -v ./...
 
