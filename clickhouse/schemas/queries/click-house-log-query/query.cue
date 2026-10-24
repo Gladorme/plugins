@@ -21,5 +21,6 @@ import (
 kind: "ClickHouseLogQuery"
 spec: close({
 	ds.#selector
-	query: strings.MinRunes(1)
+	query:       strings.MinRunes(1)
+	timeColumn?: strings.MinRunes(1)
 })

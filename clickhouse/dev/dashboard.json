@@ -1,0 +1,390 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "clickhouse",
+    "project": "clickhouse-e2e"
+  },
+  "spec": {
+    "display": {
+      "name": "ClickHouse observability"
+    },
+    "duration": "1h",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "service",
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT DISTINCT ServiceName AS value, ServiceName AS label\nFROM otel_logs\nWHERE Timestamp BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\nORDER BY value"
+            }
+          }
+        }
+      }
+    ],
+    "annotations": [
+      {
+        "display": {
+          "name": "Errors"
+        },
+        "plugin": {
+          "kind": "ClickHouseAnnotationQuery",
+          "spec": {
+            "query": "SELECT Timestamp AS start, Body AS title, ServiceName AS legend,\n  LogAttributes AS tags\nFROM otel_logs\nWHERE ServiceName IN (${service:sqlstring})\n  AND Timestamp BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\n  AND SeverityText = 'ERROR'\nORDER BY Timestamp LIMIT 1000"
+          }
+        }
+      }
+    ],
+    "panels": {
+      "metrics": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse metrics"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT toStartOfInterval(TimeUnix, INTERVAL {step} SECOND) AS time,\n  avg(Value) AS value, MetricName AS metric, ResourceAttributes['service.name'] AS service\nFROM otel_metrics_gauge\nWHERE ResourceAttributes['service.name'] IN (${service:sqlstring})\n  AND TimeUnix BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\nGROUP BY time, metric, service ORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "logs": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse logs"
+          },
+          "plugin": {
+            "kind": "LogsTable",
+            "spec": {
+              "showTime": true,
+              "allowWrap": true,
+              "enableDetails": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "LogQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseLogQuery",
+                  "spec": {
+                    "query": "SELECT Timestamp, Body, SeverityText, ServiceName, TraceId, SpanId,\n  ResourceAttributes, LogAttributes\nFROM otel_logs\nWHERE ServiceName IN (${service:sqlstring})\n  AND Timestamp BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\nORDER BY Timestamp DESC LIMIT 1000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "search": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse traces"
+          },
+          "plugin": {
+            "kind": "TraceTable",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TraceQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTraceQuery",
+                  "spec": {
+                    "query": "SELECT *\nFROM otel_traces\nWHERE TraceId IN (\n  SELECT TraceId FROM otel_traces\n  WHERE ServiceName IN (${service:sqlstring}) AND Timestamp BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\n  GROUP BY TraceId ORDER BY max(Timestamp) DESC LIMIT 100\n)\nORDER BY Timestamp"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "trace": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse trace detail"
+          },
+          "plugin": {
+            "kind": "TracingGanttChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TraceQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTraceQuery",
+                  "spec": {
+                    "query": "0123456789abcdef0123456789abcdef"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "histogram": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse histogram"
+          },
+          "plugin": {
+            "kind": "HistogramChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_metrics_histogram\nWHERE TimeUnix BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\nORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "heatmap": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse heatmap"
+          },
+          "plugin": {
+            "kind": "HeatMapChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_metrics_histogram\nWHERE TimeUnix BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\nORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "exemplars": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse exemplars"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_metrics_gauge\nWHERE TimeUnix BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\nORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "exponential": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse exponential histogram"
+          },
+          "plugin": {
+            "kind": "HistogramChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_metrics_exponential_histogram\nWHERE TimeUnix BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')\nORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "profiles": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ClickHouse profiles"
+          },
+          "plugin": {
+            "kind": "FlameChart",
+            "spec": {
+              "palette": "package-name",
+              "showSettings": true,
+              "showSeries": true,
+              "showTable": true,
+              "showFlameGraph": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "ProfileQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseProfileQuery",
+                  "spec": {
+                    "query": "SELECT Timestamp, SampleType, SampleUnit, FunctionNames, FileNames, LineNumbers,\n  MappingFileNames, Addresses, Values, TimestampsUnixNano\nFROM otel_profiles\nWHERE SampleType = 'cpu' AND SampleUnit = 'nanoseconds'\n  AND ServiceName IN (${service:sqlstring})\n  AND Timestamp <= toDateTime64('{end}', 9, 'UTC')\n  AND Timestamp + toIntervalNanosecond(DurationNano) >= toDateTime64('{start}', 9, 'UTC')\nORDER BY Timestamp LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/metrics"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/logs"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/search"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/trace"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/histogram"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/heatmap"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/exemplars"
+              }
+            },
+            {
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/exponential"
+              }
+            },
+            {
+              "x": 0,
+              "y": 32,
+              "width": 24,
+              "height": 16,
+              "content": {
+                "$ref": "#/spec/panels/profiles"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

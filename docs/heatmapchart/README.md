@@ -5,9 +5,12 @@ The HeatMap Chart plugin displays data as a heatmap in Perses dashboards. This p
 ![HistogramChart example](https://github.com/perses/website/blob/main/docs/assets/images/blog/v052/heatmap-dark.png?raw=true)
 
 !!! warning
-    This panel plugin is only compatible with Prometheus native histograms data for the moment.
+This panel plugin is only compatible with Prometheus native histograms data for the moment.
 
 See also technical docs related to this plugin:
 
 - [Data model](./model.md)
 - [Dashboard-as-Code Go lib](./go-sdk.md)
+
+Unbounded native histogram buckets are drawn up to the plot edges with finite automatic axis limits.
+Their original bounds and counts remain in tooltips. Zero-width zero buckets are drawn with a minimum one-pixel extent.

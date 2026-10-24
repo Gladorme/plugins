@@ -1,0 +1,9 @@
+{
+  "kind": "ClickHouseTraceQuery",
+  "spec": {
+    "query": "SELECT 1",
+    "datasource": {
+      "kind": "PrometheusDatasource"
+    }
+  }
+}

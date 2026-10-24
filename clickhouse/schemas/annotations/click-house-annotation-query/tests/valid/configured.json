@@ -1,0 +1,10 @@
+{
+  "kind": "ClickHouseAnnotationQuery",
+  "spec": {
+    "query": "SELECT 1",
+    "datasource": {
+      "kind": "ClickHouseDatasource",
+      "name": "clickhouse"
+    }
+  }
+}

@@ -85,8 +85,6 @@ describe('ClickHouseLogQuery', () => {
     );
 
     expect(clickhouseStubClient.query).toHaveBeenCalledWith({
-      start: '2025-01-01 00:00:00',
-      end: '2025-01-02 00:00:00',
       query:
         "SELECT * FROM application_logs WHERE timestamp >= '2025-01-01 00:00:00' AND timestamp <= '2025-01-02 00:00:00'",
     });

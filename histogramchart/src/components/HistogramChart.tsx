@@ -56,8 +56,8 @@ export function HistogramChart({
   const transformedData = useMemo(() => {
     return data.buckets
       .map(([bucket, lowerBound, upperBound, count]) => {
-        let lower = parseFloat(lowerBound);
-        const upper = parseFloat(upperBound);
+        let lower = parseFloat(lowerBound.replace(/Inf$/, 'Infinity'));
+        const upper = parseFloat(upperBound.replace(/Inf$/, 'Infinity'));
         const countValue = parseFloat(count);
 
         // For logarithmic scales, we need to handle non-positive lower bounds
@@ -70,7 +70,7 @@ export function HistogramChart({
           // For buckets that span from 0 (or negative) to positive,
           // use a small fraction of the upper bound as the lower bound
           // This ensures the bucket is still visible on the log scale
-          lower = upper * 0.001; // Use 0.1% of upper bound as minimum
+          lower = Number.isFinite(upper) ? upper * 0.001 : 0.001;
         }
 
         return {
@@ -95,22 +95,30 @@ export function HistogramChart({
       return undefined;
     }
 
-    if (min) {
+    if (min !== undefined) {
       return min;
     }
 
     if (transformedData && transformedData[0]) {
-      return Math.min(0, Math.floor(transformedData[0]?.value[0] ?? 0));
+      const first = transformedData[0].value[0] ?? 0;
+      if (Number.isFinite(first)) return Math.min(0, Math.floor(first));
+      const bounds = transformedData.flatMap(({ value }) => value.slice(0, 2)).filter(Number.isFinite);
+      const lowest = bounds.reduce((a, b) => Math.min(a, b), Infinity);
+      return Number.isFinite(lowest) ? Math.min(0, Math.floor(lowest - Math.max(Math.abs(lowest) * 0.1, 1))) : -1;
     }
     return undefined;
   }, [logBase, min, transformedData]);
 
   const maxXAxis: number | undefined = useMemo(() => {
-    if (max) {
+    if (max !== undefined) {
       return max;
     }
     if (transformedData && transformedData[transformedData.length - 1]) {
-      return Math.ceil(transformedData[transformedData.length - 1]?.value[1] ?? 1);
+      const last = transformedData[transformedData.length - 1]?.value[1] ?? 1;
+      if (Number.isFinite(last)) return Math.ceil(last);
+      const bounds = transformedData.flatMap(({ value }) => value.slice(0, 2)).filter(Number.isFinite);
+      const highest = bounds.reduce((a, b) => Math.max(a, b), -Infinity);
+      return Number.isFinite(highest) ? Math.ceil(highest + Math.max(Math.abs(highest) * 0.1, 1)) : 1;
     }
     return undefined;
   }, [max, transformedData]);
@@ -150,8 +158,11 @@ export function HistogramChart({
             const yValue = api.value(2) as number;
 
             // Get the pixel coordinates for the start and end points of the bar
-            const startCoord = api.coord([lowerBound, yValue]);
-            const endCoord = api.coord([upperBound, 0]);
+            // Keep true infinite boundaries in the data/tooltip, but clip their geometry to the plot.
+            const plotLower = lowerBound === -Infinity ? (minXAxis ?? 0) : lowerBound;
+            const plotUpper = upperBound === Infinity ? (maxXAxis ?? 1) : upperBound;
+            const startCoord = api.coord([plotLower, yValue], true);
+            const endCoord = api.coord([plotUpper, 0], true);
 
             // Extract coordinates with safety checks
             const startX = startCoord?.[0];
@@ -167,7 +178,7 @@ export function HistogramChart({
             // For logarithmic scales, api.size() doesn't work correctly because
             // the visual width isn't linear. Instead, we calculate the width
             // directly from the pixel coordinates.
-            const barWidth = endX - startX;
+            const barWidth = lowerBound === upperBound ? 1 : endX - startX;
             const barHeight = endY - startY;
 
             const style = api.style?.();

@@ -23,6 +23,7 @@ import type { ReactElement } from 'react';
 export interface CustomBreadcrumbProps {
   totalValue: string;
   totalSample: number;
+  unit?: string;
   otherItemSample: number | undefined;
   onSelectedIdChange: (newId: number) => void;
 }
@@ -45,7 +46,7 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
 });
 
 export function CustomBreadcrumb(props: CustomBreadcrumbProps): ReactElement {
-  const { totalValue, totalSample, otherItemSample, onSelectedIdChange } = props;
+  const { totalValue, totalSample, unit, otherItemSample, onSelectedIdChange } = props;
 
   const handleClick = (event: React.MouseEvent<Element, MouseEvent>): void => {
     event.preventDefault();
@@ -55,7 +56,9 @@ export function CustomBreadcrumb(props: CustomBreadcrumbProps): ReactElement {
   const splitedValue = totalValue.split('(');
   const totalValueText = splitedValue[splitedValue.length - 1]?.slice(0, -1);
 
-  const totalLabel = formatValue(totalSample, { unit: 'decimal', decimalPlaces: 2, shortValues: true }) + ' samples';
+  const isSampleCount = !unit || unit === 'samples' || unit === 'count';
+  const sampleLabel = formatValue(totalSample, { unit: 'decimal', decimalPlaces: 2, shortValues: true }) + ' samples';
+  const totalLabel = isSampleCount ? totalValueText + '  |  ' + sampleLabel : totalValueText;
 
   return (
     <Stack direction="row" spacing={1} minHeight={40} alignItems="center">
@@ -64,7 +67,7 @@ export function CustomBreadcrumb(props: CustomBreadcrumbProps): ReactElement {
         aria-label="breadcrumb"
         sx={{ justifyContent: 'center' }}
       >
-        <StyledBreadcrumb label={totalValueText + '  |  ' + totalLabel} />
+        <StyledBreadcrumb label={totalLabel} />
         {otherItemSample !== undefined && (
           <StyledBreadcrumb
             label={((otherItemSample / totalSample) * 100).toFixed(2) + '% of total'}

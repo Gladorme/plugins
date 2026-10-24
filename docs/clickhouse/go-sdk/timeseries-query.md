@@ -69,5 +69,22 @@ func main() {
 			),
 		),
 	)
-}```
+}
 ```
+
+## OpenTelemetry metrics
+
+The same constructor accepts queries returning the Collector's standard metric columns. Gauge and sum values,
+histograms, exponential histograms, summary quantiles, and exemplars are converted automatically. For example,
+use the following query with a Histogram or Heatmap panel:
+
+```golang
+clickhousequery.ClickHouseTimeSeriesQuery(`
+    SELECT * FROM otel_metrics_histogram
+    WHERE TimeUnix BETWEEN toDateTime64('{start}', 9, 'UTC') AND toDateTime64('{end}', 9, 'UTC')
+    ORDER BY TimeUnix
+    LIMIT 10000
+`)
+```
+
+See the [metric result contract](../model.md#native-opentelemetry-metrics) for supported columns and SQL examples.

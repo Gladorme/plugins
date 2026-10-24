@@ -1,0 +1,7 @@
+{
+  "kind": "ClickHouseProfileQuery",
+  "spec": {
+    "query": "SELECT * FROM otel_profiles WHERE ServiceName IN (${service:sqlstring})",
+    "datasource": "$source"
+  }
+}

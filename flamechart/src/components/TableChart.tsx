@@ -83,7 +83,7 @@ export function TableChart(props: TableChartProps): ReactElement {
       {
         accessorKey: 'self',
         header: 'Self',
-        headerDescription: 'Function self samples',
+        headerDescription: 'Function self weight',
         align: 'right',
         enableSorting: true,
         width: 0.25 * availableWidth - SCROLL_BAR_WIDTH,
@@ -95,7 +95,7 @@ export function TableChart(props: TableChartProps): ReactElement {
       {
         accessorKey: 'total',
         header: 'Total',
-        headerDescription: 'Function total samples',
+        headerDescription: 'Function total weight',
         align: 'right',
         enableSorting: true,
         width: 0.25 * availableWidth,

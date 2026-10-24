@@ -103,14 +103,13 @@ describe('ClickHouseTimeSeriesQuery', () => {
     );
 
     expect(clickhouseStubClient.query).toHaveBeenCalledWith({
-      start: '2025-01-01 00:00:00',
-      end: '2025-01-02 00:00:00',
       query:
         "SELECT toStartOfMinute(timestamp) as time, avg(cpu_usage) as avg_cpu, max(memory_usage) as max_memory FROM system_metrics WHERE timestamp BETWEEN '2025-01-01 00:00:00' AND '2025-01-02 00:00:00' GROUP BY time ORDER BY time",
     });
     expect(response.series).toEqual([
       {
         name: 'avg_cpu',
+        labels: { service: 'api' },
         values: [
           [new Date('2025-09-09 05:18:00').getTime(), 2.5],
           [new Date('2025-09-09 05:19:00').getTime(), 3.5],
@@ -118,6 +117,7 @@ describe('ClickHouseTimeSeriesQuery', () => {
       },
       {
         name: 'max_memory',
+        labels: { service: 'api' },
         values: [
           [new Date('2025-09-09 05:18:00').getTime(), 277],
           [new Date('2025-09-09 05:19:00').getTime(), 156102],

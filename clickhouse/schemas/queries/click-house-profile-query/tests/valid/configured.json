@@ -1,0 +1,10 @@
+{
+  "kind": "ClickHouseProfileQuery",
+  "spec": {
+    "query": "SELECT frames AS stack, weight AS value FROM samples",
+    "datasource": {
+      "kind": "ClickHouseDatasource",
+      "name": "profiles"
+    }
+  }
+}

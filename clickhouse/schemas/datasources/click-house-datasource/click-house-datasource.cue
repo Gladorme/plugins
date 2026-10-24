@@ -25,4 +25,6 @@ spec: {
 	datasource.#HTTPDatasourceSpec
 }
 
-#selector: common.#datasourceSelector & {_kind: #kind}
+#selector: common.#datasourceSelector & {
+	datasource?: string | {kind: #kind}
+}

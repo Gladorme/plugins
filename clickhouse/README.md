@@ -1,41 +1,48 @@
-# Plugin Module: click-house
+# ClickHouse plugin
 
-### How to install
+Provides SQL queries for metrics, logs, trace search and detail, profiles, annotations, and dashboard variables.
 
-This plugin requires react and react-dom 18
-
-Install peer dependencies:
-
-```bash
-npm install react@18 react-dom@18
-```
-
-Install the plugin:
-
-```bash
-npm install @my-org/click-house
-```
+See the [user documentation](../docs/clickhouse/README.md) for query contracts, OpenTelemetry examples, and Go builders.
 
 ## Development
 
-### Setup
+Follow the [repository development instructions](../README.md). From the repository root:
 
-Install dependencies:
-
-```bash
-npm install
+```sh
+npm ci
+npm run type-check -w clickhouse
+npm run test -w clickhouse
+npm run build -w clickhouse
 ```
 
-### Get Started
+Use `percli plugin start ./clickhouse` with a local Perses server to exercise the editors.
 
-Start the dev server:
+For optional live SQL tests, start a disposable ClickHouse instance and load
+[the synthetic fixture](./dev/fixture.sql) into its default database:
 
-```bash
-npm run dev
+```sh
+docker run --detach --rm --name perses-clickhouse-test \
+  --publish 127.0.0.1:18123:8123 --env CLICKHOUSE_SKIP_USER_SETUP=1 \
+  clickhouse/clickhouse-server:26.2
+docker exec -i perses-clickhouse-test clickhouse-client --multiquery < clickhouse/dev/fixture.sql
+CLICKHOUSE_TEST_URL=http://127.0.0.1:18123 npm run test -w clickhouse
+docker stop perses-clickhouse-test
 ```
 
-Build the plugin for distribution:
+The fixture creates test tables; use a disposable instance. Live tests are skipped unless `CLICKHOUSE_TEST_URL` is set.
 
-```bash
-npm run build
+## Browser integration
+
+The [sample dashboard](./dev/dashboard.json) exercises all six query types against the fixture.
+Load the ClickHouse, TimeSeriesChart, LogsTable, TraceTable, TracingGanttChart, HistogramChart, HeatMapChart, and FlameChart plugins in a disposable Perses server
+with authentication disabled and the loopback datasource proxy enabled. The fixture datasource uses port 18123. The host must include the shared runtime profile-variable support
+for service filters in the Flame Chart panel.
+
+Run the browser test from the repository root, with the server's base URL:
+
+```sh
+CLICKHOUSE_E2E_URL=http://127.0.0.1:18080 npm exec -w e2e -- playwright test src/tests/clickhouse
 ```
+
+The test creates and removes its own project and dashboard. For manual inspection of the sample, open the dashboard
+with `?start=1735689600000&end=1735693200000` to select the fixture's time range.

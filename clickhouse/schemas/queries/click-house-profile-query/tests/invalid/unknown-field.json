@@ -1,0 +1,7 @@
+{
+  "kind": "ClickHouseProfileQuery",
+  "spec": {
+    "query": "SELECT 1",
+    "stackOrder": "invalid"
+  }
+}

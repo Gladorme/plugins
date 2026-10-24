@@ -13,3 +13,5 @@
 
 export * from './click-house-time-series-query';
 export * from './click-house-log-query';
+export * from './click-house-trace-query';
+export * from './click-house-profile-query';

@@ -1,0 +1,12 @@
+{
+  "kind": "ClickHouseTraceQuery",
+  "spec": {
+    "query": "SELECT 1",
+    "datasource": {
+      "kind": "ClickHouseDatasource",
+      "name": "clickhouse"
+    },
+    "mode": "trace",
+    "table": "observability.otel_traces"
+  }
+}

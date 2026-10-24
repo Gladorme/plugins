@@ -12,8 +12,9 @@
 // limitations under the License.
 
 import type { LogQueryPlugin } from '@perses-dev/plugin-system';
-import { parseVariables } from '@perses-dev/plugin-system';
 
+import { queryDependencies } from '../../model/query';
+import { quoteIdentifier } from '../../model/sql';
 import type { ClickHouseLogQuerySpec } from './click-house-log-query-types';
 import { ClickHouseLogQueryEditor } from './ClickHouseLogQueryEditor';
 import { getClickHouseLogData } from './get-click-house-log-data';
@@ -22,13 +23,29 @@ export const ClickHouseLogQuery: LogQueryPlugin<ClickHouseLogQuerySpec> = {
   getLogData: getClickHouseLogData,
   OptionsEditorComponent: ClickHouseLogQueryEditor,
   createInitialOptions: () => ({ query: '' }),
-  dependsOn: (spec) => {
-    const queryVariables = parseVariables(spec.query);
-    const allVariables = [...new Set(queryVariables)];
+  dependsOn: queryDependencies,
+  createVolumeQuery: (spec) => {
+    if (!spec.query.trim()) return null;
+    const sql = spec.query
+      .trim()
+      .replace(/;\s*$/, '')
+      .replace(/\s+FORMAT\s+JSON\s*$/i, '');
     return {
-      variables: allVariables,
+      kind: 'TimeSeriesQuery',
+      spec: {
+        plugin: {
+          kind: 'ClickHouseTimeSeriesQuery',
+          spec: {
+            datasource: spec.datasource,
+            query:
+              'SELECT toStartOfInterval(' +
+              quoteIdentifier(spec.timeColumn ?? 'Timestamp') +
+              ', INTERVAL {step} SECOND) AS time, count() AS logs\nFROM (\n' +
+              sql +
+              '\n) GROUP BY time ORDER BY time',
+          },
+        },
+      },
     };
   },
-  // TODO: Implement proper SQL parsing for volume queries
-  createVolumeQuery: () => null,
 };

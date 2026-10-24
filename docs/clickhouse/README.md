@@ -1,36 +1,25 @@
 ---
 tags:
-  - datasource
+    - datasource
 ---
+
 # ClickHouse plugins
 
-The ClickHouse package includes several plugins that provide comprehensive support for ClickHouse database in Perses dashboards.
+Query ClickHouse from Perses using SQL. The package provides:
 
-## Datasource (`ClickHouseDatasource`)
+- `ClickHouseDatasource`: HTTP access directly or through the Perses proxy.
+- `ClickHouseTimeSeriesQuery`: numeric metrics grouped by labels.
+- `ClickHouseLogQuery`: log messages, timestamps, attributes, and volume queries.
+- `ClickHouseTraceQuery`: trace search and OTLP trace detail for waterfall panels.
+- `ClickHouseProfileQuery`: Collector or custom SQL stacks for Flame Chart panels.
+- `ClickHouseAnnotationQuery`: point and range annotations.
+- `ClickHouseVariable`: query-backed dropdowns, including chained variables.
 
-The ClickHouse datasource enables connection between Perses and your ClickHouse database for analytical querying. It works with various visualization panels and supports SQL queries.
+The examples use the [OpenTelemetry Collector ClickHouse exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/clickhouseexporter)
+tables. Custom schemas work by aliasing columns to the documented result names.
+SQL editors include examples; trace, profile, annotation, and variable editors start with OpenTelemetry queries.
 
-It supports the [proxy](https://perses.dev/perses/docs/concepts/proxy/) feature of Perses that allows to restrict the access to your data source.
-
-See also technical docs related to this plugin:
-
-- [Data model](./model.md#clickhousedatasource)
-- [Dashboard-as-Code Go lib](./go-sdk/datasource.md)
-
-## Time Series Query (`ClickHouseTimeSeriesQuery`)
-
-The ClickHouse time series query plugin enables executing SQL queries against your ClickHouse database for time-based data visualization. It supports complex analytical queries and aggregations for metrics and time series data.
-
-See also technical docs related to this plugin:
-
-- [Data model](./model.md#clickhousetimeseriesquery)
-- [Dashboard-as-Code Go lib](./go-sdk/timeseries-query.md)
-
-## Log Query (`ClickHouseLogQuery`)
-
-The ClickHouse log query plugin enables querying log data stored in your ClickHouse database. It supports log filtering, searching, and analysis for log management use cases.
-
-See also technical docs related to this plugin:
-
-- [Data model](./model.md#clickhouselogquery)
-- [Dashboard-as-Code Go lib](./go-sdk/log-query.md)
+See the [data models and SQL examples](./model.md), and the Go SDK documentation for
+[datasources](./go-sdk/datasource.md), [metrics](./go-sdk/timeseries-query.md),
+[logs](./go-sdk/log-query.md), [traces](./go-sdk/trace-query.md), [profiles](./go-sdk/profile-query.md),
+[annotations](./go-sdk/annotation-query.md), and [variables](./go-sdk/variable.md).

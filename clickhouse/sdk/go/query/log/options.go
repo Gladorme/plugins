@@ -34,3 +34,11 @@ func Datasource(datasourceName string) Option {
 		return nil
 	}
 }
+
+// TimeColumn selects the DateTime column for log timestamps and volume queries.
+func TimeColumn(column string) Option {
+	return func(builder *Builder) error {
+		builder.TimeColumn = column
+		return nil
+	}
+}

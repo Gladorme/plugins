@@ -74,3 +74,8 @@ func main() {
 	)
 }```
 ```
+
+## Timestamp column
+
+Use `TimeColumn("created_at")` for a custom timestamp column. Log volume queries use this column as a DateTime/DateTime64.
+See [the log result contract](../model.md#clickhouselogquery).

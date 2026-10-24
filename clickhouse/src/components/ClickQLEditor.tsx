@@ -16,45 +16,39 @@ import { useTheme, InputLabel, Stack } from '@mui/material';
 import type { ReactCodeMirrorProps } from '@uiw/react-codemirror';
 import CodeMirror from '@uiw/react-codemirror';
 import type { ReactElement } from 'react';
+import { useMemo } from 'react';
 
 export type ClickQLEditorProps = Omit<ReactCodeMirrorProps, 'theme' | 'extensions'>;
 
-export function ClickQLEditor(props: ClickQLEditorProps): ReactElement {
-  const theme = useTheme();
-  const isDarkMode = theme.palette.mode === 'dark';
+const LABEL_SX = { fontWeight: 500, marginBottom: '4px', color: 'text.primary' };
+const BASIC_SETUP = {
+  highlightActiveLine: false,
+  highlightActiveLineGutter: false,
+  foldGutter: false,
+  syntaxHighlighting: true,
+};
+const EXTENSIONS = [
+  EditorView.lineWrapping,
+  EditorView.contentAttributes.of({ 'aria-label': 'ClickHouse SQL query' }),
+  EditorView.theme({ '.cm-content': { paddingTop: '8px', paddingBottom: '8px', paddingRight: '40px' } }),
+];
 
+export function ClickQLEditor({
+  placeholder = 'Write ClickHouse SQL query here...',
+  ...props
+}: ClickQLEditorProps): ReactElement {
+  const theme = useTheme();
+  const style = useMemo(() => ({ border: '1px solid ' + theme.palette.divider }), [theme.palette.divider]);
   return (
     <Stack position="relative">
-      <InputLabel
-        sx={{
-          fontWeight: 500,
-          marginBottom: '4px',
-          color: theme.palette.text.primary,
-        }}
-      >
-        ClickHouse Query
-      </InputLabel>
+      <InputLabel sx={LABEL_SX}>ClickHouse Query</InputLabel>
       <CodeMirror
         {...props}
-        style={{ border: `1px solid ${theme.palette.divider}` }}
-        theme={isDarkMode ? 'dark' : 'light'}
-        basicSetup={{
-          highlightActiveLine: false,
-          highlightActiveLineGutter: false,
-          foldGutter: false,
-          syntaxHighlighting: true,
-        }}
-        extensions={[
-          EditorView.lineWrapping,
-          EditorView.theme({
-            '.cm-content': {
-              paddingTop: '8px',
-              paddingBottom: '8px',
-              paddingRight: '40px',
-            },
-          }),
-        ]}
-        placeholder="Write ClickHouse Query Here..."
+        style={style}
+        theme={theme.palette.mode === 'dark' ? 'dark' : 'light'}
+        basicSetup={BASIC_SETUP}
+        extensions={EXTENSIONS}
+        placeholder={placeholder}
       />
     </Stack>
   );

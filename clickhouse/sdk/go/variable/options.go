@@ -1,0 +1,58 @@
+// Copyright The Perses Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package variable
+
+import (
+	"fmt"
+
+	clickhouseDatasource "github.com/perses/plugins/clickhouse/sdk/go/datasource"
+)
+
+func Query(expr string) Option {
+	return func(builder *Builder) error {
+		builder.Query = expr
+		return nil
+	}
+}
+
+func Datasource(datasourceName string) Option {
+	return func(builder *Builder) error {
+		sel, err := clickhouseDatasource.Selector(datasourceName)
+		if err != nil {
+			return err
+		}
+		builder.Datasource = sel
+		return nil
+	}
+}
+
+func ValueColumn(value string) Option {
+	return func(builder *Builder) error {
+		if value == "" {
+			return fmt.Errorf("valueColumn cannot be empty")
+		}
+		builder.ValueColumn = value
+		return nil
+	}
+}
+
+func LabelColumn(value string) Option {
+	return func(builder *Builder) error {
+		if value == "" {
+			return fmt.Errorf("labelColumn cannot be empty")
+		}
+		builder.LabelColumn = value
+		return nil
+	}
+}

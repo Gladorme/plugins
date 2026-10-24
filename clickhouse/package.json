@@ -84,6 +84,42 @@
           },
           "name": "ClickHouseLogQuery"
         }
+      },
+      {
+        "kind": "TraceQuery",
+        "spec": {
+          "display": {
+            "name": "ClickHouse Trace Query"
+          },
+          "name": "ClickHouseTraceQuery"
+        }
+      },
+      {
+        "kind": "ProfileQuery",
+        "spec": {
+          "display": {
+            "name": "ClickHouse Profile Query"
+          },
+          "name": "ClickHouseProfileQuery"
+        }
+      },
+      {
+        "kind": "Annotation",
+        "spec": {
+          "display": {
+            "name": "ClickHouse Annotation Query"
+          },
+          "name": "ClickHouseAnnotationQuery"
+        }
+      },
+      {
+        "kind": "Variable",
+        "spec": {
+          "display": {
+            "name": "ClickHouse SQL Variable"
+          },
+          "name": "ClickHouseVariable"
+        }
       }
     ]
   }

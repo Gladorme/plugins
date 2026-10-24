@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { DatasourceSelector } from '@perses-dev/spec';
+import type { DatasourceSelectValue } from '@perses-dev/plugin-system';
 
 export interface ClickHouseTimeSeriesQuerySpec {
   query: string;
-  datasource?: DatasourceSelector;
+  datasource?: DatasourceSelectValue;
 }
 
 // TODO: import this type from your datasource or an existing datasource plugin

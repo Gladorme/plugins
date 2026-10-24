@@ -34,7 +34,7 @@ const getEffectiveLowerBound = (lowerBound: number, upperBound: number, logBase:
   }
   // For log scales with non-positive lower bounds, use a small fraction of upper bound
   // This ensures the bucket is still visible on the log scale
-  return upperBound * 0.001;
+  return Number.isFinite(upperBound) ? upperBound * 0.001 : 0.001;
 };
 
 export type HeatMapChartPanelProps = PanelProps<HeatMapChartOptions, TimeSeriesData>;
@@ -103,12 +103,14 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
     let highestBound = -Infinity;
     let countMin = Infinity;
     let countMax = -Infinity;
+    let lowerOverflow = false;
+    let upperOverflow = false;
 
     for (const [, histogram] of series?.histograms ?? []) {
       for (const bucket of histogram?.buckets ?? []) {
         const [, lowerBound, upperBound, count] = bucket;
-        let lowerBoundFloat = parseFloat(lowerBound);
-        const upperBoundFloat = parseFloat(upperBound);
+        let lowerBoundFloat = parseFloat(lowerBound.replace(/Inf$/, 'Infinity'));
+        const upperBoundFloat = parseFloat(upperBound.replace(/Inf$/, 'Infinity'));
         const countFloat = parseFloat(count);
 
         // For logarithmic scales, skip buckets that would be entirely non-positive
@@ -121,11 +123,13 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
           lowerBoundFloat = getEffectiveLowerBound(lowerBoundFloat, upperBoundFloat, logBase);
         }
 
-        if (lowerBoundFloat < lowestBound) {
-          lowestBound = lowerBoundFloat;
-        }
-        if (upperBoundFloat > highestBound) {
-          highestBound = upperBoundFloat;
+        lowerOverflow = lowerOverflow || lowerBoundFloat === -Infinity;
+        upperOverflow = upperOverflow || upperBoundFloat === Infinity;
+        for (const bound of [lowerBoundFloat, upperBoundFloat]) {
+          if (Number.isFinite(bound)) {
+            lowestBound = Math.min(lowestBound, bound);
+            highestBound = Math.max(highestBound, bound);
+          }
         }
         if (countFloat < countMin) {
           countMin = countFloat;
@@ -143,8 +147,8 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
 
       for (const bucket of histogram?.buckets ?? []) {
         const [, lowerBound, upperBound, count] = bucket;
-        let lowerBoundFloat = parseFloat(lowerBound);
-        const upperBoundFloat = parseFloat(upperBound);
+        let lowerBoundFloat = parseFloat(lowerBound.replace(/Inf$/, 'Infinity'));
+        const upperBoundFloat = parseFloat(upperBound.replace(/Inf$/, 'Infinity'));
 
         // For logarithmic scales, skip buckets that would be entirely non-positive
         if (logBase !== undefined && upperBoundFloat <= 0) {
@@ -162,11 +166,16 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
         });
       }
     }
+    if (!Number.isFinite(lowestBound)) lowestBound = logBase === undefined ? -1 : 0.001;
+    if (!Number.isFinite(highestBound)) highestBound = 1;
+    const padding = Math.max((highestBound - lowestBound) * 0.1, 0.001);
+    if (lowerOverflow) lowestBound -= padding;
+    if (upperOverflow) highestBound += padding;
     return {
       data,
       xAxisCategories,
-      min: lowestBound === Infinity ? undefined : lowestBound,
-      max: highestBound === -Infinity ? undefined : highestBound,
+      min: lowestBound,
+      max: highestBound,
       countMin,
       countMax,
       timeScale,

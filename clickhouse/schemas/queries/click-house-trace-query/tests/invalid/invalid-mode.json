@@ -1,0 +1,7 @@
+{
+  "kind": "ClickHouseTraceQuery",
+  "spec": {
+    "query": "SELECT 1",
+    "mode": "all"
+  }
+}

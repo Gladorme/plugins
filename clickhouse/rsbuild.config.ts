@@ -20,8 +20,12 @@ export default createConfigForPlugin({
   },
   moduleFederation: {
     exposes: {
+      './ClickHouseProfileQuery': './src/queries/click-house-profile-query',
       './ClickHouseDatasource': './src/datasources/click-house-datasource',
       './ClickHouseTimeSeriesQuery': './src/queries/click-house-time-series-query',
+      './ClickHouseTraceQuery': './src/queries/click-house-trace-query',
+      './ClickHouseAnnotationQuery': './src/annotations',
+      './ClickHouseVariable': './src/variables',
       './ClickHouseLogQuery': './src/queries/click-house-log-query',
     },
     shared: {

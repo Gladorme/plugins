@@ -37,7 +37,8 @@ const createClient: DatasourcePlugin<ClickHouseDatasourceSpec, ClickHouseDatasou
     options: {
       datasourceUrl,
     },
-    query: (params, headers) => query(params, { datasourceUrl, headers: headers ?? specHeaders, fetch: customFetch }),
+    query: (params, headers, signal) =>
+      query(params, { datasourceUrl, headers: { ...specHeaders, ...headers }, fetch: customFetch, signal }),
   };
 };
 

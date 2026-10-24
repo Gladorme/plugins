@@ -1,0 +1,7 @@
+{
+  "kind": "ClickHouseVariable",
+  "spec": {
+    "query": "SELECT 1",
+    "valueColumn": ""
+  }
+}

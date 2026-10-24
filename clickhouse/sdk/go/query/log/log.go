@@ -22,6 +22,7 @@ import (
 const PluginKind = "ClickHouseLogQuery"
 
 type PluginSpec struct {
+	TimeColumn string               `json:"timeColumn,omitempty" yaml:"timeColumn,omitempty"`
 	Datasource *datasource.Selector `json:"datasource,omitempty" yaml:"datasource,omitempty"`
 	Query      string               `json:"query" yaml:"query"`
 }

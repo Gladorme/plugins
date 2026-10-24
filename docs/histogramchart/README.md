@@ -7,7 +7,7 @@ This plugin allows you to visualize Prometheus Native Histograms, providing a cl
 ![HistogramChart example](https://github.com/perses/website/blob/main/docs/assets/images/blog/v051/histogram-panel.png?raw=true)
 
 !!! warning
-    This panel plugin is only compatible with Prometheus native histograms data for the moment.
+This panel plugin is only compatible with Prometheus native histograms data for the moment.
 
 This panel is supporting thresholds, which allow you to colorize the chart based on specific values, making it easier to understand your data.
 
@@ -21,3 +21,6 @@ See also technical docs related to this plugin:
 
 - [Data model](./model.md)
 - [Dashboard-as-Code Go lib](./go-sdk.md)
+
+Unbounded native histogram buckets are drawn up to the plot edges with finite automatic axis limits.
+Their original bounds and counts remain in tooltips. Zero-width zero buckets are drawn with a minimum one-pixel extent.

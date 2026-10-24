@@ -167,9 +167,12 @@ export function HeatMapChart({
             const yUpper = api.value(2) as number;
 
             // Pixel coordinates
-            const upperStart = api.coord([xIndex, yUpper]);
-            const lowerStart = api.coord([xIndex, yLower]);
-            const upperNext = api.coord([xIndex + 1, yUpper]);
+            // Infinite tail buckets retain their real tooltip bounds and fill to the plot edge.
+            const plotLower = yLower === -Infinity ? (min ?? 0) : yLower;
+            const plotUpper = yUpper === Infinity ? (max ?? 1) : yUpper;
+            const upperStart = api.coord([xIndex, plotUpper], true);
+            const lowerStart = api.coord([xIndex, plotLower], true);
+            const upperNext = api.coord([xIndex + 1, plotUpper]);
 
             const startX = upperStart?.[0];
             const upperY = upperStart?.[1];
@@ -183,7 +186,7 @@ export function HeatMapChart({
             const topY = Math.min(upperY, lowerY);
             const bottomY = Math.max(upperY, lowerY);
             const width = nextX - startX;
-            const height = bottomY - topY;
+            const height = yLower === yUpper ? 1 : bottomY - topY;
 
             return {
               type: 'rect',
