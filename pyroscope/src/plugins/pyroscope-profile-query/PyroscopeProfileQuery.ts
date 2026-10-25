@@ -11,20 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { LabelFilter } from '../../utils/types';
+import type { ProfileQueryPlugin } from '@perses-dev/plugin-system';
+import { parseVariables } from '@perses-dev/plugin-system';
+
+import type { PyroscopeProfileQuerySpec } from '../../model';
 import { getProfileData } from './get-profile-data';
 import { PyroscopeProfileQueryEditor } from './PyroscopeProfileQueryEditor';
 
-export const PyroscopeProfileQuery = {
+export const PyroscopeProfileQuery: ProfileQueryPlugin<PyroscopeProfileQuerySpec> = {
   getProfileData,
+  dependsOn: (spec) => ({
+    variables: [
+      ...new Set(
+        [
+          spec.profileType,
+          spec.service ?? '',
+          spec.datasource?.name ?? '',
+          ...(spec.filters?.flatMap((filter) => [filter.labelName, filter.labelValue]) ?? []),
+        ].flatMap(parseVariables),
+      ),
+    ],
+  }),
   OptionsEditorComponent: PyroscopeProfileQueryEditor,
-  createInitialOptions: (): {
-    maxNodes: number;
-    datasource?: string;
-    service: string;
-    profileType: string;
-    filters: LabelFilter[];
-  } => ({
+  createInitialOptions: () => ({
     maxNodes: 0,
     datasource: undefined,
     service: '',

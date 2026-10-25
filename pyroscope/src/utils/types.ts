@@ -22,7 +22,7 @@ export interface LabelFilter {
 export function computeFilterExpr(filters: LabelFilter[]): string {
   return `${filters
     .filter((filter) => filter.labelName !== '' && filter.labelValue !== '')
-    .map((filter) => `${filter.labelName}${filter.operator}"${filter.labelValue}"`)
+    .map((filter) => `${filter.labelName}${filter.operator}${JSON.stringify(filter.labelValue)}`)
     .join(',')}`;
 }
 

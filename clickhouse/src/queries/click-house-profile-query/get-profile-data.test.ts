@@ -176,7 +176,7 @@ it('expands SQL and datasource variables, exposes executed SQL, and forwards can
   };
   const signal = new AbortController().signal;
   const result = await getProfileData(spec, ctx, signal);
-  expect(ClickHouseProfileQuery.dependsOn(spec).variables).toEqual(['service', 'source']);
+  expect(ClickHouseProfileQuery.dependsOn?.(spec, ctx).variables).toEqual(['service', 'source']);
   expect(ctx.datasourceStore.getDatasourceClient).toHaveBeenCalledWith({
     kind: 'ClickHouseDatasource',
     name: 'profiles',
@@ -187,13 +187,6 @@ it('expands SQL and datasource variables, exposes executed SQL, and forwards can
     signal,
   );
   expect(result.metadata?.executedQueryString).toContain("'app''one'");
-});
-
-it('supports older hosts for constant SQL and explains missing host support for variables', async () => {
-  const ctx = createContext([NATIVE]);
-  const old = { datasourceStore: ctx.datasourceStore, absoluteTimeRange: ctx.timeRange };
-  expect((await getProfileData({ query: PROFILE_EXAMPLE }, old)).numTicks).toBe(5);
-  await expect(getProfileData({ query: 'SELECT $service' }, old)).rejects.toThrow('host with profile variable support');
 });
 
 it('propagates query failures and leaves incomplete queries idle', async () => {

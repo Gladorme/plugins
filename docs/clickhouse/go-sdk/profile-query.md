@@ -12,4 +12,4 @@ profile.ClickHouseProfileQuery(
 Use the returned `query.Option` when building a `ProfileQuery` for a Flame Chart panel.
 `Query(sql)` overrides the expression. Empty queries and invalid datasource selectors are rejected.
 See [the result contract](../model.md#clickhouseprofilequery) for Collector and custom SQL shapes,
-time filtering, and the host requirement for profile variables.
+time filtering, and profile variables.

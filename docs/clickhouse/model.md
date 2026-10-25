@@ -287,9 +287,8 @@ AND ServiceName IN (${service:sqlstring})
 AND TraceId = ${trace_id:sqlstring}
 ```
 
-Profile query variables, including `datasource: "$source"`, require the Perses shared runtime's
-profile variable support (`ProfileQueryContext.variableState` and `ProfileQueryPlugin.dependsOn`).
-Static SQL and time placeholders work on older hosts; variable queries show an explicit compatibility error there.
+Profile queries support dashboard and built-in variables, including `datasource: "$source"`,
+with the same dependency loading and refresh behavior as the other query types.
 Configure dashboard links to pass trace IDs between signals. Profile results do not create automatic trace links.
 
 ### Custom profile schemas

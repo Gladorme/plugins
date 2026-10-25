@@ -19,10 +19,7 @@ import { ClickHouseProfileQueryEditor } from './ClickHouseProfileQueryEditor';
 import { getProfileData } from './get-profile-data';
 import type { ClickHouseProfileQuerySpec } from './types';
 
-// The optional dependency hook also works with hosts predating profile variable support.
-export const ClickHouseProfileQuery: ProfileQueryPlugin<ClickHouseProfileQuerySpec> & {
-  dependsOn: typeof queryDependencies;
-} = {
+export const ClickHouseProfileQuery: ProfileQueryPlugin<ClickHouseProfileQuerySpec> = {
   getProfileData,
   dependsOn: queryDependencies,
   OptionsEditorComponent: ClickHouseProfileQueryEditor,

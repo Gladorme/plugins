@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import type { ProfileQueryPlugin } from '@perses-dev/plugin-system';
+import { replaceVariables } from '@perses-dev/plugin-system';
 import type { AbsoluteTimeRange, ProfileData, StackTrace, Timeline } from '@perses-dev/spec';
 import { getUnixTime } from 'date-fns';
 
@@ -47,10 +48,30 @@ export const getProfileData: ProfileQueryPlugin<PyroscopeProfileQuerySpec>['getP
   if (!isProfileQueryComplete(spec)) {
     return emptyProfileData();
   }
-  const profileTypeID = spec.profileType;
+  const { variableState } = context;
+  const resolvedSpec: PyroscopeProfileQuerySpec = {
+    ...spec,
+    profileType: replaceVariables(spec.profileType, variableState),
+    service: spec.service ? replaceVariables(spec.service, variableState) : spec.service,
+    filters: spec.filters?.map((filter) => ({
+      ...filter,
+      labelName: replaceVariables(filter.labelName, variableState),
+      labelValue: replaceVariables(filter.labelValue, variableState),
+    })),
+    datasource: spec.datasource
+      ? {
+          ...spec.datasource,
+          name: spec.datasource.name ? replaceVariables(spec.datasource.name, variableState) : undefined,
+        }
+      : undefined,
+  };
+  if (!isProfileQueryComplete(resolvedSpec)) {
+    return emptyProfileData();
+  }
+  const profileTypeID = resolvedSpec.profileType;
 
   const client: PyroscopeClient = await context.datasourceStore.getDatasourceClient(
-    spec.datasource ?? DEFAULT_PYROSCOPE,
+    resolvedSpec.datasource ?? DEFAULT_PYROSCOPE,
   );
 
   let startSeconds: number;
@@ -64,7 +85,7 @@ export const getProfileData: ProfileQueryPlugin<PyroscopeProfileQuerySpec>['getP
   const start = startSeconds * MILLISECONDS;
   const end = endSeconds * MILLISECONDS;
 
-  const labelSelector = buildLabelSelector(spec);
+  const labelSelector = buildLabelSelector(resolvedSpec);
 
   const stacktracesRequest: SelectMergeStacktracesRequest = {
     profileTypeID,
@@ -72,8 +93,8 @@ export const getProfileData: ProfileQueryPlugin<PyroscopeProfileQuerySpec>['getP
     start,
     end,
   };
-  if (spec.maxNodes) {
-    stacktracesRequest.maxNodes = spec.maxNodes;
+  if (resolvedSpec.maxNodes) {
+    stacktracesRequest.maxNodes = resolvedSpec.maxNodes;
   }
 
   const minStepSeconds = client.options.minStepSeconds ?? DEFAULT_MIN_STEP_SECONDS;
@@ -110,7 +131,7 @@ export const getProfileData: ProfileQueryPlugin<PyroscopeProfileQuerySpec>['getP
 function buildLabelSelector(spec: PyroscopeProfileQuerySpec): string {
   const selectors: string[] = [];
   if (spec.service) {
-    selectors.push(`service_name="${spec.service}"`);
+    selectors.push(`service_name=${JSON.stringify(spec.service)}`);
   }
   if (spec.filters && spec.filters.length > 0) {
     const filterExpr = computeFilterExpr(spec.filters);

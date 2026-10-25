@@ -23,6 +23,7 @@ import type {
   SelectSeriesRequest,
 } from '../../model';
 import { getProfileData, transformFlameGraph, transformTimeline } from './get-profile-data';
+import { PyroscopeProfileQuery } from './PyroscopeProfileQuery';
 
 // Flamegraph levels use groups of 4 numbers: [offset, total, self, nameIndex].
 // `offset` is the gap (in samples) since the end of the previous sibling on the same level.
@@ -100,6 +101,7 @@ function createContext(
       setSavedDatasources: vi.fn(),
     },
     absoluteTimeRange,
+    variableState: {},
   } as ProfileQueryContext;
 }
 
@@ -721,3 +723,53 @@ function buildChain(depth: number): GeneratedNode {
   const child = buildChain(depth - 1);
   return { start: 0, end: child.end, self: 0, name: 'recurse', children: [child] };
 }
+
+it('interpolates profile, service, filter and datasource-name variables in both requests', async () => {
+  const client = makeClient({
+    selectMergeStacktraces: vi.fn().mockResolvedValue({ flamegraph: MOCK_FLAMEGRAPH }),
+    selectSeries: vi.fn().mockResolvedValue({ series: [] }),
+  });
+  const context = createContext(client, TIME_RANGE);
+  context.variableState = {
+    profile: { value: BASE_SPEC.profileType, loading: false },
+    service: { value: 'api"blue', loading: false },
+    label: { value: 'env', loading: false },
+    environment: { value: 'prod\\eu', loading: false },
+    source: { value: 'profiles', loading: false },
+  };
+  const spec: PyroscopeProfileQuerySpec = {
+    ...BASE_SPEC,
+    profileType: '$profile',
+    service: '$service',
+    filters: [{ labelName: '$label', labelValue: '${environment}', operator: '=' }],
+    datasource: { kind: 'PyroscopeDatasource', name: '$source' },
+  };
+  expect(PyroscopeProfileQuery.dependsOn?.(spec, context).variables).toEqual([
+    'profile',
+    'service',
+    'source',
+    'label',
+    'environment',
+  ]);
+  const result = await getProfileData(spec, context);
+  expect(context.datasourceStore.getDatasourceClient).toHaveBeenCalledWith({
+    kind: 'PyroscopeDatasource',
+    name: 'profiles',
+  });
+  const expected = expect.objectContaining({
+    profileTypeID: BASE_SPEC.profileType,
+    labelSelector: '{service_name="api\\"blue",env="prod\\\\eu"}',
+  });
+  expect(client.selectMergeStacktraces).toHaveBeenCalledWith(expected);
+  expect(client.selectSeries).toHaveBeenCalledWith(expected);
+  expect(result.metadata?.units).toBe('nanoseconds');
+  expect(spec.service).toBe('$service');
+});
+
+it('does not issue profile requests when a service variable resolves to an empty value', async () => {
+  const client = makeClient();
+  const context = createContext(client, TIME_RANGE);
+  context.variableState.service = { value: '', loading: false };
+  await getProfileData({ ...BASE_SPEC, service: '$service' }, context);
+  expect(context.datasourceStore.getDatasourceClient).not.toHaveBeenCalled();
+});

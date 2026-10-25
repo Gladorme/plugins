@@ -77,11 +77,15 @@ Perses supports profile queries for Pyroscope: `PyroscopeProfileQuery`.
 ```yaml
 kind: "PyroscopeProfileQuery"
 spec:
-  # Profile type to query (e.g., "cpu", "memory", "goroutines")
+  # Full Pyroscope profile type ID
   profileType: <string>
 
-  # `query` is the query expression using label selectors.
-  query: <string>
+  service: <string>
+  filters: # Optional
+    - labelName: <string>
+      labelValue: <string>
+      operator: <string> # =, !=, =~, or !~
+  maxNodes: <number> # Optional
 
   # `datasource` is a datasource selector. If not provided, the default PyroscopeDatasource is used.
   # See the documentation about the datasources to understand how it is selected.
@@ -100,16 +104,27 @@ spec:
   plugin:
     kind: "PyroscopeProfileQuery"
     spec:
-      profileType: "cpu"
-      query: '{service_name="api", environment="production"}'
+      profileType: "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
+      service: "$service"
+      filters:
+        - labelName: "environment"
+          labelValue: "$environment"
+          operator: "="
 ```
+
+The existing string fields support dashboard and built-in variables: `profileType`, `service`,
+filter names and values, and `datasource.name`. For example, `service: "$service"` selects the
+service chosen in a dashboard variable. The Service editor also accepts a variable expression.
+Both the flame graph and timeline use the interpolated values. Dependencies are tracked so requests wait for
+variables to load and refresh when their values change. Service and filter values are escaped as label-selector
+strings after interpolation. For multi-select filter variables, use a regex operator (`=~` or `!~`) with
+the `${variable:regex}` format.
 
 ## Shared definitions
 
 ### Pyroscope Datasource selector
 
-!!! note
-    See [Selecting / Referencing a Datasource](https://github.com/perses/perses/blob/main/docs/api/datasource.md#selecting--referencing-a-datasource)
+See [Selecting / Referencing a Datasource](https://github.com/perses/perses/blob/main/docs/api/datasource.md#selecting--referencing-a-datasource)
 
 ```yaml
 kind: "PyroscopeDatasource"

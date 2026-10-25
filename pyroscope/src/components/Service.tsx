@@ -40,6 +40,7 @@ export function Service({ datasource, value, onChange }: ServiceProps): ReactEle
       }}
     >
       <Autocomplete
+        freeSolo
         options={servicesOptions?.names ?? []}
         value={value}
         sx={{ minWidth: 200 }}

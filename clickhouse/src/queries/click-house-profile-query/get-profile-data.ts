@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { ProfileQueryContext, VariableStateMap } from '@perses-dev/plugin-system';
+import type { ProfileQueryContext } from '@perses-dev/plugin-system';
 import type { AbsoluteTimeRange, ProfileData, StackTrace, Timeline } from '@perses-dev/spec';
 
-import { executeQuery, queryDependencies } from '../../model/query';
+import { executeQuery } from '../../model/query';
 import { numericValue, timestampNano } from '../../model/rows';
 import type { ClickHouseProfileQuerySpec } from './types';
 
@@ -245,16 +245,13 @@ export function buildProfileData(rows: Row[], range?: AbsoluteTimeRange, execute
 
 export async function getProfileData(
   spec: ClickHouseProfileQuerySpec,
-  context: ProfileQueryContext & { variableState?: VariableStateMap },
+  context: ProfileQueryContext,
   signal?: AbortSignal,
 ): Promise<ProfileData> {
   if (!spec.query?.trim()) return buildProfileData([], context.absoluteTimeRange);
-  if (!context.variableState && queryDependencies(spec).variables.length) {
-    throw new Error('ClickHouse profile variables require a Perses host with profile variable support');
-  }
   const { rows, executedQueryString } = await executeQuery(
     spec,
-    { ...context, timeRange: context.absoluteTimeRange, variableState: context.variableState ?? {} },
+    { ...context, timeRange: context.absoluteTimeRange },
     signal,
   );
   return buildProfileData(rows, context.absoluteTimeRange, executedQueryString);
