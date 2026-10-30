@@ -61,3 +61,23 @@ it('gives a completely unbounded distribution a finite viewport', () => {
   expect(Number.isFinite(props?.min)).toBe(true);
   expect(Number.isFinite(props?.max)).toBe(true);
 });
+
+it('preserves irregular sample timestamps and missing intervals instead of assigning all buckets to index -1', () => {
+  const props = panelProps([[0, '0', '1', '2']]);
+  const result = props.queryResults[0]!;
+  result.data.timeRange = { start: new Date(100), end: new Date(5000) };
+  result.data.series[0]!.histograms = [
+    [0.234, { count: 2, sum: '1', buckets: [[0, '0', '1', '2']] }],
+    [1.239, { count: 3, sum: '1', buckets: [[0, '0', '1', '3']] }],
+    [4.236, { count: 4, sum: '1', buckets: [[0, '0', '1', '4']] }],
+  ];
+  render(<HeatMapChartPanel {...props} />);
+  const chart = vi.mocked(HeatMapChart).mock.calls.at(-1)?.[0];
+  expect(chart?.xAxisCategories).toEqual([234, 1239, 4236]);
+  expect(chart?.data.map((bucket) => bucket.value)).toEqual([
+    [234, 0, 1, 2],
+    [1239, 0, 1, 3],
+    [4236, 0, 1, 4],
+  ]);
+  expect(chart?.timeScale).toMatchObject({ startMs: 100, endMs: 5000, stepMs: 1000 });
+});

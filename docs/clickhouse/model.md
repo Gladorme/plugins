@@ -246,7 +246,7 @@ SELECT Timestamp, SampleType, SampleUnit,
        FunctionNames, FileNames, LineNumbers, MappingFileNames, Addresses,
        Values, TimestampsUnixNano
 FROM otel_profiles
-WHERE SampleType = 'cpu' AND SampleUnit = 'nanoseconds'
+WHERE SampleType = 'samples' AND SampleUnit = 'count'
   AND Timestamp <= toDateTime64('{end}', 9, 'UTC')
   AND Timestamp + toIntervalNanosecond(DurationNano) >= toDateTime64('{start}', 9, 'UTC')
 ORDER BY Timestamp LIMIT 10000
@@ -277,6 +277,9 @@ The overlap predicate above includes profiles collected before the range whose o
 Shared stack prefixes are merged. The function table shows total and self weights, preserving recursion.
 The timeline sums weights into bounded time buckets; it does not turn CPU time into a rate or percentage.
 Weights must be finite, nonnegative, and within JavaScript's safe numeric range; oversized totals fail explicitly.
+The OTel eBPF profiler emits `samples` / `count`, which the editor example selects.
+Other profilers can emit CPU time or allocation sizes.
+
 Filter to **one sample type and unit** per query, such as CPU nanoseconds, allocation bytes, or sample counts.
 Mixed types or units are rejected rather than added together.
 

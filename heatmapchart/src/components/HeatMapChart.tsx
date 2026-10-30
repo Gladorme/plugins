@@ -43,7 +43,7 @@ const DEFAULT_VISUAL_MAP_COLORS = [
   '#a50026',
 ];
 
-export type HeatMapData = [number, number, number, number | undefined]; // [xIndex, yLower, yUpper, count]
+export type HeatMapData = [number, number, number, number | undefined]; // [timestampMs, yLower, yUpper, count]
 
 export interface HeatMapDataItem {
   value: HeatMapData;
@@ -91,6 +91,8 @@ export function HeatMapChart({
   const { timeZone } = useTimeZone();
 
   const option: EChartsCoreOption = useMemo(() => {
+    const nextTimestamps = new Map(xAxisCategories.map((time, index) => [time, xAxisCategories[index + 1]]));
+    const stepMs = timeScale?.stepMs ?? 1000;
     return {
       tooltip: {
         appendToBody: true,
@@ -99,7 +101,6 @@ export function HeatMapChart({
             data: params.data.value,
             label: params.data.label,
             marker: params.marker,
-            xAxisCategories,
             theme,
             yAxisFormat: yAxisFormat,
             countFormat: countFormat,
@@ -107,8 +108,9 @@ export function HeatMapChart({
         },
       },
       xAxis: {
-        type: 'category',
-        data: xAxisCategories,
+        type: 'time',
+        min: timeScale?.startMs ?? xAxisCategories[0],
+        max: timeScale?.endMs ?? (xAxisCategories.at(-1) ?? 0) + stepMs,
         axisLabel: {
           hideOverlap: true,
           formatter: getFormattedHeatmapAxisLabel(timeScale?.rangeMs ?? 0, timeZone),
@@ -162,7 +164,12 @@ export function HeatMapChart({
             params: CustomSeriesRenderItemParams,
             api: CustomSeriesRenderItemAPI,
           ): CustomSeriesRenderItemReturn {
-            const xIndex = api.value(0) as number;
+            const timestamp = api.value(0) as number;
+            const end = Math.min(
+              timestamp + stepMs,
+              nextTimestamps.get(timestamp) ?? Infinity,
+              timeScale?.endMs ?? Infinity,
+            );
             const yLower = api.value(1) as number;
             const yUpper = api.value(2) as number;
 
@@ -170,9 +177,9 @@ export function HeatMapChart({
             // Infinite tail buckets retain their real tooltip bounds and fill to the plot edge.
             const plotLower = yLower === -Infinity ? (min ?? 0) : yLower;
             const plotUpper = yUpper === Infinity ? (max ?? 1) : yUpper;
-            const upperStart = api.coord([xIndex, plotUpper], true);
-            const lowerStart = api.coord([xIndex, plotLower], true);
-            const upperNext = api.coord([xIndex + 1, plotUpper]);
+            const upperStart = api.coord([timestamp, plotUpper], true);
+            const lowerStart = api.coord([timestamp, plotLower], true);
+            const upperNext = api.coord([end, plotUpper]);
 
             const startX = upperStart?.[0];
             const upperY = upperStart?.[1];
@@ -185,7 +192,7 @@ export function HeatMapChart({
 
             const topY = Math.min(upperY, lowerY);
             const bottomY = Math.max(upperY, lowerY);
-            const width = nextX - startX;
+            const width = Math.max(1, nextX - startX);
             const height = yLower === yUpper ? 1 : bottomY - topY;
 
             return {
@@ -197,7 +204,7 @@ export function HeatMapChart({
             };
           },
           label: { show: false },
-          dimensions: ['xIndex', 'yLower', 'yUpper', 'count'],
+          dimensions: ['timestamp', 'yLower', 'yUpper', 'count'],
           encode: { x: 0, y: [1, 2], tooltip: [1, 2, 3] },
           data: data,
           progressive: 1000,
@@ -207,7 +214,7 @@ export function HeatMapChart({
     };
   }, [
     xAxisCategories,
-    timeScale?.rangeMs,
+    timeScale,
     timeZone,
     yAxisFormat,
     showVisualMap,

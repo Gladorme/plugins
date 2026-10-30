@@ -22,7 +22,6 @@ interface CustomTooltipProps {
   data: HeatMapData;
   label: string;
   marker: string;
-  xAxisCategories: number[];
   theme: Theme;
   yAxisFormat?: FormatOptions;
   countFormat?: FormatOptions;
@@ -32,15 +31,13 @@ export function generateTooltipHTML({
   data,
   label,
   marker,
-  xAxisCategories,
   theme,
   yAxisFormat,
   countFormat,
 }: CustomTooltipProps): string {
-  const [xIndex, yLower, yUpper] = data;
-  const xAxisLabel = xAxisCategories[xIndex];
+  const [timestamp, yLower, yUpper] = data;
 
-  const { formattedDate, formattedTime } = getDateAndTime(xAxisLabel);
+  const { formattedDate, formattedTime } = getDateAndTime(timestamp);
 
   const tooltipHeader = css`
     border-bottom: 1px solid ${theme.palette.grey[500]};

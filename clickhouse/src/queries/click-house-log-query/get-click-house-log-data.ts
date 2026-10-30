@@ -23,7 +23,7 @@ export const getClickHouseLogData: LogQueryPlugin<ClickHouseLogQuerySpec>['getLo
   signal,
 ) => {
   if (!spec.query?.trim()) {
-    return { logs: { entries: [], totalCount: 0 }, timeRange: context.timeRange };
+    return { logs: { entries: [], totalCount: 0 }, timeRange: context.absoluteTimeRange };
   }
   const { rows, executedQueryString } = await executeQuery(spec, context, signal);
   const entries = rows.map((row) => {
@@ -41,7 +41,7 @@ export const getClickHouseLogData: LogQueryPlugin<ClickHouseLogQuerySpec>['getLo
     return { timestamp: timestampMs(time) / 1000, line, labels };
   });
   return {
-    timeRange: context.timeRange,
+    timeRange: context.absoluteTimeRange,
     logs: { entries, totalCount: entries.length },
     metadata: { executedQueryString },
   };

@@ -20,7 +20,7 @@ import { useMemo } from 'react';
 
 import type { HeatMapChartOptions, LOG_BASE } from '../heat-map-chart-model';
 import { DEFAULT_FORMAT } from '../heat-map-chart-model';
-import { generateCompleteTimestamps, getCommonTimeScaleForQueries } from '../utils';
+import { getCommonTimeScaleForQueries } from '../utils';
 import type { HeatMapDataItem } from './HeatMapChart';
 import { HeatMapChart } from './HeatMapChart';
 
@@ -94,7 +94,7 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
     const series: TimeSeries = queryResults[0]!.data.series[0]!;
 
     const timeScale = getCommonTimeScaleForQueries(queryResults);
-    const xAxisCategories: number[] = generateCompleteTimestamps(timeScale);
+    const xAxisCategories = [...new Set(series.histograms?.map(([time]) => time * 1000))].toSorted((a, b) => a - b);
 
     const logBase = pluginSpec.logBase;
 
@@ -141,10 +141,8 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
     }
 
     const data: HeatMapDataItem[] = [];
-    // Each bucket becomes a rectangle spanning [lowerBound, upperBound] at the given x index
+    // Preserve collection timestamps: OTel samples need not align with the requested range or step.
     for (const [time, histogram] of series?.histograms ?? []) {
-      const itemIndexOnXaxis = xAxisCategories.findIndex((v) => v === time * 1000);
-
       for (const bucket of histogram?.buckets ?? []) {
         const [, lowerBound, upperBound, count] = bucket;
         let lowerBoundFloat = parseFloat(lowerBound.replace(/Inf$/, 'Infinity'));
@@ -161,7 +159,7 @@ export function HeatMapChartPanel(props: HeatMapChartPanelProps): ReactElement |
         }
 
         data.push({
-          value: [itemIndexOnXaxis, lowerBoundFloat, upperBoundFloat, parseFloat(count)],
+          value: [time * 1000, lowerBoundFloat, upperBoundFloat, parseFloat(count)],
           label: count,
         });
       }

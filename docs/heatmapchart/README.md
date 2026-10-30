@@ -5,7 +5,7 @@ The HeatMap Chart plugin displays data as a heatmap in Perses dashboards. This p
 ![HistogramChart example](https://github.com/perses/website/blob/main/docs/assets/images/blog/v052/heatmap-dark.png?raw=true)
 
 !!! warning
-This panel plugin is only compatible with Prometheus native histograms data for the moment.
+This panel plugin accepts native histograms, including OpenTelemetry histograms converted by the ClickHouse datasource.
 
 See also technical docs related to this plugin:
 
@@ -14,3 +14,6 @@ See also technical docs related to this plugin:
 
 Unbounded native histogram buckets are drawn up to the plot edges with finite automatic axis limits.
 Their original bounds and counts remain in tooltips. Zero-width zero buckets are drawn with a minimum one-pixel extent.
+
+Histogram cells use their actual collection timestamps on a continuous time axis.
+Irregular samples remain visible, and gaps longer than the query step remain empty.

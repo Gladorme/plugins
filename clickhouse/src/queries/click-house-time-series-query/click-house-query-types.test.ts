@@ -67,7 +67,7 @@ const createStubContext = (): TimeSeriesQueryContext => {
       getSavedDatasources: vi.fn(),
       setSavedDatasources: vi.fn(),
     },
-    timeRange: {
+    absoluteTimeRange: {
       end: new Date('2025-01-02T00:00:00.000Z'),
       start: new Date('2025-01-01T00:00:00.000Z'),
     },

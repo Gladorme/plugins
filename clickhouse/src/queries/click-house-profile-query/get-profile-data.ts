@@ -249,10 +249,6 @@ export async function getProfileData(
   signal?: AbortSignal,
 ): Promise<ProfileData> {
   if (!spec.query?.trim()) return buildProfileData([], context.absoluteTimeRange);
-  const { rows, executedQueryString } = await executeQuery(
-    spec,
-    { ...context, timeRange: context.absoluteTimeRange },
-    signal,
-  );
+  const { rows, executedQueryString } = await executeQuery(spec, context, signal);
   return buildProfileData(rows, context.absoluteTimeRange, executedQueryString);
 }

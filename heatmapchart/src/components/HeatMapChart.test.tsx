@@ -40,12 +40,13 @@ it('renders tail and zero-width buckets with finite geometry while retaining too
   const option = vi.mocked(EChart).mock.calls.at(-1)![0].option;
   const series = (option.series as CustomSeriesOption[])[0];
   expect(series?.data).toEqual(DATA);
+  expect(option.xAxis).toMatchObject({ type: 'time', min: 0, max: 2000 });
   function renderBucket(bucket: number[]): unknown {
     const api: Partial<CustomSeriesRenderItemAPI> = {
       value: (dim) => bucket[Number(dim)] ?? 0,
       coord: (values) => {
         const [x = 0, y = 0] = values as number[];
-        return [x * 10, Number.isFinite(y) ? 100 - y : NaN];
+        return [x / 100, Number.isFinite(y) ? 100 - y : NaN];
       },
       visual: vi.fn(),
     };

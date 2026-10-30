@@ -37,11 +37,7 @@ export const getTraceData: TraceQueryPlugin<ClickHouseTraceQuerySpec>['getTraceD
           "' ORDER BY Timestamp",
       }
     : spec;
-  const { rows, executedQueryString } = await executeQuery(
-    querySpec,
-    { ...context, timeRange: context.absoluteTimeRange },
-    signal,
-  );
+  const { rows, executedQueryString } = await executeQuery(querySpec, context, signal);
   return {
     ...(isTraceId || spec.mode === 'trace' ? { trace: traceDetail(rows) } : { searchResult: traceSearch(rows) }),
     metadata: { executedQueryString },

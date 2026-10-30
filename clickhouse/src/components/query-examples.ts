@@ -88,7 +88,7 @@ export const PROFILE_EXAMPLE = `SELECT Timestamp, SampleType, SampleUnit,
   FunctionNames, FileNames, LineNumbers, MappingFileNames, Addresses,
   Values, TimestampsUnixNano
 FROM otel_profiles
-WHERE SampleType = 'cpu' AND SampleUnit = 'nanoseconds'
+WHERE SampleType = 'samples' AND SampleUnit = 'count'
   AND Timestamp <= toDateTime64('{end}', 9, 'UTC')
   AND Timestamp + toIntervalNanosecond(DurationNano) >= toDateTime64('{start}', 9, 'UTC')
 ORDER BY Timestamp LIMIT 10000`;
@@ -97,6 +97,8 @@ export const PROFILE_EXAMPLES =
   PROFILE_EXAMPLE +
   `
 
+-- The OTel eBPF profiler emits samples/count. Select the SampleType and
+-- SampleUnit stored by your profiler, for example cpu/nanoseconds.
 -- Filter by a service or a trace using dashboard variables:
 -- AND ServiceName IN (\${service:sqlstring})
 -- AND TraceId = \${trace_id:sqlstring}
