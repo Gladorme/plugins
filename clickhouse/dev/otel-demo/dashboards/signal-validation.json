@@ -1,0 +1,425 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "signal-validation",
+    "project": "otel-demo"
+  },
+  "spec": {
+    "display": {
+      "name": "ClickHouse \u2022 All signals",
+      "description": "Live standard OTel tables: metrics, logs, traces, profiles, histograms, exemplars, SQL annotations and dependent variables."
+    },
+    "duration": "15m",
+    "refreshInterval": "30s",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "service",
+          "defaultValue": "checkout",
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT DISTINCT ServiceName AS value FROM otel_traces WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND ServiceName != '' ORDER BY value"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "metric",
+          "defaultValue": "go.memory.used",
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT DISTINCT MetricName AS value FROM otel_metrics_sum WHERE ServiceName = ${service:sqlstring} AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') ORDER BY value"
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "metrics": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Native OTel metrics",
+            "description": "Select a service and its dependent metric variable. Raw cumulative counters and up/down sums retain their OTel labels."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_metrics_sum WHERE ServiceName = ${service:sqlstring} AND MetricName = ${metric:sqlstring} AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') ORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "logs": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Live application logs"
+          },
+          "plugin": {
+            "kind": "LogsTable",
+            "spec": {
+              "showTime": true,
+              "allowWrap": true,
+              "enableDetails": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "LogQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseLogQuery",
+                  "spec": {
+                    "query": "SELECT Timestamp, if(Body = '', EventName, Body) AS Body, SeverityText, ServiceName, TraceId, SpanId, ResourceAttributes, LogAttributes FROM otel_logs WHERE ServiceName = ${service:sqlstring} AND Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') ORDER BY Timestamp DESC LIMIT 100"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "search": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Live trace search"
+          },
+          "plugin": {
+            "kind": "TraceTable",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TraceQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTraceQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_traces WHERE TraceId IN (SELECT TraceId FROM otel_traces WHERE ServiceName = ${service:sqlstring} AND Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') GROUP BY TraceId ORDER BY max(Timestamp) DESC LIMIT 10) ORDER BY Timestamp"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "trace": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Latest trace detail"
+          },
+          "plugin": {
+            "kind": "TracingGanttChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TraceQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTraceQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_traces WHERE TraceId IN (SELECT TraceId FROM otel_traces WHERE ServiceName = ${service:sqlstring} AND Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') GROUP BY TraceId ORDER BY max(Timestamp) DESC LIMIT 1) ORDER BY Timestamp",
+                    "mode": "trace"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "histogram": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Native explicit histogram",
+            "description": "Cart get latency. Native cumulative OTel bucket counts, not a rate."
+          },
+          "plugin": {
+            "kind": "HistogramChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT TimeUnix, MetricName, MetricUnit, Count, Sum, ExplicitBounds, BucketCounts, Flags FROM otel_metrics_histogram WHERE MetricName = 'demo.cart.get_cart.latency' AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') ORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "heatmap": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Native histogram over time",
+            "description": "Cart get latency. Native cumulative observations at their original collection timestamps."
+          },
+          "plugin": {
+            "kind": "HeatMapChart",
+            "spec": {
+              "yAxisFormat": {
+                "unit": "seconds"
+              },
+              "min": 0
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT TimeUnix, MetricName, MetricUnit, Count, Sum, ExplicitBounds, BucketCounts, Flags FROM otel_metrics_histogram WHERE MetricName = 'demo.cart.get_cart.latency' AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') ORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "exemplars": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mean cart latency and trace exemplars",
+            "description": "Mean of cumulative observations; exemplar points retain their measured duration and trace/span IDs."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT TimeUnix, MetricName, MetricUnit, Sum / nullIf(Count, 0) AS Value, `Exemplars.Value`, `Exemplars.TimeUnix`, `Exemplars.TraceId`, `Exemplars.SpanId`, `Exemplars.FilteredAttributes` FROM otel_metrics_histogram WHERE MetricName = 'demo.cart.get_cart.latency' AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') ORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "exponential": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Native exponential histogram",
+            "description": "Real load-generator HTTP timings exported with the SDK's base-2 exponential histogram aggregation."
+          },
+          "plugin": {
+            "kind": "HistogramChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT TimeUnix, MetricName, MetricUnit, Count, Sum, Scale, ZeroCount, PositiveOffset, PositiveBucketCounts, NegativeOffset, NegativeBucketCounts, Flags FROM otel_metrics_exponential_histogram WHERE ServiceName = 'load-generator' AND MetricName = 'http.client.duration' AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND Attributes = (SELECT Attributes FROM otel_metrics_exponential_histogram WHERE ServiceName = 'load-generator' AND MetricName = 'http.client.duration' AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') GROUP BY Attributes ORDER BY count() DESC LIMIT 1) ORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "profiles": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Live eBPF profiles",
+            "description": "Live Docker Linux VM eBPF samples, filtered by service and time; counts are not nanoseconds."
+          },
+          "plugin": {
+            "kind": "FlameChart",
+            "spec": {
+              "palette": "package-name",
+              "showSettings": true,
+              "showSeries": true,
+              "showTable": true,
+              "showFlameGraph": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "ProfileQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseProfileQuery",
+                  "spec": {
+                    "query": "SELECT Timestamp, SampleType, SampleUnit, FunctionNames, FileNames, LineNumbers, MappingFileNames, Addresses, Values, TimestampsUnixNano FROM otel_profiles WHERE ServiceName = ${service:sqlstring} AND SampleType = 'samples' AND SampleUnit = 'count' AND Timestamp <= toDateTime64('{end}', 3, 'UTC') AND Timestamp + toIntervalNanosecond(DurationNano) >= toDateTime64('{start}', 3, 'UTC') ORDER BY Timestamp LIMIT 20000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/metrics"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/logs"
+              }
+            },
+            {
+              "x": 0,
+              "y": 9,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/search"
+              }
+            },
+            {
+              "x": 12,
+              "y": 9,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/trace"
+              }
+            },
+            {
+              "x": 0,
+              "y": 18,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/histogram"
+              }
+            },
+            {
+              "x": 12,
+              "y": 18,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/heatmap"
+              }
+            },
+            {
+              "x": 0,
+              "y": 27,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/exemplars"
+              }
+            },
+            {
+              "x": 12,
+              "y": 27,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/exponential"
+              }
+            },
+            {
+              "x": 0,
+              "y": 36,
+              "width": 24,
+              "height": 20,
+              "content": {
+                "$ref": "#/spec/panels/profiles"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "annotations": [
+      {
+        "display": {
+          "name": "Application log activity"
+        },
+        "plugin": {
+          "kind": "ClickHouseAnnotationQuery",
+          "spec": {
+            "query": "SELECT toStartOfInterval(Timestamp, INTERVAL 1 MINUTE) AS start, concat(toString(count()), ' application logs') AS title, ServiceName AS legend FROM otel_logs WHERE ServiceName = ${service:sqlstring} AND Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') GROUP BY start, ServiceName ORDER BY start LIMIT 100"
+          }
+        }
+      }
+    ]
+  }
+}

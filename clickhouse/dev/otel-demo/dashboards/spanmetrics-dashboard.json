@@ -1,0 +1,389 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "spanmetrics-dashboard",
+    "project": "otel-demo"
+  },
+  "spec": {
+    "display": {
+      "name": "Spanmetrics Demo Dashboard",
+      "description": "Migrated from OpenTelemetry demo 33bd823107b1b38eaa88dd4ef625cc16d60475d4. All queries use ClickHouse. Metrics preserve PromQL calculations through ClickHouse SQL; other signals read Collector tables."
+    },
+    "duration": "15m",
+    "refreshInterval": "30s",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "service",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT tags['service_name'] AS value FROM timeSeriesTags(demo_metrics)\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "span_name",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT tags['span_name'] AS value FROM timeSeriesTags(demo_metrics) WHERE startsWith(metric_name, 'traces_span_metrics_') AND match(tags['service_name'], concat('^(?:', if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')), ')$'))\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "panel-26": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Overview"
+          },
+          "plugin": {
+            "kind": "Markdown",
+            "spec": {
+              "text": "This dashboard uses RED metrics generated for all services by the spanmetrics connector configured in the OpenTelemetry Collector.\n<br>\nChart panels may require 5 minutes after the Demo is started before rendering data."
+            }
+          }
+        }
+      },
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top 3x3 - Service Latency - quantile95"
+          },
+          "plugin": {
+            "kind": "GaugeChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "milliseconds"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')) AS demo_var_service,\nif(has([${span_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${span_name:sqlstring}]), '|')) AS demo_var_span_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"B\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('topk(7,histogram_quantile(0.95, sum(rate(traces_span_metrics_duration_milliseconds_bucket{service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])) by (le,service_name)))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-4": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top 7 Services Mean Rate over Range"
+          },
+          "plugin": {
+            "kind": "BarChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "requests/sec"
+              },
+              "orientation": "horizontal",
+              "sort": "desc"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')) AS demo_var_service,\nif(has([${span_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${span_name:sqlstring}]), '|')) AS demo_var_span_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('topk(7,sum by (service_name) (rate(traces_span_metrics_calls_total{service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-15": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top 7 Services Mean ERROR Rate over Range"
+          },
+          "plugin": {
+            "kind": "BarChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "requests/sec"
+              },
+              "orientation": "horizontal",
+              "sort": "desc"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')) AS demo_var_service,\nif(has([${span_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${span_name:sqlstring}]), '|')) AS demo_var_span_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('topk(7,sum(rate(traces_span_metrics_calls_total{status_code=\"STATUS_CODE_ERROR\",service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])) by (service_name))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-22": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top 7 span_names and Errors  (APM Table)"
+          },
+          "plugin": {
+            "kind": "TimeSeriesTable",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')) AS demo_var_service,\nif(has([${span_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${span_name:sqlstring}]), '|')) AS demo_var_span_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"Rate\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('topk(7, sum(rate(traces_span_metrics_calls_total{service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])) by (span_name,service_name))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')) AS demo_var_service,\nif(has([${span_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${span_name:sqlstring}]), '|')) AS demo_var_span_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"Error Rate\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('topk(7, sum(rate(traces_span_metrics_calls_total{status_code=\"STATUS_CODE_ERROR\",service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])) by (span_name,service_name))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-25": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top 3x3 - span_name Latency - quantile95"
+          },
+          "plugin": {
+            "kind": "GaugeChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "milliseconds"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')) AS demo_var_service,\nif(has([${span_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${span_name:sqlstring}]), '|')) AS demo_var_span_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"B\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('topk(7,histogram_quantile(0.95, sum(rate(traces_span_metrics_duration_milliseconds_bucket{service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])) by (le,span_name)))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-10": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top 7 Highest Endpoint Latencies  Mean Over Range "
+          },
+          "plugin": {
+            "kind": "BarChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "milliseconds"
+              },
+              "orientation": "horizontal",
+              "sort": "desc"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')) AS demo_var_service,\nif(has([${span_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${span_name:sqlstring}]), '|')) AS demo_var_span_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('topk(7, sum by (span_name,service_name)(increase(traces_span_metrics_duration_milliseconds_sum{service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[5m]) / increase(traces_span_metrics_duration_milliseconds_count{service_name=~', toJSONString(demo_var_service), ',span_name=~', toJSONString(demo_var_span_name), '}[5m\n])))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-16": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top 7 Latencies Over Range "
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "milliseconds"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')) AS demo_var_service,\nif(has([${span_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${span_name:sqlstring}]), '|')) AS demo_var_span_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('topk(7,sum by (span_name,service_name)(increase(traces_span_metrics_duration_milliseconds_sum{service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']) / increase(traces_span_metrics_duration_milliseconds_count{service_name=~', toJSONString(demo_var_service), ', span_name=~', toJSONString(demo_var_span_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), '])))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/panel-26"
+              }
+            },
+            {
+              "x": 0,
+              "y": 3,
+              "width": 12,
+              "height": 20,
+              "content": {
+                "$ref": "#/spec/panels/panel-2"
+              }
+            },
+            {
+              "x": 12,
+              "y": 3,
+              "width": 12,
+              "height": 13,
+              "content": {
+                "$ref": "#/spec/panels/panel-4"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/panel-15"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 24,
+              "height": 11,
+              "content": {
+                "$ref": "#/spec/panels/panel-22"
+              }
+            },
+            {
+              "x": 0,
+              "y": 36,
+              "width": 12,
+              "height": 13,
+              "content": {
+                "$ref": "#/spec/panels/panel-25"
+              }
+            },
+            {
+              "x": 12,
+              "y": 36,
+              "width": 12,
+              "height": 13,
+              "content": {
+                "$ref": "#/spec/panels/panel-10"
+              }
+            },
+            {
+              "x": 0,
+              "y": 49,
+              "width": 24,
+              "height": 12,
+              "content": {
+                "$ref": "#/spec/panels/panel-16"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -46,3 +46,9 @@ CLICKHOUSE_E2E_URL=http://127.0.0.1:18080 npm exec -w e2e -- playwright test src
 
 The test creates and removes its own project and dashboard. For manual inspection of the sample, open the dashboard
 with `?start=1735689600000&end=1735693200000` to select the fixture's time range.
+
+## OpenTelemetry demo
+
+For real application telemetry, the [OpenTelemetry demo setup](./dev/otel-demo/README.md) runs the official Astronomy Shop with ClickHouse,
+11 migrated Grafana dashboards and a native signal validation dashboard. It includes pinned images, provisioning,
+Tailscale access instructions and browser tests. Keep this runtime separate from the synthetic fixture above.

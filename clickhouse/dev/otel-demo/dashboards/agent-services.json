@@ -1,0 +1,438 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "agent-services",
+    "project": "otel-demo"
+  },
+  "spec": {
+    "display": {
+      "name": "Agent Services",
+      "description": "Migrated from OpenTelemetry demo 33bd823107b1b38eaa88dd4ef625cc16d60475d4. All queries use ClickHouse. Metrics preserve PromQL calculations through ClickHouse SQL; other signals read Collector tables."
+    },
+    "duration": "15m",
+    "refreshInterval": "30s",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "service_name",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT tags['service_name'] AS value FROM timeSeriesTags(demo_metrics) WHERE match(metric_name, '^(?:demo_tool_calls_total|demo_chatbot_requests_total|gen_ai_client_operation_duration_seconds_count)$')\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Tool calls",
+            "description": "Rate of Astronomy Shop tool calls made by the agent service (direct calls) and the mcp service (proxied calls). Source: demo.tool.calls."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(demo_tool_calls_total{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Chatbot requests",
+            "description": "Rate of chat messages sent from the chatbot UI to the agent service. Source: demo.chatbot.requests."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(demo_chatbot_requests_total{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-4": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Distinct tools invoked",
+            "description": "Number of distinct Astronomy Shop tools invoked by the agent/mcp services in the selected time range."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "decimal"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('count(count by (gen_ai_tool_name) (demo_tool_calls_total{service_name=~', toJSONString(demo_var_service_name), '}))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-5": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LLM calls",
+            "description": "Rate of LLM calls completed by the agent/chatbot services, from the langchain instrumentation's gen_ai.client.operation.duration histogram count."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(gen_ai_client_operation_duration_seconds_count{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-7": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Tool call rate by tool",
+            "description": "Rate of demo.tool.calls broken down by tool name (gen_ai.tool.name), summed across the agent and mcp services."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (gen_ai_tool_name) (rate(demo_tool_calls_total{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-8": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Tool call rate by service",
+            "description": "Rate of demo.tool.calls broken down by the service that recorded it: agent (direct local tool calls) vs mcp (tool calls proxied through MCP)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (rate(demo_tool_calls_total{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-10": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Chatbot request rate",
+            "description": "Rate of demo.chatbot.requests: chat messages sent from the chatbot UI to the agent service."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (rate(demo_chatbot_requests_total{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-12": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Token usage rate (input vs output)",
+            "description": "Rate of input/output tokens consumed, from the langchain instrumentation's gen_ai.client.token.usage histogram (auto-emitted once a MeterProvider is configured; not a demo-defined metric)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (gen_ai_token_type) (rate(gen_ai_client_token_usage_sum{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-13": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LLM call duration (p95)",
+            "description": "p95 LLM call duration by response model, from the langchain instrumentation's gen_ai.client.operation.duration histogram."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('histogram_quantile(0.95, sum by (le, gen_ai_response_model) (rate(gen_ai_client_operation_duration_seconds_bucket{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), '])))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-14": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LLM call rate by model",
+            "description": "Rate of completed LLM calls by response model, from the langchain instrumentation's gen_ai.client.operation.duration histogram count."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (gen_ai_response_model) (rate(gen_ai_client_operation_duration_seconds_count{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 1,
+              "width": 6,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-2"
+              }
+            },
+            {
+              "x": 6,
+              "y": 1,
+              "width": 6,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-3"
+              }
+            },
+            {
+              "x": 12,
+              "y": 1,
+              "width": 6,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-4"
+              }
+            },
+            {
+              "x": 18,
+              "y": 1,
+              "width": 6,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-5"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-7"
+              }
+            },
+            {
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-8"
+              }
+            },
+            {
+              "x": 0,
+              "y": 15,
+              "width": 24,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-10"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-12"
+              }
+            },
+            {
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-13"
+              }
+            },
+            {
+              "x": 0,
+              "y": 32,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-14"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

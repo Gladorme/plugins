@@ -1,0 +1,218 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "exemplars-dashboard",
+    "project": "otel-demo"
+  },
+  "spec": {
+    "display": {
+      "name": "Cart Service Exemplars",
+      "description": "Migrated from OpenTelemetry demo 33bd823107b1b38eaa88dd4ef625cc16d60475d4. All queries use ClickHouse. Metrics preserve PromQL calculations through ClickHouse SQL; other signals read Collector tables."
+    },
+    "duration": "15m",
+    "refreshInterval": "30s",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [],
+    "panels": {
+      "panel-8": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Overview"
+          },
+          "plugin": {
+            "kind": "Markdown",
+            "spec": {
+              "text": "This dashboard shows the use of metric exemplars.\nExemplars can be used to look up a trace in Jaeger.\nOnly the most recent exemplars may still be available in Jaeger.\n<br>\nChart panels may require 5 minutes after the Demo is started before rendering data."
+            }
+          }
+        }
+      },
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "GetCart Latency Heatmap with Exemplars"
+          },
+          "plugin": {
+            "kind": "HeatMapChart",
+            "spec": {
+              "yAxisFormat": {
+                "unit": "seconds"
+              },
+              "min": 0
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_metrics_histogram WHERE MetricName = 'demo.cart.get_cart.latency' AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') ORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-5": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "95th Pct Cart GetCart Latency with Exemplars"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('histogram_quantile(0.95, sum by(le) (rate(demo_cart_get_cart_latency_seconds_bucket[', concat(toString(greatest(240, {step} * 4)), 's'), '])))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-6": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "AddItem Latency Heatmap with Exemplars"
+          },
+          "plugin": {
+            "kind": "HeatMapChart",
+            "spec": {
+              "yAxisFormat": {
+                "unit": "seconds"
+              },
+              "min": 0
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT * FROM otel_metrics_histogram WHERE MetricName = 'demo.cart.add_item.latency' AND TimeUnix BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') ORDER BY TimeUnix LIMIT 10000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "95th Pct Cart AddItem Latency with Exemplars"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('histogram_quantile(0.95, sum by(le) (rate(demo_cart_add_item_latency_seconds_bucket[', concat(toString(greatest(240, {step} * 4)), 's'), '])))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/panel-8"
+              }
+            },
+            {
+              "x": 0,
+              "y": 3,
+              "width": 24,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/panel-2"
+              }
+            },
+            {
+              "x": 0,
+              "y": 12,
+              "width": 24,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/panel-5"
+              }
+            },
+            {
+              "x": 0,
+              "y": 23,
+              "width": 24,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/panel-6"
+              }
+            },
+            {
+              "x": 0,
+              "y": 32,
+              "width": 24,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/panel-1"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

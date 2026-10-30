@@ -1,0 +1,195 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "nginx-metrics",
+    "project": "otel-demo"
+  },
+  "spec": {
+    "display": {
+      "name": "[Image-Provider] NGINX Metrics",
+      "description": "Migrated from OpenTelemetry demo 33bd823107b1b38eaa88dd4ef625cc16d60475d4. All queries use ClickHouse. Metrics preserve PromQL calculations through ClickHouse SQL; other signals read Collector tables."
+    },
+    "duration": "15m",
+    "refreshInterval": "30s",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [],
+    "panels": {
+      "panel-1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Accepted connections",
+            "description": "The total number of accepted client connections"
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, 'nginx_connections_accepted_total', toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Connections handled",
+            "description": "The total number of handled connections"
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, 'nginx_connections_handled_total', toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-4": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Total number of client requests",
+            "description": "The total number of client requests"
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, 'nginx_requests_total', toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Number of connections by state",
+            "description": "The current number of nginx connections by state"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, 'nginx_connections_current', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 5,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-1"
+              }
+            },
+            {
+              "x": 5,
+              "y": 0,
+              "width": 5,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-3"
+              }
+            },
+            {
+              "x": 10,
+              "y": 0,
+              "width": 9,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-4"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 19,
+              "height": 11,
+              "content": {
+                "$ref": "#/spec/panels/panel-2"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

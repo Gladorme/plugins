@@ -1,0 +1,1192 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "self-observability",
+    "project": "otel-demo"
+  },
+  "spec": {
+    "display": {
+      "name": "Self-Observability",
+      "description": "Migrated from OpenTelemetry demo 33bd823107b1b38eaa88dd4ef625cc16d60475d4. All queries use ClickHouse. Metrics preserve PromQL calculations through ClickHouse SQL; other signals read Collector tables."
+    },
+    "duration": "15m",
+    "refreshInterval": "30s",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "service_name",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT tags['service_name'] AS value FROM timeSeriesTags(demo_metrics) WHERE startsWith(metric_name, 'otel_sdk_')\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Services reporting",
+            "description": "Number of services currently emitting OpenTelemetry SDK self-observability metrics."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "decimal"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('count(group by (service_name) ({__name__=~\"otel_sdk_.+\",service_name=~', toJSONString(demo_var_service_name), '}))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Spans exported",
+            "description": "Rate of spans that finished exporting successfully (`error_type` empty) across the selected services. See \"Export errors\" for the failed portion of the same counter."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(otel_sdk_exporter_span_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-4": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Metric data points exported",
+            "description": "Rate of metric data points that finished exporting successfully (`error_type` empty) across the selected services. See \"Export errors\" for the failed portion of the same counter."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(otel_sdk_exporter_metric_data_point_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-5": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LogRecords exported",
+            "description": "Rate of LogRecords that finished exporting successfully (`error_type` empty) across the selected services. See \"Export errors\" for the failed portion of the same counter."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(otel_sdk_exporter_log_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-6": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Export errors",
+            "description": "Rate of spans, LogRecords, and metric data points whose export attempt finished with `error_type` set (the failed complement of the three \"exported\" panels above). A non-zero value means the exporter could not deliver telemetry to the collector/backend."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(otel_sdk_exporter_span_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), '])) + sum(rate(otel_sdk_exporter_log_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), '])) + sum(rate(otel_sdk_exporter_metric_data_point_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-7": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Items in-flight",
+            "description": "Telemetry items (spans, LogRecords, and metric data points) currently passed to an exporter but not yet exported (in-flight), summed across all signals."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "decimal"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(otel_sdk_exporter_span_inflight{service_name=~', toJSONString(demo_var_service_name), '}) + sum(otel_sdk_exporter_log_inflight{service_name=~', toJSONString(demo_var_service_name), '}) + sum(otel_sdk_exporter_metric_data_point_inflight{service_name=~', toJSONString(demo_var_service_name), '})'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-69": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Processing errors (spans + LogRecords)",
+            "description": "Rate of spans and LogRecords DROPPED by their processor's queue before ever reaching the exporter (spans + LogRecords only -- metrics have no processor stage). A non-zero value means `queue_full` or `already_shutdown` drops are happening; see the per-signal \"processed error rate\" panels in the Span pipeline / Log pipeline rows below for the breakdown."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(otel_sdk_processor_span_processed_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), '])) + sum(rate(otel_sdk_processor_log_processed_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-70": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Spans processed successfully",
+            "description": "Rate of spans successfully accepted by span processors (`error_type` empty). This measures processor throughput, not successful export."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(otel_sdk_processor_span_processed_total{service_name=~', toJSONString(demo_var_service_name), ',error_type=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-71": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LogRecords processed successfully",
+            "description": "Rate of LogRecords successfully accepted by log processors (`error_type` empty). This measures processor throughput, not successful export."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number"
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(rate(otel_sdk_processor_log_processed_total{service_name=~', toJSONString(demo_var_service_name), ',error_type=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-21": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Spans started rate",
+            "description": "Rate of spans started by the SDK (`otel.sdk.span.started`). Includes non-recording spans."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (rate(otel_sdk_span_started_total{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-22": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Live spans",
+            "description": "Number of live (started but not yet ended) recording spans (`otel.sdk.span.live`)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (otel_sdk_span_live{service_name=~', toJSONString(demo_var_service_name), '})'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-23": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Span processor queue utilization",
+            "description": "Batch span processor queue utilization: current queue size as a fraction of capacity (`otel.sdk.processor.span.queue.size` / `otel.sdk.processor.span.queue.capacity`). At 100% the queue is full and the processor starts dropping new spans (reported as `error_type=\"queue_full\"` in the \"Spans processed error rate\" panel below)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "percent-decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, otel_component_name) (otel_sdk_processor_span_queue_size{service_name=~', toJSONString(demo_var_service_name), '}) / sum by (service_name, otel_component_name) (otel_sdk_processor_span_queue_capacity{service_name=~', toJSONString(demo_var_service_name), '})'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-24": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Spans processed error rate (by error type)",
+            "description": "Rate of spans that were DROPPED by the span processor (never reached the exporter), broken down by `error.type` (this panel excludes the success case -- see \"Spans started rate\" for total volume). `error_type` is `queue_full` (the processor's queue was full) or `already_shutdown` (submitted after the processor was shut down). Should be flat zero in a healthy system."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, error_type) (rate(otel_sdk_processor_span_processed_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-25": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Spans exported error rate (by error type)",
+            "description": "Rate of FAILED span export operations, broken down by `error.type` (this panel excludes the success case -- see \"Spans exported\" in the Overview row for the success rate). A non-zero value means the export call itself failed, e.g. `timeout` or a connection error -- distinct from processor-side `queue_full` drops shown in \"Spans processed error rate\" above. Should be flat zero in a healthy system."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, error_type) (rate(otel_sdk_exporter_span_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-26": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Spans in-flight",
+            "description": "Spans passed to an exporter but not yet exported (`otel.sdk.exporter.span.inflight`)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (otel_sdk_exporter_span_inflight{service_name=~', toJSONString(demo_var_service_name), '})'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-66": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Span export operation duration (avg)",
+            "description": "Average duration of the span exporter's export call (`otel.sdk.exporter.operation.duration`, filtered to span exporters). Distinct from \"Spans exported error rate\", which measures success/failure, not latency. Shown as an average (sum/count) rather than a percentile because the SDK currently reports this histogram with a single `+Inf` bucket, which makes `histogram_quantile` always return NaN."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, otel_component_type) (rate(otel_sdk_exporter_operation_duration_seconds_sum{service_name=~', toJSONString(demo_var_service_name), ',otel_component_type=~\".*span_exporter\"}[', concat(toString(greatest(240, {step} * 4)), 's'), '])) / sum by (service_name, otel_component_type) (rate(otel_sdk_exporter_operation_duration_seconds_count{service_name=~', toJSONString(demo_var_service_name), ',otel_component_type=~\".*span_exporter\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-61": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LogRecords created rate",
+            "description": "Rate of LogRecords submitted to enabled SDK loggers (`otel.sdk.log.created`)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (rate(otel_sdk_log_created_total{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-62": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LogRecords exported error rate (by error type)",
+            "description": "Rate of FAILED LogRecord export operations, broken down by `error.type` (this panel excludes the success case -- see \"LogRecords exported\" in the Overview row for the success rate). A non-zero value means the export call itself failed, e.g. `timeout` or a connection error. Should be flat zero in a healthy system."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, error_type) (rate(otel_sdk_exporter_log_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-63": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Log processor queue utilization",
+            "description": "Batch LogRecord processor queue utilization: current queue size as a fraction of capacity (`otel.sdk.processor.log.queue.size` / `otel.sdk.processor.log.queue.capacity`). At 100% the queue is full and the processor starts dropping new LogRecords (reported as `error_type=\"queue_full\"` in the \"LogRecords processed error rate\" panel below)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "percent-decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, otel_component_name) (otel_sdk_processor_log_queue_size{service_name=~', toJSONString(demo_var_service_name), '}) / sum by (service_name, otel_component_name) (otel_sdk_processor_log_queue_capacity{service_name=~', toJSONString(demo_var_service_name), '})'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-64": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LogRecords processed error rate (by error type)",
+            "description": "Rate of LogRecords that were DROPPED by the log processor (never reached the exporter), broken down by `error.type` (this panel excludes the success case -- see \"LogRecords created rate\" for total volume). `error_type` is `queue_full` (the processor's queue was full) or `already_shutdown` (submitted after the processor was shut down). Should be flat zero in a healthy system."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, error_type) (rate(otel_sdk_processor_log_processed_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-65": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LogRecords in-flight",
+            "description": "LogRecords passed to an exporter but not yet exported (`otel.sdk.exporter.log.inflight`)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (otel_sdk_exporter_log_inflight{service_name=~', toJSONString(demo_var_service_name), '})'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-67": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "LogRecord export operation duration (avg)",
+            "description": "Average duration of the LogRecord exporter's export call (`otel.sdk.exporter.operation.duration`, filtered to log exporters). Distinct from \"LogRecords exported error rate\", which measures success/failure, not latency. Shown as an average (sum/count) rather than a percentile because the SDK currently reports this histogram with a single `+Inf` bucket, which makes `histogram_quantile` always return NaN."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, otel_component_type) (rate(otel_sdk_exporter_operation_duration_seconds_sum{service_name=~', toJSONString(demo_var_service_name), ',otel_component_type=~\".*log_exporter\"}[', concat(toString(greatest(240, {step} * 4)), 's'), '])) / sum by (service_name, otel_component_type) (rate(otel_sdk_exporter_operation_duration_seconds_count{service_name=~', toJSONString(demo_var_service_name), ',otel_component_type=~\".*log_exporter\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-41": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Metric data points exported error rate (by error type)",
+            "description": "Rate of FAILED metric data point export operations, broken down by `error.type` (this panel excludes the success case -- see \"Metric data points exported\" in the Overview row for the success rate). A non-zero value means the export call itself failed, e.g. `timeout` or a connection error. Should be flat zero in a healthy system."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, error_type) (rate(otel_sdk_exporter_metric_data_point_exported_total{service_name=~', toJSONString(demo_var_service_name), ',error_type!=\"\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-42": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Metric data points in-flight",
+            "description": "Metric data points passed to an exporter but not yet exported (`otel.sdk.exporter.metric_data_point.inflight`)."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (otel_sdk_exporter_metric_data_point_inflight{service_name=~', toJSONString(demo_var_service_name), '})'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-43": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Metric collect duration (avg)",
+            "description": "Average duration of the metric reader's collect step (`otel.sdk.metric_reader.collection.duration`). This is metric-pipeline specific. Shown as an average (sum/count) rather than a percentile because the SDK currently reports this histogram with a single `+Inf` bucket, which makes `histogram_quantile` always return NaN."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name) (rate(otel_sdk_metric_reader_collection_duration_seconds_sum{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), '])) / sum by (service_name) (rate(otel_sdk_metric_reader_collection_duration_seconds_count{service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-68": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Metric export operation duration (avg)",
+            "description": "Average duration of the metric exporter's export call (`otel.sdk.exporter.operation.duration`, filtered to metric exporters), if the SDK reports it. Distinct from \"Metric collect duration\" (the reader's collect step) and from \"Metric data points exported error rate\" (success/failure, not latency). Shown as an average (sum/count) rather than a percentile because the SDK currently reports this histogram with a single `+Inf` bucket, which makes `histogram_quantile` always return NaN."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum by (service_name, otel_component_type) (rate(otel_sdk_exporter_operation_duration_seconds_sum{service_name=~', toJSONString(demo_var_service_name), ',otel_component_type=~\".*metric_exporter\"}[', concat(toString(greatest(240, {step} * 4)), 's'), '])) / sum by (service_name, otel_component_type) (rate(otel_sdk_exporter_operation_duration_seconds_count{service_name=~', toJSONString(demo_var_service_name), ',otel_component_type=~\".*metric_exporter\"}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-8": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "SDK components reporting",
+            "description": "SDK components (exporters, processors, metric readers) reporting self-observability, per service. Derived from `otel.component.type` / `otel.component.name`."
+          },
+          "plugin": {
+            "kind": "TimeSeriesTable",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('group by (service_name, otel_component_type, otel_component_name) ({__name__=~\"otel_sdk_.+\",otel_component_type!=\"\",service_name=~', toJSONString(demo_var_service_name), '})'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-51": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Services with overflow observed",
+            "description": "Distinct services with an overflow point reported in the selected time range. Zero means no overflow observed, not proof that every SDK supports or reports cardinality limits."
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "decimal"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('count(group by (service_namespace, service_name) (last_over_time({otel_metric_overflow=\"true\",service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), ']))) or vector(0)'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-52": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Interpreting overflow"
+          },
+          "plugin": {
+            "kind": "Markdown",
+            "spec": {
+              "text": "Overflow preserves measurement values but loses their measurement attributes.\n\nFor synchronous instruments:\n- **Cumulative:** once capacity is exhausted, new attribute combinations continue overflowing until SDK state is reset, typically by restarting the service. Previously tracked combinations continue normally.\n- **Delta:** overflow can stop in subsequent collection cycles when active cardinality falls below the limit.\n\nThis dashboard shows overflow **observed within the selected time range**, which can remain visible after recovery.\n\n[Learn about cardinality limits](https://opentelemetry.io/docs/concepts/signals/metrics/#cardinality-limits)"
+            }
+          }
+        }
+      },
+      "panel-53": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Metrics with overflow observed",
+            "description": "One row per metric, service instance, and scope observed in the selected time range. Classic histogram components are grouped under their base Prometheus name only when matching _bucket series with an le label are present for the same service instance and scope. The suffix regex extracts a candidate base name; unmatched names are preserved. A row indicates presence, not lost measurement count, configured limit, or current overflow activity."
+          },
+          "plugin": {
+            "kind": "TimeSeriesTable",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${service_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service_name:sqlstring}]), '|')) AS demo_var_service_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('group by (metric, service_namespace, service_name, service_instance_id, otel_scope_name, otel_scope_version) ((label_replace(group by (__name__, service_namespace, service_name, service_instance_id, otel_scope_name, otel_scope_version) (last_over_time({otel_metric_overflow=\"true\",service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])), \"metric\", \"$1\", \"__name__\", \"(.+)_(bucket|sum|count)\") and on (metric, service_namespace, service_name, service_instance_id, otel_scope_name, otel_scope_version) label_replace(group by (__name__, service_namespace, service_name, service_instance_id, otel_scope_name, otel_scope_version) (last_over_time({otel_metric_overflow=\"true\",service_name=~', toJSONString(demo_var_service_name), ',__name__=~\".+_bucket\",le!=\"\"}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])), \"metric\", \"$1\", \"__name__\", \"(.+)_bucket\")) or label_replace((label_replace(group by (__name__, service_namespace, service_name, service_instance_id, otel_scope_name, otel_scope_version) (last_over_time({otel_metric_overflow=\"true\",service_name=~', toJSONString(demo_var_service_name), '}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])), \"metric\", \"$1\", \"__name__\", \"(.+)_(bucket|sum|count)\") unless on (metric, service_namespace, service_name, service_instance_id, otel_scope_name, otel_scope_version) label_replace(group by (__name__, service_namespace, service_name, service_instance_id, otel_scope_name, otel_scope_version) (last_over_time({otel_metric_overflow=\"true\",service_name=~', toJSONString(demo_var_service_name), ',__name__=~\".+_bucket\",le!=\"\"}[', concat(toString(greatest(1, dateDiff('second', toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC')))), 's'), '])), \"metric\", \"$1\", \"__name__\", \"(.+)_bucket\")), \"metric\", \"$1\", \"__name__\", \"(.+)\"))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 1,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-2"
+              }
+            },
+            {
+              "x": 8,
+              "y": 1,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-3"
+              }
+            },
+            {
+              "x": 0,
+              "y": 5,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-4"
+              }
+            },
+            {
+              "x": 16,
+              "y": 1,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-5"
+              }
+            },
+            {
+              "x": 8,
+              "y": 5,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-6"
+              }
+            },
+            {
+              "x": 16,
+              "y": 5,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-7"
+              }
+            },
+            {
+              "x": 0,
+              "y": 9,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-69"
+              }
+            },
+            {
+              "x": 8,
+              "y": 9,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-70"
+              }
+            },
+            {
+              "x": 16,
+              "y": 9,
+              "width": 8,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/panel-71"
+              }
+            },
+            {
+              "x": 0,
+              "y": 14,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-21"
+              }
+            },
+            {
+              "x": 8,
+              "y": 14,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-22"
+              }
+            },
+            {
+              "x": 16,
+              "y": 14,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-23"
+              }
+            },
+            {
+              "x": 0,
+              "y": 22,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-24"
+              }
+            },
+            {
+              "x": 8,
+              "y": 22,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-25"
+              }
+            },
+            {
+              "x": 16,
+              "y": 22,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-26"
+              }
+            },
+            {
+              "x": 0,
+              "y": 30,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-66"
+              }
+            },
+            {
+              "x": 0,
+              "y": 39,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-61"
+              }
+            },
+            {
+              "x": 8,
+              "y": 39,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-62"
+              }
+            },
+            {
+              "x": 16,
+              "y": 39,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-63"
+              }
+            },
+            {
+              "x": 0,
+              "y": 47,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-64"
+              }
+            },
+            {
+              "x": 8,
+              "y": 47,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-65"
+              }
+            },
+            {
+              "x": 16,
+              "y": 47,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-67"
+              }
+            },
+            {
+              "x": 0,
+              "y": 56,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-41"
+              }
+            },
+            {
+              "x": 8,
+              "y": 56,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-42"
+              }
+            },
+            {
+              "x": 16,
+              "y": 56,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-43"
+              }
+            },
+            {
+              "x": 0,
+              "y": 64,
+              "width": 8,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/panel-68"
+              }
+            },
+            {
+              "x": 0,
+              "y": 72,
+              "width": 24,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/panel-8"
+              }
+            },
+            {
+              "x": 0,
+              "y": 80,
+              "width": 6,
+              "height": 5,
+              "content": {
+                "$ref": "#/spec/panels/panel-51"
+              }
+            },
+            {
+              "x": 6,
+              "y": 80,
+              "width": 18,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/panel-52"
+              }
+            },
+            {
+              "x": 0,
+              "y": 89,
+              "width": 24,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/panel-53"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

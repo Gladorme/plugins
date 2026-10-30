@@ -1,0 +1,165 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "events-by-name",
+    "project": "otel-demo"
+  },
+  "spec": {
+    "display": {
+      "name": "Events by Name",
+      "description": "Migrated from OpenTelemetry demo 33bd823107b1b38eaa88dd4ef625cc16d60475d4. All queries use ClickHouse. Metrics preserve PromQL calculations through ClickHouse SQL; other signals read Collector tables."
+    },
+    "duration": "15m",
+    "refreshInterval": "30s",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "service",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT ServiceName AS value FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND EventName != ''\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "event_name",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT EventName AS value FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(ServiceName, concat('^(?:', if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')), ')$'))\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "severity",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT SeverityText AS value FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(ServiceName, concat('^(?:', if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')), ')$')) AND match(EventName, concat('^(?:', if(has([${event_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${event_name:sqlstring}]), '|')), ')$'))\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "panel-1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top Event Names by Volume",
+            "description": "Events grouped by service and EventName, ordered by volume."
+          },
+          "plugin": {
+            "kind": "TimeSeriesTable",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT toDateTime64('{end}', 3, 'UTC') AS time, ServiceName AS service, EventName AS event, count() AS log_count FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(ServiceName, concat('^(?:', if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')), ')$')) AND EventName != '' AND match(EventName, concat('^(?:', if(has([${event_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${event_name:sqlstring}]), '|')), ')$')) AND match(SeverityText, concat('^(?:', if(has([${severity:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${severity:sqlstring}]), '|')), ')$')) GROUP BY time, service, event ORDER BY log_count DESC LIMIT 20"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Event Volume Over Time (Top Event Names)",
+            "description": "Event volume over time, split by the top Event Names."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "SELECT toStartOfInterval(Timestamp, toIntervalSecond({step})) AS time, ServiceName AS service, EventName AS event, count() AS log_count FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(ServiceName, concat('^(?:', if(has([${service:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${service:sqlstring}]), '|')), ')$')) AND EventName != '' AND match(EventName, concat('^(?:', if(has([${event_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${event_name:sqlstring}]), '|')), ')$')) AND match(SeverityText, concat('^(?:', if(has([${severity:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${severity:sqlstring}]), '|')), ')$')) GROUP BY time, service, event ORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 10,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/panel-1"
+              }
+            },
+            {
+              "x": 10,
+              "y": 0,
+              "width": 14,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/panel-2"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+# Copyright The Perses Authors
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+receivers:
+  host_metrics:
+    root_path: ''
+exporters:
+  clickhouse:
+    endpoint: tcp://clickhouse:9000
+    database: default
+    ttl: 72h
+    create_schema: true
+    async_insert: false
+    sending_queue:
+      enabled: true
+      queue_size: 10000
+      batch: {}
+  prometheus_remote_write/clickhouse:
+    http:
+      endpoint: http://clickhouse:8123/prometheus/api/v1/write
+      tls:
+        insecure: true
+    resource_constant_labels:
+      included: ['*']
+    remote_write_queue:
+      num_consumers: 1
+connectors:
+  span_metrics:
+    exemplars:
+      enabled: true
+service:
+  pipelines:
+    traces:
+      exporters: [span_metrics, clickhouse]
+    metrics:
+      exporters: [clickhouse, prometheus_remote_write/clickhouse]
+    logs:
+      exporters: [clickhouse]
+    profiles:
+      exporters: [clickhouse]

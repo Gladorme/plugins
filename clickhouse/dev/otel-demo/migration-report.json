@@ -1,0 +1,139 @@
+{
+  "sourceRevision": "33bd823107b1b38eaa88dd4ef625cc16d60475d4",
+  "dashboards": [
+    {
+      "source": "NGINX-metrics.json",
+      "dashboard": "nginx-metrics",
+      "panels": 4,
+      "notes": []
+    },
+    {
+      "source": "agent-services.json",
+      "dashboard": "agent-services",
+      "panels": 10,
+      "notes": []
+    },
+    {
+      "source": "apm-dashboard.json",
+      "dashboard": "apm-dashboard",
+      "panels": 14,
+      "notes": [
+        {
+          "panel": 39,
+          "change": "Latest metric timestamp is read directly from ClickHouse metadata because timestamp() is not implemented in this PromQL engine."
+        },
+        {
+          "panel": 40,
+          "change": "Grafana alert list replaced with an explicit explanation; no rules were supplied."
+        },
+        {
+          "panel": 41,
+          "change": "Deduplicates host metadata and uses a one-host-to-many-instances join for Docker's shared host."
+        },
+        {
+          "panel": 41,
+          "change": "Deduplicates host metadata and uses a one-host-to-many-instances join for Docker's shared host."
+        },
+        {
+          "panel": 26,
+          "change": "Text-rich log table uses LogsTable; SQL retains source filters, fields and ordering."
+        }
+      ]
+    },
+    {
+      "source": "demo-dashboard.json",
+      "dashboard": "demo-dashboard",
+      "panels": 12,
+      "notes": [
+        {
+          "panel": 17,
+          "change": "Text-rich log table uses LogsTable; SQL retains source filters, fields and ordering."
+        },
+        {
+          "panel": 22,
+          "change": "Service dependency graph represented as a caller/callee table with observed span counts."
+        }
+      ]
+    },
+    {
+      "source": "events-by-name.json",
+      "dashboard": "events-by-name",
+      "panels": 2,
+      "notes": []
+    },
+    {
+      "source": "exemplars-dashboard.json",
+      "dashboard": "exemplars-dashboard",
+      "panels": 5,
+      "notes": [
+        {
+          "panel": 2,
+          "change": "Uses native OTel histogram buckets; displays recorded cumulative observations rather than PromQL bucket rates."
+        },
+        {
+          "panel": 6,
+          "change": "Uses native OTel histogram buckets; displays recorded cumulative observations rather than PromQL bucket rates."
+        }
+      ]
+    },
+    {
+      "source": "linux-dashboard.json",
+      "dashboard": "linux-dashboard",
+      "panels": 19,
+      "notes": []
+    },
+    {
+      "source": "opentelemetry-collector.json",
+      "dashboard": "opentelemetry-collector",
+      "panels": 49,
+      "notes": [
+        {
+          "panel": 56,
+          "change": "Grafana alert list replaced with an explicit explanation; no rules were supplied."
+        }
+      ]
+    },
+    {
+      "source": "postgresql-dashboard.json",
+      "dashboard": "postgresql-dashboard",
+      "panels": 11,
+      "notes": [
+        {
+          "change": "Declared legacy Postgres-exporter filters referenced but missing from source; exporter-only series may remain empty."
+        },
+        {
+          "panel": 17,
+          "change": "Text-rich log table uses LogsTable; SQL retains source filters, fields and ordering."
+        },
+        {
+          "panel": 18,
+          "change": "Text-rich log table uses LogsTable; SQL retains source filters, fields and ordering."
+        },
+        {
+          "panel": 19,
+          "change": "Text-rich log table uses LogsTable; SQL retains source filters, fields and ordering."
+        },
+        {
+          "panel": 21,
+          "change": "Text-rich log table uses LogsTable; SQL retains source filters, fields and ordering."
+        },
+        {
+          "panel": 22,
+          "change": "Text-rich log table uses LogsTable; SQL retains source filters, fields and ordering."
+        }
+      ]
+    },
+    {
+      "source": "self-observability.json",
+      "dashboard": "self-observability",
+      "panels": 30,
+      "notes": []
+    },
+    {
+      "source": "spanmetrics-dashboard.json",
+      "dashboard": "spanmetrics-dashboard",
+      "panels": 8,
+      "notes": []
+    }
+  ]
+}

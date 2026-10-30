@@ -1,0 +1,681 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "postgresql-dashboard",
+    "project": "otel-demo"
+  },
+  "spec": {
+    "display": {
+      "name": "PostgreSQL",
+      "description": "Migrated from OpenTelemetry demo 33bd823107b1b38eaa88dd4ef625cc16d60475d4. All queries use ClickHouse. Metrics preserve PromQL calculations through ClickHouse SQL; other signals read Collector tables."
+    },
+    "duration": "15m",
+    "refreshInterval": "30s",
+    "datasources": {
+      "clickhouse": {
+        "default": true,
+        "plugin": {
+          "kind": "ClickHouseDatasource",
+          "spec": {
+            "proxy": {
+              "kind": "HTTPProxy",
+              "spec": {
+                "url": "http://127.0.0.1:18123",
+                "allowedEndpoints": [
+                  {
+                    "endpointPattern": "/",
+                    "method": "GET"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "k8s_cluster_name",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT tags['k8s_cluster_name'] AS value FROM timeSeriesTags(demo_metrics) WHERE metric_name = 'postgresql_table_count'\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "k8s_statefulset_name",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT tags['k8s_statefulset_name'] AS value FROM timeSeriesTags(demo_metrics) WHERE metric_name = 'postgresql_table_count' AND match(tags['k8s_cluster_name'], concat('^(?:', if(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')), ')$'))\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "host_name",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT tags['host_name'] AS value FROM timeSeriesTags(demo_metrics) WHERE metric_name = 'postgresql_table_count' AND match(tags['k8s_cluster_name'], concat('^(?:', if(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')), ')$')) AND match(tags['k8s_statefulset_name'], concat('^(?:', if(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')), ')$'))\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "db",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT tags['postgresql_database_name'] AS value FROM timeSeriesTags(demo_metrics) WHERE metric_name = 'postgresql_table_count' AND match(tags['host_name'], concat('^(?:', if(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')), ')$')) AND NOT match(tags['postgresql_database_name'], '^(?:template.*|postgres)$') AND match(tags['k8s_cluster_name'], concat('^(?:', if(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')), ')$')) AND match(tags['k8s_statefulset_name'], concat('^(?:', if(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')), ')$'))\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "query_db",
+          "allowMultiple": true,
+          "allowAllValue": false,
+          "defaultValue": [".*"],
+          "plugin": {
+            "kind": "ClickHouseVariable",
+            "spec": {
+              "query": "SELECT '.*' AS value, 'All' AS label\nUNION DISTINCT\nSELECT value, value AS label FROM (\nSELECT DISTINCT LogAttributes['db.namespace'] AS value FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND EventName = 'db.server.top_query'\n) WHERE value != ''\nORDER BY label"
+            }
+          }
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "job",
+          "value": ".*"
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "cluster",
+          "value": ".*"
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "instance",
+          "value": ".*"
+        }
+      }
+    ],
+    "panels": {
+      "panel-11": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "QPS",
+            "description": "Queries per seconds. Queries being commits or rollbacks.\n"
+          },
+          "plugin": {
+            "kind": "StatChart",
+            "spec": {
+              "calculation": "last-number",
+              "format": {
+                "unit": "decimal"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT timestamp AS time, if(isFinite(value), value, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQuery(demo_metrics, concat('sum(irate(postgresql_commits_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), '])) + sum(irate(postgresql_rollbacks_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{end}', 3, 'UTC'))"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Rows",
+            "description": "See [pg_stat_database / `tup_fetched`](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-DATABASE-VIEW)"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"fetched\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum(irate(postgresql_tup_fetched_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"returned\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum(irate(postgresql_tup_returned_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"inserted\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum(irate(postgresql_tup_inserted_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"updated\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum(irate(postgresql_tup_updated_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"deleted\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum(irate(postgresql_tup_deleted_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), ']))'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Buffers"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"buffers_allocated\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('irate(postgresql_bgwriter_buffers_allocated_total{host_name=~', toJSONString(demo_var_host_name), ', k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), '])'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"buffers_write\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('irate(postgresql_bgwriter_buffers_writes_total{k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ', host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(1, {step})), 's'), '])'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${cluster:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${cluster:sqlstring}]), '|')) AS demo_var_cluster,\nif(has([${instance:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${instance:sqlstring}]), '|')) AS demo_var_instance,\nif(has([${job:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${job:sqlstring}]), '|')) AS demo_var_job\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"buffers_backend\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('irate(pg_stat_bgwriter_buffers_backend_total{job=~', toJSONString(demo_var_job), ',cluster=~', toJSONString(demo_var_cluster), ',instance=~', toJSONString(demo_var_instance), '}[', concat(toString(greatest(240, {step} * 4)), 's'), '])'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${cluster:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${cluster:sqlstring}]), '|')) AS demo_var_cluster,\nif(has([${instance:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${instance:sqlstring}]), '|')) AS demo_var_instance,\nif(has([${job:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${job:sqlstring}]), '|')) AS demo_var_job\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"buffers_clean\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('irate(pg_stat_bgwriter_buffers_clean_total{job=~', toJSONString(demo_var_job), ',cluster=~', toJSONString(demo_var_cluster), ',instance=~', toJSONString(demo_var_instance), '}[', concat(toString(greatest(240, {step} * 4)), 's'), '])'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"checkpoint\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('irate(postgresql_bgwriter_checkpoint_count_total{k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ', host_name=~', toJSONString(demo_var_host_name), '}[', concat(toString(greatest(240, {step} * 4)), 's'), '])'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Conflicts/Deadlocks"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"deadlocks\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum(postgresql_deadlocks_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ', host_name=~', toJSONString(demo_var_host_name), '})'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"conflicts-not-yet-implemented-in-otelcol\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('sum(postgresql_conflicts_total{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',host_name=~', toJSONString(demo_var_host_name), '})'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-12": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Cache hit ratio"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "percent"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('round(\n  sum by (postgresql_database_name) (\n    rate(\n      postgresql_blks_hit_total{\n        postgresql_database_name=~', toJSONString(demo_var_db), ',\n        k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',\n        host_name=~', toJSONString(demo_var_host_name), '\n      }[', concat(toString(greatest(240, {step} * 4)), 's'), ']\n    )\n  )\n  /\n  (\n    sum by (postgresql_database_name) (\n      rate(\n        postgresql_blks_hit_total{\n          postgresql_database_name=~', toJSONString(demo_var_db), ',\n          k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',\n          host_name=~', toJSONString(demo_var_host_name), '\n        }[', concat(toString(greatest(240, {step} * 4)), 's'), ']\n      )\n    )\n    +\n    sum by (postgresql_database_name) (\n      rate(\n        postgresql_blks_read_total{\n          postgresql_database_name=~', toJSONString(demo_var_db), ',\n          k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ',\n          host_name=~', toJSONString(demo_var_host_name), '\n        }[', concat(toString(greatest(240, {step} * 4)), 's'), ']\n      )\n    )\n  ) * 100,\n  0.001\n)'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-13": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Number of active connections"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                }
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseTimeSeriesQuery",
+                  "spec": {
+                    "query": "WITH if(has([${db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${db:sqlstring}]), '|')) AS demo_var_db,\nif(has([${host_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${host_name:sqlstring}]), '|')) AS demo_var_host_name,\nif(has([${k8s_cluster_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_cluster_name:sqlstring}]), '|')) AS demo_var_k8s_cluster_name,\nif(has([${k8s_statefulset_name:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${k8s_statefulset_name:sqlstring}]), '|')) AS demo_var_k8s_statefulset_name\nSELECT sample.1 AS time, if(isFinite(sample.2), sample.2, NULL) AS \"A\",\n  mapFromArrays(arrayMap(t -> t.1, tags), arrayMap(t -> t.2, tags)) AS labels\nFROM prometheusQueryRange(demo_metrics, concat('postgresql_backends{postgresql_database_name=~', toJSONString(demo_var_db), ',k8s_cluster_name=~', toJSONString(demo_var_k8s_cluster_name), ', k8s_statefulset_name=~', toJSONString(demo_var_k8s_statefulset_name), ', host_name=~', toJSONString(demo_var_host_name), '}'), toDateTime64('{start}', 3, 'UTC'), toDateTime64('{end}', 3, 'UTC'), toIntervalSecond({step}))\nARRAY JOIN samples AS sample\nORDER BY time"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-17": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top Queries by Execution Time",
+            "description": "Top-query values are interval deltas. Execution time is seconds; calls and rows are counts over the selected period. Collector-owned queries are excluded."
+          },
+          "plugin": {
+            "kind": "LogsTable",
+            "spec": {
+              "showTime": true,
+              "allowWrap": true,
+              "enableDetails": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "LogQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseLogQuery",
+                  "spec": {
+                    "query": "SELECT max(Timestamp) AS Timestamp, LogAttributes['db.query.text'] AS Body,\n  LogAttributes['db.namespace'] AS database, LogAttributes['postgresql.rolname'] AS role,\n  LogAttributes['postgresql.queryid'] AS query_id,\n  sum(toFloat64OrZero(LogAttributes['postgresql.total_exec_time'])) AS total_exec_time_s,\n  sum(toFloat64OrZero(LogAttributes['postgresql.total_plan_time'])) AS total_plan_time_s,\n  sum(toFloat64OrZero(LogAttributes['postgresql.calls'])) AS calls,\n  sum(toFloat64OrZero(LogAttributes['postgresql.rows'])) AS rows,\n  sum(toFloat64OrZero(LogAttributes['postgresql.shared_blks_read'])) AS blocks_read,\n  sum(toFloat64OrZero(LogAttributes['postgresql.shared_blks_hit'])) AS blocks_hit,\n  sum(toFloat64OrZero(LogAttributes['postgresql.shared_blks_written'])) AS blocks_written,\n  sum(toFloat64OrZero(LogAttributes['postgresql.temp_blks_read'])) AS temp_read,\n  sum(toFloat64OrZero(LogAttributes['postgresql.temp_blks_written'])) AS temp_written,\n  total_exec_time_s * 1000 / nullIf(calls, 0) AS avg_exec_ms\nFROM otel_logs WHERE otel_logs.Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(LogAttributes['db.namespace'], concat('^(?:', if(has([${query_db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${query_db:sqlstring}]), '|')), ')$')) AND EventName = 'db.server.top_query' AND LogAttributes['postgresql.rolname'] != 'monitoring_user' AND LogAttributes['user.name'] != 'monitoring_user' GROUP BY Body, database, role, query_id\nHAVING calls > 0 ORDER BY total_exec_time_s DESC LIMIT 20"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-18": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Recent Query Samples",
+            "description": "Recent query samples from pg_stat_activity. The receiver reports postgresql.total_exec_time here in milliseconds."
+          },
+          "plugin": {
+            "kind": "LogsTable",
+            "spec": {
+              "showTime": true,
+              "allowWrap": true,
+              "enableDetails": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "LogQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseLogQuery",
+                  "spec": {
+                    "query": "SELECT Timestamp, LogAttributes['db.query.text'] AS Body, ServiceName, LogAttributes, EventName FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(LogAttributes['db.namespace'], concat('^(?:', if(has([${query_db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${query_db:sqlstring}]), '|')), ')$')) AND EventName = 'db.server.query_sample' AND LogAttributes['postgresql.rolname'] != 'monitoring_user' AND LogAttributes['user.name'] != 'monitoring_user' ORDER BY Timestamp DESC LIMIT 50"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-19": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top Queries and Plans",
+            "description": "All top queries are shown, including queries with no plan. An empty plan is expected when monitoring_user cannot EXPLAIN a query, including queries that reference accounting.shipping, which is intentionally excluded from its SELECT grants."
+          },
+          "plugin": {
+            "kind": "LogsTable",
+            "spec": {
+              "showTime": true,
+              "allowWrap": true,
+              "enableDetails": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "LogQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseLogQuery",
+                  "spec": {
+                    "query": "SELECT Timestamp, LogAttributes['db.query.text'] AS Body, ServiceName, LogAttributes, EventName FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(LogAttributes['db.namespace'], concat('^(?:', if(has([${query_db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${query_db:sqlstring}]), '|')), ')$')) AND EventName = 'db.server.top_query' AND LogAttributes['postgresql.rolname'] != 'monitoring_user' AND LogAttributes['user.name'] != 'monitoring_user' ORDER BY Timestamp DESC LIMIT 50"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-21": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Wait and Blocker Samples",
+            "description": "Wait fields are captured with query samples. ClientRead commonly means an idle backend waiting for client input; non-empty blocking PIDs and lock fields indicate PostgreSQL lock blockers."
+          },
+          "plugin": {
+            "kind": "LogsTable",
+            "spec": {
+              "showTime": true,
+              "allowWrap": true,
+              "enableDetails": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "LogQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseLogQuery",
+                  "spec": {
+                    "query": "SELECT Timestamp, LogAttributes['db.query.text'] AS Body, ServiceName, LogAttributes, EventName FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(LogAttributes['db.namespace'], concat('^(?:', if(has([${query_db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${query_db:sqlstring}]), '|')), ')$')) AND EventName = 'db.server.query_sample' AND LogAttributes['postgresql.rolname'] != 'monitoring_user' AND LogAttributes['user.name'] != 'monitoring_user' AND (LogAttributes['postgresql.wait_event_type'] != '' OR LogAttributes['postgresql.blocking.pids'] NOT IN ('', '{}')) ORDER BY Timestamp DESC LIMIT 50"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "panel-22": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Longest Query Samples",
+            "description": "Execution duration for sampled queries, in milliseconds. These are sampled query records, not a latency percentile or full query history."
+          },
+          "plugin": {
+            "kind": "LogsTable",
+            "spec": {
+              "showTime": true,
+              "allowWrap": true,
+              "enableDetails": true
+            }
+          },
+          "queries": [
+            {
+              "kind": "LogQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "ClickHouseLogQuery",
+                  "spec": {
+                    "query": "SELECT Timestamp, LogAttributes['db.query.text'] AS Body, ServiceName, LogAttributes, EventName FROM otel_logs WHERE Timestamp BETWEEN toDateTime64('{start}', 3, 'UTC') AND toDateTime64('{end}', 3, 'UTC') AND match(LogAttributes['db.namespace'], concat('^(?:', if(has([${query_db:sqlstring}], '.*'), '.*', arrayStringConcat(arrayMap(v -> regexpQuoteMeta(v), [${query_db:sqlstring}]), '|')), ')$')) AND EventName = 'db.server.query_sample' AND LogAttributes['postgresql.rolname'] != 'monitoring_user' AND LogAttributes['user.name'] != 'monitoring_user' ORDER BY toFloat64OrZero(LogAttributes['postgresql.total_exec_time']) DESC LIMIT 50"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 1,
+              "width": 4,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/panel-11"
+              }
+            },
+            {
+              "x": 4,
+              "y": 1,
+              "width": 20,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/panel-1"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/panel-2"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/panel-3"
+              }
+            },
+            {
+              "x": 0,
+              "y": 15,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/panel-12"
+              }
+            },
+            {
+              "x": 12,
+              "y": 15,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/panel-13"
+              }
+            },
+            {
+              "x": 0,
+              "y": 23,
+              "width": 24,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/panel-17"
+              }
+            },
+            {
+              "x": 0,
+              "y": 33,
+              "width": 24,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/panel-18"
+              }
+            },
+            {
+              "x": 0,
+              "y": 43,
+              "width": 24,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/panel-19"
+              }
+            },
+            {
+              "x": 0,
+              "y": 53,
+              "width": 24,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/panel-21"
+              }
+            },
+            {
+              "x": 0,
+              "y": 63,
+              "width": 24,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/panel-22"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
