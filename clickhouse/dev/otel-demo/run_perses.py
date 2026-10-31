@@ -25,6 +25,7 @@ import time
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parent
+SHARED_REVISION = "224c3187e04b5d694a96870bf27c826ec02d493f"
 
 
 def main():
@@ -50,6 +51,9 @@ def main():
         return
     if not all([args.perses, args.shared, args.binary]):
         parser.error("start requires --perses, --shared and --binary")
+    revision = subprocess.check_output(["git", "-C", str(args.shared.resolve()), "rev-parse", "HEAD"], text=True).strip()
+    if revision != SHARED_REVISION:
+        parser.error("Expected shared revision " + SHARED_REVISION + "; got " + revision)
     if pidfile.exists():
         parser.error("Process state already exists; stop this runtime first")
     for host, port in [("127.0.0.1", 8080), ("127.0.0.1", 18081), (args.host, 18080)]:

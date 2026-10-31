@@ -24,7 +24,7 @@ export const getAnnotationData: AnnotationPlugin<ClickHouseAnnotationQuerySpec>[
   signal,
 ) => {
   if (!spec.query.trim()) return [];
-  const { rows } = await executeQuery(spec, context, signal);
+  const { rows } = await executeQuery(spec, { ...context, timeRange: context.absoluteTimeRange }, signal);
   return rows.map((row) => {
     const start = timestampMs(row.start ?? row.Timestamp);
     const end = row.end === null || row.end === undefined ? undefined : timestampMs(row.end);

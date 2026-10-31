@@ -49,11 +49,15 @@ For shop access from Tailscale, add `--tailscale-ip "$(tailscale ip -4)"` to `co
 
 ## Prepare Perses
 
-This branch consumes the shared runtime with unified `absoluteTimeRange` query contexts. The tested host commits were Perses `4f9350d788e9d7bfd8d852e36fd5b2d84305f1f5` and shared `11a1e60` from `feat/clickhouse-profile-variables`. Use that shared branch together with this plugin branch; the published 0.55.0 plugin-system package predates this API.
+This demo is pinned to shared `224c3187e04b5d694a96870bf27c826ec02d493f` and Perses `4f9350d788e9d7bfd8d852e36fd5b2d84305f1f5`. The launcher checks the shared checkout before starting. This shared commit includes profile variables and infinite cache freshness, before the later breaking query-context changes. Use the exact commit rather than the moving branch tip.
+
+At this pin, metrics, logs and variable options receive `timeRange`; traces, profiles and annotations receive `absoluteTimeRange`. ClickHouse maps these declared contracts into its common SQL execution path. All query kinds retain variable interpolation. No runtime version detection or compatibility fallback is used.
 
 Build shared and install its local plugin-system package for plugin type checking, without changing package manifests or dependency versions:
 
 ```sh
+git -C ../shared fetch origin feat/clickhouse-profile-variables
+git -C ../shared switch --detach 224c3187e04b5d694a96870bf27c826ec02d493f
 (cd ../shared && npm ci && npm run build)
 (cd ../shared/plugin-system && npm pack --pack-destination ../..)
 npm ci
@@ -95,7 +99,7 @@ OTEL_DEMO_E2E_URL="http://$(tailscale ip -4):18080" \
 
 The SQL validator runs every variable, panel and annotation query and requires nonempty native signal results. Browser tests traverse lazy-rendered panels on all 12 dashboards, detect query/runtime failures, verify native charts and profiles, change service variables, and refresh an absolute time range despite infinite query freshness. Live SQL/browser runs are separate from the existing synthetic fixture, which must not overwrite these Collector tables.
 
-The repository-wide unit tests and lint run against this setup. With the newer shared package, repository-wide type checking also exposes unmigrated `timeRange` consumers in other datasource plugins; affected ClickHouse and HeatMapChart type checks pass. See [validation.md](./validation.md) for the actual run results and remaining limits.
+Run the repository checks against the pinned local plugin-system package. See [validation.md](./validation.md) for the results and remaining telemetry limits.
 
 ## Stop or restart
 

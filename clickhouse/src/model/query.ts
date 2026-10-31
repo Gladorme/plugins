@@ -32,7 +32,7 @@ export interface ClickHouseQuerySpec {
 export interface ClickHouseQueryContext {
   datasourceStore: DatasourceStore;
   variableState: VariableStateMap;
-  absoluteTimeRange?: AbsoluteTimeRange;
+  timeRange?: AbsoluteTimeRange;
   suggestedStepMs?: number;
 }
 
@@ -67,7 +67,7 @@ export async function executeQuery(
   context: ClickHouseQueryContext,
   signal?: AbortSignal,
 ): Promise<{ response: ClickHouseQueryResponse; rows: Array<Record<string, unknown>>; executedQueryString: string }> {
-  const { datasourceStore, variableState, absoluteTimeRange } = context;
+  const { datasourceStore, variableState, timeRange } = context;
   let selector = spec.datasource ?? DEFAULT_DATASOURCE;
   if (isVariableDatasource(selector)) {
     const resolved = datasourceSelectValueToSelector(
@@ -82,8 +82,8 @@ export async function executeQuery(
   }
   if (selector.kind !== DATASOURCE_KIND) throw new Error('Expected a ClickHouse datasource');
   const client: ClickHouseClient = await datasourceStore.getDatasourceClient(selector);
-  const start = absoluteTimeRange ? formatClickHouseDateTime(absoluteTimeRange.start) : undefined;
-  const end = absoluteTimeRange ? formatClickHouseDateTime(absoluteTimeRange.end) : undefined;
+  const start = timeRange ? formatClickHouseDateTime(timeRange.start) : undefined;
+  const end = timeRange ? formatClickHouseDateTime(timeRange.end) : undefined;
   const step = Math.max(1, Math.ceil((context.suggestedStepMs ?? 30_000) / 1000));
   const timedQuery = replaceTimeRangePlaceholders(spec.query, start, end).replaceAll('{step}', String(step));
   if (/\{(?:start|end)\}/.test(timedQuery)) {

@@ -83,7 +83,7 @@ export const getTimeSeriesData: TimeSeriesQueryPlugin<ClickHouseTimeSeriesQueryS
       : { series: buildTimeSeries(rows, response.meta) };
   return {
     ...result,
-    timeRange: context.absoluteTimeRange,
+    timeRange: context.timeRange,
     stepMs: inferStepMs(result.series, context.suggestedStepMs ?? 30_000),
     metadata: { executedQueryString },
   };

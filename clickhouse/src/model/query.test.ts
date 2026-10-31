@@ -92,7 +92,7 @@ describe('ClickHouse query execution', () => {
         { query: "SELECT '{start}'" },
         {
           ...context,
-          absoluteTimeRange: undefined,
+          timeRange: undefined,
         },
       ),
     ).rejects.toThrow('requires a time range');

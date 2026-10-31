@@ -25,7 +25,9 @@ export function createContext(
   datasourceStore: DatasourceStore;
   variableState: VariableStateMap;
   variables: VariableStateMap;
+  timeRange: { start: Date; end: Date };
   absoluteTimeRange: { start: Date; end: Date };
+  refreshKey: string;
 } {
   const query = vi
     .fn<(params: unknown, headers?: unknown, signal?: AbortSignal) => Promise<ClickHouseQueryResponse>>()
@@ -43,8 +45,10 @@ export function createContext(
       getSavedDatasources: vi.fn(),
       setSavedDatasources: vi.fn(),
     },
+    timeRange,
     absoluteTimeRange: timeRange,
     variableState: variables,
     variables,
+    refreshKey: '',
   };
 }
