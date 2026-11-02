@@ -1,0 +1,250 @@
+[
+  {
+    "file": "shared-axes-light.png",
+    "bytes": 156607,
+    "width": 1564,
+    "height": 1880,
+    "cases": [
+      {
+        "chart": "line",
+        "exactDifferentPixels": 475
+      },
+      {
+        "chart": "lineAxes",
+        "exactDifferentPixels": 475
+      },
+      {
+        "chart": "logLine",
+        "exactDifferentPixels": 1550
+      },
+      {
+        "chart": "scatter",
+        "exactDifferentPixels": 415
+      },
+      {
+        "chart": "histogram",
+        "exactDifferentPixels": 65
+      }
+    ]
+  },
+  {
+    "file": "shared-bars-and-text-light.png",
+    "bytes": 106134,
+    "width": 1564,
+    "height": 1532,
+    "cases": [
+      {
+        "chart": "groupedBar",
+        "exactDifferentPixels": 2488
+      },
+      {
+        "chart": "stackedBar",
+        "exactDifferentPixels": 718
+      },
+      {
+        "chart": "flame",
+        "exactDifferentPixels": 51
+      },
+      {
+        "chart": "status",
+        "exactDifferentPixels": 604
+      }
+    ]
+  },
+  {
+    "file": "shared-downstream-fixes-light.png",
+    "bytes": 83307,
+    "width": 1564,
+    "height": 836,
+    "cases": [
+      {
+        "chart": "gauge",
+        "exactDifferentPixels": 5501
+      },
+      {
+        "chart": "heatmap",
+        "exactDifferentPixels": 5400
+      }
+    ]
+  },
+  {
+    "file": "plugins-fixes-light.png",
+    "bytes": 82509,
+    "width": 1564,
+    "height": 836,
+    "cases": [
+      {
+        "chart": "gauge",
+        "exactDifferentPixels": 5501
+      },
+      {
+        "chart": "heatmap",
+        "exactDifferentPixels": 6450
+      }
+    ]
+  },
+  {
+    "file": "plugins-overall-light.png",
+    "bytes": 81385,
+    "width": 1564,
+    "height": 836,
+    "cases": [
+      {
+        "chart": "gauge",
+        "exactDifferentPixels": 0
+      },
+      {
+        "chart": "heatmap",
+        "exactDifferentPixels": 2120
+      }
+    ]
+  },
+  {
+    "file": "perses-context-light.png",
+    "bytes": 135908,
+    "width": 1564,
+    "height": 1532,
+    "cases": [
+      {
+        "chart": "line",
+        "exactDifferentPixels": 475
+      },
+      {
+        "chart": "groupedBar",
+        "exactDifferentPixels": 2488
+      },
+      {
+        "chart": "gauge",
+        "exactDifferentPixels": 0
+      },
+      {
+        "chart": "heatmap",
+        "exactDifferentPixels": 2120
+      }
+    ]
+  },
+  {
+    "file": "shared-axes-dark.png",
+    "bytes": 164763,
+    "width": 1564,
+    "height": 1880,
+    "cases": [
+      {
+        "chart": "line",
+        "exactDifferentPixels": 475
+      },
+      {
+        "chart": "lineAxes",
+        "exactDifferentPixels": 475
+      },
+      {
+        "chart": "logLine",
+        "exactDifferentPixels": 1564
+      },
+      {
+        "chart": "scatter",
+        "exactDifferentPixels": 415
+      },
+      {
+        "chart": "histogram",
+        "exactDifferentPixels": 65
+      }
+    ]
+  },
+  {
+    "file": "shared-bars-and-text-dark.png",
+    "bytes": 106887,
+    "width": 1564,
+    "height": 1532,
+    "cases": [
+      {
+        "chart": "groupedBar",
+        "exactDifferentPixels": 2491
+      },
+      {
+        "chart": "stackedBar",
+        "exactDifferentPixels": 720
+      },
+      {
+        "chart": "flame",
+        "exactDifferentPixels": 51
+      },
+      {
+        "chart": "status",
+        "exactDifferentPixels": 365
+      }
+    ]
+  },
+  {
+    "file": "shared-downstream-fixes-dark.png",
+    "bytes": 82497,
+    "width": 1564,
+    "height": 836,
+    "cases": [
+      {
+        "chart": "gauge",
+        "exactDifferentPixels": 5501
+      },
+      {
+        "chart": "heatmap",
+        "exactDifferentPixels": 5400
+      }
+    ]
+  },
+  {
+    "file": "plugins-fixes-dark.png",
+    "bytes": 81787,
+    "width": 1564,
+    "height": 836,
+    "cases": [
+      {
+        "chart": "gauge",
+        "exactDifferentPixels": 5501
+      },
+      {
+        "chart": "heatmap",
+        "exactDifferentPixels": 6450
+      }
+    ]
+  },
+  {
+    "file": "plugins-overall-dark.png",
+    "bytes": 79481,
+    "width": 1564,
+    "height": 836,
+    "cases": [
+      {
+        "chart": "gauge",
+        "exactDifferentPixels": 0
+      },
+      {
+        "chart": "heatmap",
+        "exactDifferentPixels": 2120
+      }
+    ]
+  },
+  {
+    "file": "perses-context-dark.png",
+    "bytes": 136304,
+    "width": 1564,
+    "height": 1532,
+    "cases": [
+      {
+        "chart": "line",
+        "exactDifferentPixels": 475
+      },
+      {
+        "chart": "groupedBar",
+        "exactDifferentPixels": 2491
+      },
+      {
+        "chart": "gauge",
+        "exactDifferentPixels": 0
+      },
+      {
+        "chart": "heatmap",
+        "exactDifferentPixels": 2120
+      }
+    ]
+  }
+]
