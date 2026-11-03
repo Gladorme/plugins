@@ -17,6 +17,7 @@ import type { DatasourceSelector } from '@perses-dev/spec';
 import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';
 
+import type { MetricUsageProvider } from '../../../../model';
 import { MetricList } from '../../display/list/MetricList';
 import type { LabelFilter } from '../../types';
 import { useLabelValues } from '../../utils';
@@ -26,10 +27,19 @@ export interface JobList extends StackProps {
   filters: LabelFilter[];
   datasource: DatasourceSelector;
   isMetadataEnabled?: boolean;
+  metricUsage?: MetricUsageProvider;
   onExplore: (metricName: string) => void;
 }
 
-export function JobList({ job, filters, datasource, isMetadataEnabled, onExplore, ...props }: JobList): ReactElement {
+export function JobList({
+  job,
+  filters,
+  datasource,
+  isMetadataEnabled,
+  metricUsage,
+  onExplore,
+  ...props
+}: JobList): ReactElement {
   const filtersWithJobWithoutName: LabelFilter[] = useMemo(() => {
     const result = filters.filter((filter) => filter.label !== '__name__' && filter.label !== 'job');
     result.push({ label: 'job', labelValues: [job], operator: '=' });
@@ -52,6 +62,7 @@ export function JobList({ job, filters, datasource, isMetadataEnabled, onExplore
       datasource={datasource}
       filters={filtersWithJobWithoutName}
       isMetadataEnabled={isMetadataEnabled}
+      metricUsage={metricUsage}
       onExplore={onExplore}
       {...props}
     />
@@ -63,6 +74,7 @@ export interface JobSection extends StackProps {
   filters: LabelFilter[];
   datasource: DatasourceSelector;
   isMetadataEnabled?: boolean;
+  metricUsage?: MetricUsageProvider;
   onExplore: (metricName: string) => void;
 }
 
@@ -71,6 +83,7 @@ export function JobSection({
   filters,
   datasource,
   isMetadataEnabled,
+  metricUsage,
   onExplore,
   ...props
 }: JobSection): ReactElement {
@@ -107,6 +120,7 @@ export function JobSection({
           filters={filters}
           datasource={datasource}
           isMetadataEnabled={isMetadataEnabled}
+          metricUsage={metricUsage}
           onExplore={onExplore}
         />
       )}
@@ -118,10 +132,18 @@ export interface JobTabProps extends StackProps {
   filters: LabelFilter[];
   datasource: DatasourceSelector;
   isMetadataEnabled?: boolean;
+  metricUsage?: MetricUsageProvider;
   onExplore: (metricName: string) => void;
 }
 
-export function JobTab({ filters, datasource, isMetadataEnabled, onExplore, ...props }: JobTabProps): ReactElement {
+export function JobTab({
+  filters,
+  datasource,
+  isMetadataEnabled,
+  metricUsage,
+  onExplore,
+  ...props
+}: JobTabProps): ReactElement {
   const { data: jobData, isLoading: isJobLoading } = useLabelValues('job', filters, datasource);
 
   if (isJobLoading) {
@@ -146,6 +168,7 @@ export function JobTab({ filters, datasource, isMetadataEnabled, onExplore, ...p
       filters={filters}
       datasource={datasource}
       isMetadataEnabled={isMetadataEnabled}
+      metricUsage={metricUsage}
       onExplore={onExplore}
       {...props}
     />

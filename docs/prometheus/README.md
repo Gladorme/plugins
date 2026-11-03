@@ -169,3 +169,80 @@ See also technical docs related to this plugin:
 ## Explore (`PrometheusExplorer`)
 
 The Prometheus package comes also with a built-in metrics explorer that mirror Prometheus's native UI experience.
+
+
+### Metric usage in Finder
+
+Metric Finder can show dashboard, alert, and recording-rule counts on each metric, with an icon before
+each chip label. Select a count to open a right-side drawer with the collected references and optional
+source links. Switch between usage categories with the drawer tabs. Categories with zero occurrences
+are hidden from both chips and tabs. References without a configured link remain readable.
+The built-in adapter uses the
+[Perses Metrics Usage](https://github.com/perses/metrics-usage) service, including usages matched through
+variables or regular expressions (`merge_partial_metrics=true`). Counts describe the service's collected
+usage for the exact metric name; Finder's label filters and time range do not filter that usage.
+
+The feature is disabled by default. Enable **Metric Usage** in the Prometheus datasource editor and
+configure its service URL, or provision the following datasource plugin spec:
+
+```yaml
+kind: PrometheusDatasource
+spec:
+  directUrl: https://prometheus.example.com
+  metricsUsage:
+    enable: true
+    url: /metrics-usage
+```
+
+`url` is the service base URL, not the `/api/v1/metrics` endpoint. It can be a same-origin reverse-proxy
+path or an absolute browser-accessible URL. Cross-origin services must allow the Perses origin through
+CORS. This is a separate connection: the Prometheus datasource's proxy, headers and query parameters
+are not forwarded. Configure authentication and tenant routing on your reverse proxy or use a custom
+provider when embedding the explorer; do not put credentials in the datasource URL.
+
+Remove `metricsUsage` or set `enable: false` to disable the integration. Users can also hide it with
+**Enable Metric Usage** in Finder settings; this preference is saved locally. Disabled usage makes no
+usage requests. Requests are limited to rendered rows, scoped by provider and datasource, and cancelled
+when no longer needed. Cached results are considered fresh for one minute. A failure shows **Usage unavailable** without blocking
+metric exploration. A metric absent from the collector shows **Usage unknown**; a known metric without
+collected references shows **No usage found**. Links are the URLs supplied by the collector, which may point to
+an API resource rather than a dashboard page.
+
+#### Custom providers in embedded applications
+
+`PrometheusMetricsFinder` and `PrometheusExplorer` accept an optional `metricUsage` prop. Pass `false`
+to disable usage regardless of datasource configuration, or a `MetricUsageProvider` to replace the
+built-in adapter. A provider controls fetching, authentication, categories, labels and reference links.
+The prop is application configuration and is not serialized into dashboards or explorer URLs.
+
+```tsx
+import { createMetricsUsageProvider, PrometheusExplorer } from '@perses-dev/prometheus-plugin';
+import type { MetricUsageProvider } from '@perses-dev/prometheus-plugin';
+
+const source = createMetricsUsageProvider('/metrics-usage');
+const metricUsage: MetricUsageProvider = {
+  // Include a non-secret tenant identifier and configuration version when applicable.
+  queryKey: [...source.queryKey, 'dashboards-and-alerts', 1],
+  async getUsage(request) {
+    const categories = await source.getUsage(request);
+    return categories
+      ?.filter((category) => category.id !== 'recordingRules')
+      .map((category) => ({
+        ...category,
+        label: category.id === 'alerts' ? 'Alerting rules' : category.label,
+      }));
+  },
+};
+
+<PrometheusExplorer metricUsage={metricUsage} />;
+```
+
+To use another backend, implement `getUsage({ metricName, datasource, signal })` with your own client,
+validate its response, and return categories in this same format. Forward the abort signal to cancel
+requests when the row is unmounted.
+
+Each category has a stable `id`, a display `label`, and `references` with `name`, optional `url` and
+optional `description`. Return `undefined` for unknown metrics and empty references for known zero
+usage. Only HTTP(S) reference links are clickable. Change `queryKey` when the backend, tenant or other
+result-affecting configuration changes. The public `createMetricsUsageProvider(url, fetchJson?)` factory
+can also be used to reuse the standard adapter with a host-provided HTTP client.

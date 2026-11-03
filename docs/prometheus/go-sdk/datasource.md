@@ -71,6 +71,19 @@ Enable exemplar support on the datasource: the Prometheus query plugin will also
 capable panels like the Time Series Chart. See the [plugin documentation](../README.md#exemplars) for
 the requirements (exemplar storage enabled on the Prometheus side, etc.).
 
+#### Metric Usage
+
+```golang
+datasource.WithMetricsUsage(datasource.MetricsUsage{
+    Enable: true,
+    URL: "/metrics-usage",
+})
+```
+
+Enable Metric Finder usage statistics using a browser-accessible Metrics Usage service base URL.
+Set `Enable: false` to keep the endpoint configured while disabling requests. The feature is disabled
+when omitted. See [Metric usage in Finder](../README.md#metric-usage-in-finder).
+
 ## Examples
 
 ```golang

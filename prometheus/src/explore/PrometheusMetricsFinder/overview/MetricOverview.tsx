@@ -21,6 +21,7 @@ import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';
 import { useResizeObserver } from 'use-resize-observer';
 
+import type { MetricUsageProvider } from '../../../model';
 import type { LabelFilter } from '../types';
 import { computeFilterExpr } from '../types';
 import { useMetricMetadata } from '../utils';
@@ -113,6 +114,7 @@ export interface MetricOverviewProps extends StackProps {
   datasource: DatasourceSelector;
   filters: LabelFilter[];
   isMetadataEnabled?: boolean;
+  metricUsage?: MetricUsageProvider;
   isPanelEnabled?: boolean;
   onExplore?: (metricName: string) => void;
   onFiltersChange: (filters: LabelFilter[]) => void;
@@ -123,6 +125,7 @@ export function MetricOverview({
   datasource,
   filters,
   isMetadataEnabled,
+  metricUsage,
   isPanelEnabled,
   onExplore,
   onFiltersChange,
@@ -202,6 +205,7 @@ export function MetricOverview({
             filters={filtersWithMetricName}
             datasource={datasource}
             isMetadataEnabled={isMetadataEnabled}
+            metricUsage={metricUsage}
             onExplore={(metricName) => handleExplore(metricName, 0)}
           />
         )}
@@ -210,6 +214,7 @@ export function MetricOverview({
             filters={filtersWithMetricName}
             datasource={datasource}
             isMetadataEnabled={isMetadataEnabled}
+            metricUsage={metricUsage}
             onExplore={(metricName) => handleExplore(metricName, 0)}
           />
         )}

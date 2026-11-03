@@ -23,6 +23,13 @@ spec:
   # will also query the /api/v1/query_exemplars endpoint.
   exemplars:
     enable: <boolean>
+
+  # Optional, disabled when absent. Used by Metric Finder.
+  metricsUsage:
+    enable: <boolean>
+    # Browser-accessible service base URL, including any reverse-proxy prefix.
+    # Required and non-empty when enabled.
+    url: <string>
 ```
 
 ### HTTP Proxy specification

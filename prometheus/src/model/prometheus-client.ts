@@ -35,6 +35,7 @@ import type {
   SeriesResponse,
   SuccessResponse,
 } from './api-types';
+import type { MetricUsageProvider } from './metric-usage';
 
 interface PrometheusClientOptions {
   datasourceUrl: string;
@@ -51,6 +52,7 @@ export interface ClientRequestOptions {
 
 export interface PrometheusClient extends DatasourceClient {
   options: PrometheusClientOptions;
+  metricUsage?: MetricUsageProvider;
   instantQuery(params: InstantQueryRequestParameters, options?: ClientRequestOptions): Promise<InstantQueryResponse>;
   rangeQuery(params: RangeQueryRequestParameters, options?: ClientRequestOptions): Promise<RangeQueryResponse>;
   queryExemplars(

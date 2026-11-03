@@ -23,6 +23,13 @@ spec: {
 	datasource.#HTTPDatasourceSpec
 	scrapeInterval?: =~#durationRegex
 	queryParams?: {[string]: string}
+	metricsUsage?: {
+		enable: bool
+		url:    string
+		if enable {
+			url: =~"[^[:space:]]"
+		}
+	}
 	exemplars?: {
 		enable: bool
 	}

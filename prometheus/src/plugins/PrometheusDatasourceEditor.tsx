@@ -187,6 +187,37 @@ export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProp
         }
         label="Enable exemplars"
       />
+      <Typography variant="h5" mt={2} mb={1}>
+        Metric Usage
+      </Typography>
+      <FormControlLabel
+        label="Enable metric usage"
+        control={
+          <Switch
+            checked={value.metricsUsage?.enable ?? false}
+            disabled={isReadonly}
+            onChange={(_, enable) =>
+              onChange({
+                ...value,
+                metricsUsage: { url: value.metricsUsage?.url ?? '', enable },
+              })
+            }
+          />
+        }
+      />
+      {value.metricsUsage?.enable && (
+        <TextField
+          size="small"
+          fullWidth
+          required
+          label="Metrics Usage URL"
+          value={value.metricsUsage.url}
+          disabled={isReadonly}
+          error={!value.metricsUsage.url.trim()}
+          helperText="Browser-accessible Metrics Usage service URL, including any reverse-proxy prefix."
+          onChange={(e) => onChange({ ...value, metricsUsage: { enable: true, url: e.target.value } })}
+        />
+      )}
       <HTTPSettingsEditor
         value={value}
         onChange={onChange}

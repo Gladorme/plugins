@@ -16,6 +16,7 @@ package datasource
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/perses/perses/go-sdk/datasource"
 	"github.com/perses/spec/go/common"
@@ -31,7 +32,14 @@ type PluginSpec struct {
 	Proxy          *http.Proxy       `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	ScrapeInterval common.Duration   `json:"scrapeInterval,omitempty" yaml:"scrapeInterval,omitempty"`
 	QueryParams    map[string]string `json:"queryParams,omitempty" yaml:"queryParams,omitempty"`
+	MetricsUsage   *MetricsUsage     `json:"metricsUsage,omitempty" yaml:"metricsUsage,omitempty"`
 	Exemplars      *Exemplars        `json:"exemplars,omitempty" yaml:"exemplars,omitempty"`
+}
+
+// MetricsUsage configures the browser-accessible Metrics Usage service used by Metric Finder.
+type MetricsUsage struct {
+	Enable bool   `json:"enable" yaml:"enable"`
+	URL    string `json:"url" yaml:"url"`
 }
 
 // Exemplars mirrors the exemplars section of the PrometheusDatasource CUE schema.
@@ -67,6 +75,9 @@ func (s *PluginSpec) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (s *PluginSpec) validate() error {
+	if s.MetricsUsage != nil && s.MetricsUsage.Enable && strings.TrimSpace(s.MetricsUsage.URL) == "" {
+		return fmt.Errorf("metricsUsage.url cannot be empty when enabled")
+	}
 	if len(s.DirectURL) == 0 && s.Proxy == nil {
 		return fmt.Errorf("directUrl or proxy cannot be empty")
 	}

@@ -23,9 +23,11 @@ import { useMemo } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { TableVirtuoso } from 'react-virtuoso';
 
+import type { MetricUsageProvider } from '../../../../model';
 import type { LabelFilter } from '../../types';
 import { useMetricMetadata } from '../../utils';
 import { MetricChip } from '../MetricChip';
+import { MetricUsage } from '../MetricUsage';
 
 export interface MetricRowProps {
   children?: ReactNode;
@@ -33,6 +35,7 @@ export interface MetricRowProps {
   datasource: DatasourceSelector;
   filters: LabelFilter[];
   isMetadataEnabled?: boolean;
+  metricUsage?: MetricUsageProvider;
   onExplore?: (metricName: string) => void;
 }
 
@@ -42,6 +45,7 @@ export function MetricRow({
   datasource,
   filters,
   isMetadataEnabled,
+  metricUsage,
   onExplore,
 }: MetricRowProps): ReactElement {
   const { metadata, isLoading } = useMetricMetadata(metricName, datasource, isMetadataEnabled);
@@ -72,6 +76,11 @@ export function MetricRow({
           </Typography>
         )}
       </TableCell>
+      {metricUsage && (
+        <TableCell>
+          <MetricUsage key={metricName} metricName={metricName} datasource={datasource} provider={metricUsage} />
+        </TableCell>
+      )}
       <TableCell style={{ width: 140 }}>
         <Button
           aria-label={`explore metric ${metricName}`}
@@ -95,6 +104,7 @@ export interface MetricListProps extends StackProps {
   datasource: DatasourceSelector;
   filters: LabelFilter[];
   isMetadataEnabled?: boolean;
+  metricUsage?: MetricUsageProvider;
   onExplore?: (metricName: string) => void;
 }
 
@@ -104,6 +114,7 @@ export function MetricList({
   datasource,
   filters,
   isMetadataEnabled,
+  metricUsage,
   onExplore,
   ...props
 }: MetricListProps): ReactElement {
@@ -127,6 +138,7 @@ export function MetricList({
             datasource={datasource}
             filters={filters}
             isMetadataEnabled={isMetadataEnabled}
+            metricUsage={metricUsage}
             onExplore={onExplore}
           >
             <span

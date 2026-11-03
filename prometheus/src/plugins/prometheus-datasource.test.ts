@@ -147,3 +147,31 @@ describe('PrometheusDatasource custom fetch injection', () => {
     expect(globalFetchSpy).not.toHaveBeenCalled();
   });
 });
+
+describe('PrometheusDatasource metric usage', () => {
+  it.each([undefined, { enable: false, url: '/usage' }])('is disabled unless configured: %j', (metricsUsage) => {
+    const client = PrometheusDatasource.createClient({ directUrl: '/prom', metricsUsage }, {});
+    expect(client.metricUsage).toBeUndefined();
+  });
+
+  it('uses the configured endpoint and injected HTTP client without Prometheus headers or parameters', async () => {
+    const fetchJson = vi.fn().mockResolvedValue({ up: {} });
+    const client = PrometheusDatasource.createClient(
+      {
+        proxy: {
+          kind: 'HTTPProxy',
+          spec: { url: 'https://prometheus.example.com', headers: { Authorization: 'prom-secret' } },
+        },
+        queryParams: { tenant: 'prom-tenant' },
+        metricsUsage: { enable: true, url: '/usage/' },
+      },
+      { proxyUrl: '/prom-proxy', fetchJson },
+    );
+    expect(client.metricUsage).toBeDefined();
+    await client.metricUsage?.getUsage({ metricName: 'up', datasource: { kind: 'PrometheusDatasource' } });
+    expect(fetchJson).toHaveBeenCalledWith(
+      '/usage/api/v1/metrics?metric_name=up&mode=exact&merge_partial_metrics=true',
+      { signal: undefined },
+    );
+  });
+});

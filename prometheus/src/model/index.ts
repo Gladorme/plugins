@@ -14,5 +14,6 @@
 export * from './api-types';
 export * from './parse-sample-values';
 export * from './prometheus-client';
+export * from './metric-usage';
 export * from './prometheus-selectors';
 export * from './time';

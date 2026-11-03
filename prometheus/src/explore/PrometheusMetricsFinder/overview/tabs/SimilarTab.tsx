@@ -17,6 +17,7 @@ import type { DatasourceSelector } from '@perses-dev/spec';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 
+import type { MetricUsageProvider } from '../../../../model';
 import { MetricList } from '../../display/list/MetricList';
 import type { LabelFilter } from '../../types';
 import { useLabelValues } from '../../utils';
@@ -25,6 +26,7 @@ export interface SimilarTabProps extends StackProps {
   filters: LabelFilter[];
   datasource: DatasourceSelector;
   isMetadataEnabled?: boolean;
+  metricUsage?: MetricUsageProvider;
   onExplore: (metricName: string) => void;
 }
 
@@ -32,6 +34,7 @@ export function SimilarTab({
   filters,
   datasource,
   isMetadataEnabled,
+  metricUsage,
   onExplore,
   ...props
 }: SimilarTabProps): ReactElement {
@@ -54,6 +57,7 @@ export function SimilarTab({
       datasource={datasource}
       filters={filtersWithoutName}
       isMetadataEnabled={isMetadataEnabled}
+      metricUsage={metricUsage}
       onExplore={onExplore}
       {...props}
     />

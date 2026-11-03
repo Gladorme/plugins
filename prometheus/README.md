@@ -39,3 +39,10 @@ Build the plugin for distribution:
 ```bash
 npm run build
 ```
+
+
+## Metric Finder usage statistics
+
+Metric Finder optionally displays dashboard, alert and recording-rule usage from Perses Metrics Usage.
+Configure it per datasource, or supply a custom provider when embedding the explorer. See
+[Metric usage in Finder](../docs/prometheus/README.md#metric-usage-in-finder) for configuration and examples.

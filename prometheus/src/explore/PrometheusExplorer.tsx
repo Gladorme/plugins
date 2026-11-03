@@ -20,6 +20,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useResizeObserver } from 'use-resize-observer';
 
+import type { MetricUsageProvider } from '../model';
 import { DEFAULT_PROM } from '../model/prometheus-selectors';
 import { PrometheusMetricsFinder } from './PrometheusMetricsFinder';
 import type { FinderQueryParams } from './PrometheusMetricsFinder/types';
@@ -115,7 +116,11 @@ function MetricDataTable({ queries }: { queries: QueryDefinition[] }): ReactElem
   );
 }
 
-export function PrometheusExplorer(): ReactElement {
+export interface PrometheusExplorerProps {
+  metricUsage?: MetricUsageProvider | false;
+}
+
+export function PrometheusExplorer({ metricUsage }: PrometheusExplorerProps = {}): ReactElement {
   const {
     data: { tab = 'table', queries = [], datasource = DEFAULT_PROM, filters = [], exploredMetric = undefined },
     setData,
@@ -163,6 +168,7 @@ export function PrometheusExplorer(): ReactElement {
         {tab === 'finder' && (
           <Stack>
             <PrometheusMetricsFinder
+              metricUsage={metricUsage}
               onChange={(state) => setData({ tab, ...state })}
               value={{ datasource, filters, exploredMetric }}
             />

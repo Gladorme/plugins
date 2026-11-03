@@ -15,7 +15,7 @@ import type { QueryParamValues } from '@perses-dev/components';
 import type { DatasourceSelectValue } from '@perses-dev/plugin-system';
 import type { DurationString, HTTPProxy } from '@perses-dev/spec';
 
-import type { PrometheusDatasourceSelector } from '../model';
+import type { MetricsUsageSpec, PrometheusDatasourceSelector } from '../model';
 
 export const DEFAULT_SCRAPE_INTERVAL: DurationString = '1m';
 
@@ -34,6 +34,7 @@ export interface PrometheusDatasourceSpec {
   scrapeInterval?: DurationString; // default to 1m
   queryParams?: QueryParamValues;
   exemplars?: PrometheusExemplarsSpec;
+  metricsUsage?: MetricsUsageSpec;
 }
 
 export interface PrometheusVariableOptionsBase {

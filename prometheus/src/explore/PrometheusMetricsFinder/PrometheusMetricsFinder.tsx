@@ -29,6 +29,7 @@ import {
 import type { FuzzyMatchingInterval } from '@nexucis/fuzzy';
 import { Fuzzy } from '@nexucis/fuzzy';
 import { useExplorerQueryParams } from '@perses-dev/explore';
+import { useDatasourceClient } from '@perses-dev/plugin-system';
 import type { DatasourceSelector } from '@perses-dev/spec';
 import ArrowLeftIcon from 'mdi-material-ui/ArrowLeft';
 import CogIcon from 'mdi-material-ui/Cog';
@@ -38,6 +39,7 @@ import { useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { DEFAULT_PROM } from '../../model';
+import type { MetricUsageProvider, PrometheusClient } from '../../model';
 import { MetricList } from './display/list/MetricList';
 import { FinderFilters } from './filter/FinderFilters';
 import { MetricOverview } from './overview/MetricOverview';
@@ -45,13 +47,39 @@ import type { LabelFilter, Settings } from './types';
 import { useLabelValues } from './utils';
 
 const PERSES_METRICS_FINDER_SETTINGS = 'PERSES_METRICS_FINDER_SETTINGS';
+const EMPTY_FILTERS: LabelFilter[] = [];
+
+function readSettings(): Settings {
+  const defaults: Settings = { isMetadataEnabled: true, isPanelEnabled: false, isMetricUsageEnabled: true };
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(PERSES_METRICS_FINDER_SETTINGS) ?? '{}');
+    if (typeof stored !== 'object' || stored === null) return defaults;
+    return {
+      isMetadataEnabled:
+        'isMetadataEnabled' in stored && typeof stored.isMetadataEnabled === 'boolean'
+          ? stored.isMetadataEnabled
+          : defaults.isMetadataEnabled,
+      isPanelEnabled:
+        'isPanelEnabled' in stored && typeof stored.isPanelEnabled === 'boolean'
+          ? stored.isPanelEnabled
+          : defaults.isPanelEnabled,
+      isMetricUsageEnabled:
+        'isMetricUsageEnabled' in stored && typeof stored.isMetricUsageEnabled === 'boolean'
+          ? stored.isMetricUsageEnabled
+          : defaults.isMetricUsageEnabled,
+    };
+  } catch {
+    return defaults;
+  }
+}
 
 export interface SettingsMenuProps {
   value: Settings;
+  hasMetricUsage?: boolean;
   onChange: (value: Settings) => void;
 }
 
-export function SettingsMenu({ value, onChange }: SettingsMenuProps): ReactElement {
+export function SettingsMenu({ value, onChange, hasMetricUsage }: SettingsMenuProps): ReactElement {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: MouseEvent<HTMLButtonElement>): void => {
@@ -83,6 +111,16 @@ export function SettingsMenu({ value, onChange }: SettingsMenuProps): ReactEleme
             onClick={() => onChange({ ...value, isPanelEnabled: !value.isPanelEnabled })}
           />
         </MenuItem>
+        {hasMetricUsage && (
+          <MenuItem
+            role="menuitemcheckbox"
+            aria-checked={value.isMetricUsageEnabled ?? true}
+            onClick={() => onChange({ ...value, isMetricUsageEnabled: !(value.isMetricUsageEnabled ?? true) })}
+          >
+            <Checkbox checked={value.isMetricUsageEnabled ?? true} tabIndex={-1} aria-hidden />
+            Enable Metric Usage
+          </MenuItem>
+        )}
       </Menu>
     </>
   );
@@ -92,6 +130,7 @@ export interface MetricNameExplorerProps extends StackProps {
   datasource: DatasourceSelector;
   filters: LabelFilter[];
   isMetadataEnabled?: boolean;
+  metricUsage?: MetricUsageProvider;
   onExplore?: (metricName: string) => void;
 }
 
@@ -99,6 +138,7 @@ export function MetricNameExplorer({
   datasource,
   filters,
   isMetadataEnabled,
+  metricUsage,
   onExplore,
   ...props
 }: MetricNameExplorerProps): ReactElement {
@@ -147,6 +187,7 @@ export function MetricNameExplorer({
         datasource={datasource}
         filters={filters}
         isMetadataEnabled={isMetadataEnabled}
+        metricUsage={metricUsage}
         onExplore={onExplore}
       />
     </Stack>
@@ -154,6 +195,8 @@ export function MetricNameExplorer({
 }
 
 export interface PrometheusMetricsFinderProps extends Omit<StackProps, 'onChange'> {
+  /** Overrides the datasource provider. Set false to disable usage entirely. */
+  metricUsage?: MetricUsageProvider | false;
   value: {
     datasource: DatasourceSelector;
     filters: LabelFilter[];
@@ -172,19 +215,23 @@ export interface PrometheusMetricsFinderProps extends Omit<StackProps, 'onChange
 }
 
 export function PrometheusMetricsFinder({
-  value: { datasource = DEFAULT_PROM, filters = [], exploredMetric },
+  value: { datasource = DEFAULT_PROM, filters = EMPTY_FILTERS, exploredMetric },
+  metricUsage: metricUsageOverride,
   onChange,
   onExplore,
   ...props
 }: PrometheusMetricsFinderProps): ReactElement {
-  const settingsStored = localStorage.getItem(PERSES_METRICS_FINDER_SETTINGS);
-  const [settings, setSettings] = useState<Settings>(
-    settingsStored ? JSON.parse(settingsStored) : { isMetadataEnabled: true },
-  );
+  const { data: client } = useDatasourceClient<PrometheusClient>(datasource);
+  const metricUsage = metricUsageOverride === false ? undefined : (metricUsageOverride ?? client?.metricUsage);
+  const [settings, setSettings] = useState<Settings>(readSettings);
 
   function handleSettingsUpdate(value: Settings): void {
     setSettings(value);
-    localStorage.setItem(PERSES_METRICS_FINDER_SETTINGS, JSON.stringify(value));
+    try {
+      localStorage.setItem(PERSES_METRICS_FINDER_SETTINGS, JSON.stringify(value));
+    } catch {
+      // Keep settings usable when browser storage is unavailable.
+    }
   }
 
   const isMobileSize = useMediaQuery(useTheme().breakpoints.down('md'));
@@ -234,12 +281,13 @@ export function PrometheusMetricsFinder({
             justifyContent={isMobileSize ? 'end' : 'unset'}
             alignItems="center"
           >
-            <SettingsMenu value={settings} onChange={handleSettingsUpdate} />
+            <SettingsMenu value={settings} onChange={handleSettingsUpdate} hasMetricUsage={!!metricUsage} />
           </Stack>
         </Stack>
       </Stack>
       {exploredMetric ? (
         <MetricOverview
+          metricUsage={settings.isMetricUsageEnabled !== false ? metricUsage : undefined}
           metricName={exploredMetric}
           datasource={datasource ?? DEFAULT_PROM}
           filters={filteredFilters}
@@ -250,6 +298,7 @@ export function PrometheusMetricsFinder({
         />
       ) : (
         <MetricNameExplorer
+          metricUsage={settings.isMetricUsageEnabled !== false ? metricUsage : undefined}
           datasource={datasource ?? DEFAULT_PROM}
           filters={filteredFilters}
           isMetadataEnabled={settings.isMetadataEnabled}

@@ -1,0 +1,10 @@
+{
+  "kind": "PrometheusDatasource",
+  "spec": {
+    "directUrl": "http://localhost:9090",
+    "metricsUsage": {
+      "enable": true,
+      "url": "/metrics-usage"
+    }
+  }
+}

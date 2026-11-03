@@ -18,6 +18,7 @@ import type { BuiltinVariableDefinition } from '@perses-dev/spec';
 
 import type { ClientRequestOptions, PrometheusClient, QueryOptions } from '../model';
 import {
+  createMetricsUsageProvider,
   healthCheck,
   instantQuery,
   labelNames,
@@ -68,6 +69,10 @@ const createClient: DatasourcePlugin<PrometheusDatasourceSpec, PrometheusClient>
 
   // Could think about this becoming a class, although it definitely doesn't have to be
   return {
+    metricUsage:
+      spec.metricsUsage?.enable && spec.metricsUsage.url.trim()
+        ? createMetricsUsageProvider(spec.metricsUsage.url.trim(), fetchJson)
+        : undefined,
     options: {
       datasourceUrl,
     },
