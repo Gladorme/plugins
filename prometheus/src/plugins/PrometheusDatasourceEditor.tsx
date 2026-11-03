@@ -203,9 +203,7 @@ export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProp
                 metricsUsage: {
                   ...value.metricsUsage,
                   enable,
-                  datasource:
-                    value.metricsUsage?.datasource ??
-                    (value.metricsUsage?.url ? undefined : { kind: METRICS_USAGE_DATASOURCE_KIND }),
+                  datasource: value.metricsUsage?.datasource ?? { kind: METRICS_USAGE_DATASOURCE_KIND },
                 },
               })
             }
@@ -213,31 +211,24 @@ export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProp
         }
       />
       {value.metricsUsage?.enable && (
-        <>
-          <TextField
-            size="small"
-            fullWidth
-            label="Metrics Usage datasource"
-            value={value.metricsUsage.datasource?.name ?? ''}
-            placeholder="Default Metrics Usage datasource"
-            disabled={isReadonly}
-            helperText="Name of a MetricsUsageDatasource available in this project or globally. Leave empty to use the default. Configure its URL, proxy, and authentication separately."
-            onChange={(event) =>
-              onChange({
-                ...value,
-                metricsUsage: {
-                  enable: true,
-                  datasource: { kind: METRICS_USAGE_DATASOURCE_KIND, name: event.target.value || undefined },
-                },
-              })
-            }
-          />
-          {!value.metricsUsage.datasource && value.metricsUsage.url && (
-            <Typography variant="body2" color="text.secondary">
-              Using legacy URL: {value.metricsUsage.url}. Enter a datasource name to replace it.
-            </Typography>
-          )}
-        </>
+        <TextField
+          size="small"
+          fullWidth
+          label="Metrics Usage datasource"
+          value={value.metricsUsage.datasource?.name ?? ''}
+          placeholder="Default Metrics Usage datasource"
+          disabled={isReadonly}
+          helperText="Name of a MetricsUsageDatasource available in this project or globally. Leave empty to use the default. Configure its URL, proxy, and authentication separately."
+          onChange={(event) =>
+            onChange({
+              ...value,
+              metricsUsage: {
+                enable: true,
+                datasource: { kind: METRICS_USAGE_DATASOURCE_KIND, name: event.target.value || undefined },
+              },
+            })
+          }
+        />
       )}
       <HTTPSettingsEditor
         value={value}

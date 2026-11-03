@@ -65,33 +65,12 @@ func TestEnableExemplars(t *testing.T) {
 	}
 }
 
-func TestMetricsUsage(t *testing.T) {
-	for _, enable := range []bool{true, false} {
-		config := MetricsUsage{Enable: enable, URL: "/metrics-usage"}
-		builder, err := create(DirectURL("/prometheus"), WithMetricsUsage(config))
-		if err != nil {
-			t.Fatal(err)
-		}
-		raw, err := json.Marshal(builder.PluginSpec)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var result PluginSpec
-		if err := json.Unmarshal(raw, &result); err != nil {
-			t.Fatal(err)
-		}
-		if result.MetricsUsage == nil || *result.MetricsUsage != config {
-			t.Fatalf("unexpected metric usage configuration: %+v", result.MetricsUsage)
-		}
-	}
-}
-
-func TestMetricsUsageRequiresURLWhenEnabled(t *testing.T) {
-	if _, err := create(WithMetricsUsage(MetricsUsage{Enable: true, URL: "  "})); err == nil {
-		t.Fatal("expected empty URL to be rejected")
+func TestMetricsUsageRequiresDatasourceWhenEnabled(t *testing.T) {
+	if _, err := create(WithMetricsUsage(MetricsUsage{Enable: true})); err == nil {
+		t.Fatal("expected missing datasource to be rejected")
 	}
 	var spec PluginSpec
-	if err := json.Unmarshal([]byte(`{"directUrl":"/prom","metricsUsage":{"enable":true,"url":""}}`), &spec); err == nil {
+	if err := json.Unmarshal([]byte(`{"directUrl":"/prom","metricsUsage":{"enable":true}}`), &spec); err == nil {
 		t.Fatal("expected invalid persisted configuration to be rejected")
 	}
 	if _, err := create(WithMetricsUsage(MetricsUsage{Enable: false})); err != nil {

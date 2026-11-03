@@ -28,7 +28,7 @@ export function useMetricUsageProvider(
   return useMemo(() => {
     if (override === false) return undefined;
     if (override) return override;
-    if (!selector) return client?.metricUsage;
+    if (!selector) return undefined;
     return {
       queryKey: ['metrics-usage-datasource', selector],
       getUsage: async (request) => {
@@ -42,5 +42,5 @@ export function useMetricUsageProvider(
         return provider.getUsage(request);
       },
     };
-  }, [client?.metricUsage, override, selector, store, queryClient]);
+  }, [override, selector, store, queryClient]);
 }

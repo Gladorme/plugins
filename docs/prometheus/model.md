@@ -27,11 +27,9 @@ spec:
   # Optional, disabled when absent. Used by Metric Finder.
   metricsUsage:
     enable: <boolean>
-    datasource:
+    datasource: # Required when enable is true.
       kind: MetricsUsageDatasource
       name: <string> # Optional; omit to use the default datasource of this kind.
-    # Deprecated compatibility fallback when datasource is absent.
-    url: <string> # Optional; non-empty when enabled without a datasource reference.
 ```
 
 ### HTTP Proxy specification

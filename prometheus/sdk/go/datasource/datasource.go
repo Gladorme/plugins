@@ -16,7 +16,6 @@ package datasource
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/perses/perses/go-sdk/datasource"
 	"github.com/perses/spec/go/common"
@@ -40,8 +39,6 @@ type PluginSpec struct {
 type MetricsUsage struct {
 	Enable     bool                       `json:"enable" yaml:"enable"`
 	Datasource *datasource.StaticSelector `json:"datasource,omitempty" yaml:"datasource,omitempty"`
-	// Deprecated: use Datasource to reference a MetricsUsageDatasource.
-	URL string `json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 // Exemplars mirrors the exemplars section of the PrometheusDatasource CUE schema.
@@ -95,8 +92,8 @@ func (m MetricsUsage) validate() error {
 	if m.Datasource != nil && m.Datasource.Kind != "MetricsUsageDatasource" {
 		return fmt.Errorf("metricsUsage.datasource must reference a MetricsUsageDatasource")
 	}
-	if m.Enable && m.Datasource == nil && strings.TrimSpace(m.URL) == "" {
-		return fmt.Errorf("metricsUsage.datasource is required when enabled (or a legacy url)")
+	if m.Enable && m.Datasource == nil {
+		return fmt.Errorf("metricsUsage.datasource is required when enabled")
 	}
 	return nil
 }

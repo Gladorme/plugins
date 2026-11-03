@@ -151,9 +151,10 @@ describe('Metric Finder usage integration', () => {
 
   it('shows usage per row from the datasource provider and lets users hide it', async () => {
     const usage = provider();
-    vi.mocked(useDatasourceClient).mockReturnValue({ data: { metricUsage: usage } } as ReturnType<
-      typeof useDatasourceClient
-    >);
+    store.getDatasourceClient.mockResolvedValue(usage);
+    vi.mocked(useDatasourceClient).mockReturnValue({
+      data: { metricUsageDatasource: { kind: 'MetricsUsageDatasource', name: 'usage' } },
+    } as ReturnType<typeof useDatasourceClient>);
     renderFinder();
     expect(await screen.findByRole('button', { name: 'Alerts: 1 for up' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Alerts: 1 for process_cpu_seconds_total' })).toBeInTheDocument();
@@ -170,9 +171,10 @@ describe('Metric Finder usage integration', () => {
 
   it('makes no usage requests when disabled by the host', () => {
     const usage = provider();
-    vi.mocked(useDatasourceClient).mockReturnValue({ data: { metricUsage: usage } } as ReturnType<
-      typeof useDatasourceClient
-    >);
+    store.getDatasourceClient.mockResolvedValue(usage);
+    vi.mocked(useDatasourceClient).mockReturnValue({
+      data: { metricUsageDatasource: { kind: 'MetricsUsageDatasource', name: 'usage' } },
+    } as ReturnType<typeof useDatasourceClient>);
     renderFinder(false);
     expect(usage.getUsage).not.toHaveBeenCalled();
   });

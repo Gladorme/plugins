@@ -41,19 +41,6 @@ describe('Metrics Usage datasource reference editor', () => {
     });
   });
 
-  it('replaces the deprecated URL when a datasource is selected', () => {
-    const onChange = vi.fn();
-    render(
-      <PrometheusDatasourceEditor
-        value={{ directUrl: '/prom', metricsUsage: { enable: true, url: '/legacy' } }}
-        onChange={onChange}
-      />,
-    );
-    expect(screen.getByText(/Using legacy URL: \/legacy/)).toBeInTheDocument();
-    userEvent.paste(screen.getByLabelText('Metrics Usage datasource'), 'usage');
-    expect(onChange).toHaveBeenLastCalledWith(configured);
-  });
-
   it('respects read-only datasource permissions', () => {
     render(<PrometheusDatasourceEditor value={configured} onChange={vi.fn()} isReadonly />);
     expect(screen.getByRole('checkbox', { name: 'Enable metric usage' })).toBeDisabled();

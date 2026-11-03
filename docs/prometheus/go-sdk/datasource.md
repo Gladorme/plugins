@@ -97,8 +97,7 @@ datasource.WithMetricsUsage(datasource.MetricsUsage{
 The Metrics Usage SDK provides `MetricsUsage`, `DirectURL`, `HTTPProxy` (with standard HTTP proxy options),
 and `Selector` builders. Its datasource connection is independent of Prometheus. Omit the selector's
 `Name` to use the default Metrics Usage datasource. Set `Enable: false` to retain the reference while
-disabling usage. The deprecated `MetricsUsage.URL` field remains supported for existing configurations;
-`Datasource` takes precedence. See [Metric usage in Finder](../README.md#metric-usage-in-finder).
+disabling usage. `Datasource` is required when `Enable` is true. See [Metric usage in Finder](../README.md#metric-usage-in-finder).
 
 ## Examples
 

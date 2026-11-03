@@ -29,10 +29,8 @@ spec: {
 			kind:  "MetricsUsageDatasource"
 			name?: string
 		}
-		// Deprecated: use a separate MetricsUsageDatasource.
-		url?: string
-		if enable && datasource == _|_ {
-			url: =~"[^[:space:]]"
+		if enable {
+			datasource!: _
 		}
 	}
 	exemplars?: {

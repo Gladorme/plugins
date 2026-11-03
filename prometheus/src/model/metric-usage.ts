@@ -46,8 +46,6 @@ export interface MetricsUsageDatasourceSelector extends DatasourceSelector {
 export interface MetricsUsageSpec {
   enable: boolean;
   datasource?: MetricsUsageDatasourceSelector;
-  /** @deprecated Configure a MetricsUsageDatasource and reference it with datasource instead. */
-  url?: string;
 }
 
 function object(value: unknown): Record<string, unknown> {

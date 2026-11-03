@@ -149,43 +149,18 @@ describe('PrometheusDatasource custom fetch injection', () => {
 });
 
 describe('PrometheusDatasource metric usage', () => {
-  it('exposes the reference instead of creating a client with Prometheus transport', () => {
+  it('exposes the referenced Metrics Usage datasource only when enabled', () => {
     const datasource = { kind: 'MetricsUsageDatasource' as const, name: 'usage' };
     const client = PrometheusDatasource.createClient(
-      { directUrl: '/prom', metricsUsage: { enable: true, datasource, url: '/legacy' } },
+      { directUrl: '/prom', metricsUsage: { enable: true, datasource } },
       {},
     );
     expect(client.metricUsageDatasource).toEqual(datasource);
-    expect(client.metricUsage).toBeUndefined();
     const disabled = PrometheusDatasource.createClient(
       { directUrl: '/prom', metricsUsage: { enable: false, datasource } },
       {},
     );
     expect(disabled.metricUsageDatasource).toBeUndefined();
-  });
-  it.each([undefined, { enable: false, url: '/usage' }])('is disabled unless configured: %j', (metricsUsage) => {
-    const client = PrometheusDatasource.createClient({ directUrl: '/prom', metricsUsage }, {});
-    expect(client.metricUsage).toBeUndefined();
-  });
-
-  it('uses the configured endpoint and injected HTTP client without Prometheus headers or parameters', async () => {
-    const fetchJson = vi.fn().mockResolvedValue({ up: {} });
-    const client = PrometheusDatasource.createClient(
-      {
-        proxy: {
-          kind: 'HTTPProxy',
-          spec: { url: 'https://prometheus.example.com', headers: { Authorization: 'prom-secret' } },
-        },
-        queryParams: { tenant: 'prom-tenant' },
-        metricsUsage: { enable: true, url: '/usage/' },
-      },
-      { proxyUrl: '/prom-proxy', fetchJson },
-    );
-    expect(client.metricUsage).toBeDefined();
-    await client.metricUsage?.getUsage({ metricName: 'up', datasource: { kind: 'PrometheusDatasource' } });
-    expect(fetchJson).toHaveBeenCalledWith(
-      '/usage/api/v1/metrics?metric_name=up&mode=exact&merge_partial_metrics=true',
-      { signal: undefined },
-    );
+    expect(PrometheusDatasource.createClient({ directUrl: '/prom' }, {}).metricUsageDatasource).toBeUndefined();
   });
 });

@@ -229,11 +229,6 @@ on the Metrics Usage proxy using the standard HTTP proxy settings. Prometheus he
 and proxy URLs are never used for the referenced service. References use Perses' normal datasource
 lookup and permissions; a missing or inaccessible reference shows **Usage unavailable** without blocking Finder.
 
-The earlier `metricsUsage.url` configuration remains supported for compatibility, but is deprecated.
-To migrate, create a `MetricsUsageDatasource` with that URL and replace `url` with the `datasource`
-reference shown above. If both are present, the datasource reference takes precedence. Selecting or
-editing the datasource name in the editor removes the legacy URL.
-
 Remove `metricsUsage` or set `enable: false` to disable the integration. Users can also hide it with
 **Enable Metric Usage** in Finder settings; this preference is saved locally. Disabled usage makes no
 usage requests. Requests are limited to rendered rows, scoped by provider and datasource, and cancelled
