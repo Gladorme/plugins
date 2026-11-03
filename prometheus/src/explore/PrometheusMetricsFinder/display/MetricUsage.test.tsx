@@ -54,6 +54,7 @@ describe('MetricUsage', () => {
     renderUsage({ queryKey: ['test'], getUsage: vi.fn().mockResolvedValue(categories) });
     expect(screen.getByLabelText('Loading usage for up')).toBeInTheDocument();
     const chip = await screen.findByRole('button', { name: 'Dashboards: 1 for up' });
+    expect(chip).toHaveTextContent(/^1$/);
     expect(chip.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.queryByText('Alerts: 0')).not.toBeInTheDocument();
     userEvent.click(chip);
@@ -112,8 +113,8 @@ describe('MetricUsage', () => {
 
   it('hides all chips and tabs when every category has zero occurrences', async () => {
     const usage = categories.map((category) => ({ ...category, references: [] }));
-    renderUsage({ queryKey: ['unused'], getUsage: vi.fn().mockResolvedValue(usage) });
-    expect(await screen.findByText('No usage found')).toBeInTheDocument();
+    const { container } = renderUsage({ queryKey: ['unused'], getUsage: vi.fn().mockResolvedValue(usage) });
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -125,9 +126,9 @@ describe('MetricUsage', () => {
     expect(await screen.findByText('Usage unknown')).toBeInTheDocument();
   });
 
-  it('shows known empty results', async () => {
-    renderUsage({ queryKey: ['empty'], getUsage: vi.fn().mockResolvedValue([]) });
-    expect(await screen.findByText('No usage found')).toBeInTheDocument();
+  it('renders nothing for known empty results', async () => {
+    const { container } = renderUsage({ queryKey: ['empty'], getUsage: vi.fn().mockResolvedValue([]) });
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
 
   it('isolates failures without exposing server details', async () => {
@@ -140,7 +141,7 @@ describe('MetricUsage', () => {
     const getUsage = vi.fn().mockResolvedValue(categories);
     const provider = { queryKey: ['first'], getUsage };
     const { client, rerender } = renderUsage(provider);
-    await screen.findByText('Dashboards: 1');
+    await screen.findByRole('button', { name: 'Dashboards: 1 for up' });
     const datasource = { kind: 'PrometheusDatasource', name: 'other' };
     rerender(
       <QueryClientProvider client={client}>

@@ -173,8 +173,8 @@ The Prometheus package comes also with a built-in metrics explorer that mirror P
 
 ### Metric usage in Finder
 
-Metric Finder can show dashboard, alert, and recording-rule counts on each metric, with an icon before
-each chip label. Select a count to open a right-side drawer with the collected references and optional
+Metric Finder can show dashboard, alert, and recording-rule counts on each metric as compact icon-and-count
+chips on one line. Hover or focus a chip to see its category. Select a count to open a right-side drawer with the collected references and optional
 source links. Switch between usage categories with the drawer tabs. Categories with zero occurrences
 are hidden from both chips and tabs. References without a configured link remain readable.
 The built-in adapter uses the
@@ -205,7 +205,7 @@ Remove `metricsUsage` or set `enable: false` to disable the integration. Users c
 usage requests. Requests are limited to rendered rows, scoped by provider and datasource, and cancelled
 when no longer needed. Cached results are considered fresh for one minute. A failure shows **Usage unavailable** without blocking
 metric exploration. A metric absent from the collector shows **Usage unknown**; a known metric without
-collected references shows **No usage found**. Links are the URLs supplied by the collector, which may point to
+collected references leaves the usage cell empty. Links are the URLs supplied by the collector, which may point to
 an API resource rather than a dashboard page.
 
 #### Custom providers in embedded applications

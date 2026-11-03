@@ -24,6 +24,7 @@ import {
   Stack,
   Tab,
   Tabs,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import type { DatasourceSelector } from '@perses-dev/spec';
@@ -82,7 +83,7 @@ function safeUrl(url?: string): string | undefined {
   }
 }
 
-export function MetricUsage({ metricName, datasource, provider }: MetricUsageProps): ReactElement {
+export function MetricUsage({ metricName, datasource, provider }: MetricUsageProps): ReactElement | null {
   const [categoryId, setCategoryId] = useState<string>();
   const titleId = useId();
   const { data, isLoading, isError } = useQuery({
@@ -96,22 +97,23 @@ export function MetricUsage({ metricName, datasource, provider }: MetricUsagePro
   if (isError) return <Typography color="text.secondary">Usage unavailable</Typography>;
   if (!data?.categories) return <Typography color="text.secondary">Usage unknown</Typography>;
   const categories = data.categories.filter(({ references }) => references.length > 0);
-  if (categories.length === 0) return <Typography color="text.secondary">No usage found</Typography>;
+  if (categories.length === 0) return null;
 
   const categoryIndex = categories.findIndex(({ id }) => id === categoryId);
   const category = categories[categoryIndex];
   return (
     <>
-      <Stack direction="row" gap={1} sx={{ flexWrap: 'wrap', minWidth: 200 }} aria-label={`Usage for ${metricName}`}>
+      <Stack direction="row" gap={0.5} sx={{ width: 'max-content' }} aria-label={`Usage for ${metricName}`}>
         {categories.map(({ id, label, references }) => (
-          <Chip
-            key={id}
-            size="small"
-            icon={categoryIcon(id)}
-            label={`${label}: ${references.length}`}
-            aria-label={`${label}: ${references.length} for ${metricName}`}
-            onClick={() => setCategoryId(id)}
-          />
+          <Tooltip key={id} title={`${label}: ${references.length}`}>
+            <Chip
+              size="small"
+              icon={categoryIcon(id)}
+              label={references.length}
+              aria-label={`${label}: ${references.length} for ${metricName}`}
+              onClick={() => setCategoryId(id)}
+            />
+          </Tooltip>
         ))}
       </Stack>
       <Drawer
