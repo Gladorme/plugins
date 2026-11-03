@@ -1,0 +1,9 @@
+{
+  "kind": "PrometheusDatasource",
+  "spec": {
+    "directUrl": "http://prometheus:9090",
+    "metricsUsage": {
+      "enable": false
+    }
+  }
+}

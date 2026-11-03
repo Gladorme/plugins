@@ -36,10 +36,12 @@ type PluginSpec struct {
 	Exemplars      *Exemplars        `json:"exemplars,omitempty" yaml:"exemplars,omitempty"`
 }
 
-// MetricsUsage configures the browser-accessible Metrics Usage service used by Metric Finder.
+// MetricsUsage references the separate Metrics Usage service used by Metric Finder.
 type MetricsUsage struct {
-	Enable bool   `json:"enable" yaml:"enable"`
-	URL    string `json:"url" yaml:"url"`
+	Enable     bool                       `json:"enable" yaml:"enable"`
+	Datasource *datasource.StaticSelector `json:"datasource,omitempty" yaml:"datasource,omitempty"`
+	// Deprecated: use Datasource to reference a MetricsUsageDatasource.
+	URL string `json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 // Exemplars mirrors the exemplars section of the PrometheusDatasource CUE schema.
@@ -75,14 +77,26 @@ func (s *PluginSpec) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (s *PluginSpec) validate() error {
-	if s.MetricsUsage != nil && s.MetricsUsage.Enable && strings.TrimSpace(s.MetricsUsage.URL) == "" {
-		return fmt.Errorf("metricsUsage.url cannot be empty when enabled")
+	if s.MetricsUsage != nil {
+		if err := s.MetricsUsage.validate(); err != nil {
+			return err
+		}
 	}
 	if len(s.DirectURL) == 0 && s.Proxy == nil {
 		return fmt.Errorf("directUrl or proxy cannot be empty")
 	}
 	if len(s.DirectURL) > 0 && s.Proxy != nil {
 		return fmt.Errorf("at most directUrl or proxy must be configured")
+	}
+	return nil
+}
+
+func (m MetricsUsage) validate() error {
+	if m.Datasource != nil && m.Datasource.Kind != "MetricsUsageDatasource" {
+		return fmt.Errorf("metricsUsage.datasource must reference a MetricsUsageDatasource")
+	}
+	if m.Enable && m.Datasource == nil && strings.TrimSpace(m.URL) == "" {
+		return fmt.Errorf("metricsUsage.datasource is required when enabled (or a legacy url)")
 	}
 	return nil
 }

@@ -182,8 +182,35 @@ The built-in adapter uses the
 variables or regular expressions (`merge_partial_metrics=true`). Counts describe the service's collected
 usage for the exact metric name; Finder's label filters and time range do not filter that usage.
 
-The feature is disabled by default. Enable **Metric Usage** in the Prometheus datasource editor and
-configure its service URL, or provision the following datasource plugin spec:
+The feature is disabled by default. Create a **Metrics Usage Datasource**, then enable **Metric Usage**
+in the Prometheus datasource editor and enter its datasource name. Leave the name empty to use the
+default datasource of kind `MetricsUsageDatasource` in the current datasource scope.
+
+Both datasource kinds are supplied by the Prometheus plugin package. Their connections are independent:
+Metrics Usage has its own direct URL or Perses HTTP proxy, allowed endpoints, and authentication configuration.
+A shared Metrics Usage datasource can be referenced by multiple Prometheus datasources.
+
+For example, provision a Metrics Usage datasource in the same project (or as a global datasource):
+
+```yaml
+kind: Datasource
+metadata:
+  name: metrics-usage
+  project: observability
+spec:
+  plugin:
+    kind: MetricsUsageDatasource
+    spec:
+      proxy:
+        kind: HTTPProxy
+        spec:
+          url: http://metrics-usage:8080
+          allowedEndpoints:
+            - endpointPattern: /api/v1/metrics
+              method: GET
+```
+
+Then reference it from the Prometheus datasource plugin spec:
 
 ```yaml
 kind: PrometheusDatasource
@@ -191,14 +218,21 @@ spec:
   directUrl: https://prometheus.example.com
   metricsUsage:
     enable: true
-    url: /metrics-usage
+    datasource:
+      kind: MetricsUsageDatasource
+      name: metrics-usage
 ```
 
-`url` is the service base URL, not the `/api/v1/metrics` endpoint. It can be a same-origin reverse-proxy
-path or an absolute browser-accessible URL. Cross-origin services must allow the Perses origin through
-CORS. This is a separate connection: the Prometheus datasource's proxy, headers and query parameters
-are not forwarded. Configure authentication and tenant routing on your reverse proxy or use a custom
-provider when embedding the explorer; do not put credentials in the datasource URL.
+The service URL is its base URL, not the `/api/v1/metrics` endpoint. Use `directUrl` for browser access
+(CORS must allow the Perses origin), or `proxy` for access through the Perses server. Configure secrets
+on the Metrics Usage proxy using the standard HTTP proxy settings. Prometheus headers, query parameters,
+and proxy URLs are never used for the referenced service. References use Perses' normal datasource
+lookup and permissions; a missing or inaccessible reference shows **Usage unavailable** without blocking Finder.
+
+The earlier `metricsUsage.url` configuration remains supported for compatibility, but is deprecated.
+To migrate, create a `MetricsUsageDatasource` with that URL and replace `url` with the `datasource`
+reference shown above. If both are present, the datasource reference takes precedence. Selecting or
+editing the datasource name in the editor removes the legacy URL.
 
 Remove `metricsUsage` or set `enable: false` to disable the integration. Users can also hide it with
 **Enable Metric Usage** in Finder settings; this preference is saved locally. Disabled usage makes no

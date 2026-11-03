@@ -69,8 +69,9 @@ const createClient: DatasourcePlugin<PrometheusDatasourceSpec, PrometheusClient>
 
   // Could think about this becoming a class, although it definitely doesn't have to be
   return {
+    metricUsageDatasource: spec.metricsUsage?.enable ? spec.metricsUsage.datasource : undefined,
     metricUsage:
-      spec.metricsUsage?.enable && spec.metricsUsage.url.trim()
+      spec.metricsUsage?.enable && !spec.metricsUsage.datasource && spec.metricsUsage.url?.trim()
         ? createMetricsUsageProvider(spec.metricsUsage.url.trim(), fetchJson)
         : undefined,
     options: {

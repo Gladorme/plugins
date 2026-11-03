@@ -21,12 +21,18 @@ import { VirtuosoMockContext } from 'react-virtuoso';
 
 import type { MetricUsageProvider } from '../../model';
 import { DEFAULT_PROM } from '../../model';
+import { MetricsUsageDatasource } from '../../plugins/metrics-usage-datasource';
+import { PrometheusDatasource } from '../../plugins/prometheus-datasource';
 import { JobTab } from './overview/tabs/JobTab';
 import { SimilarTab } from './overview/tabs/SimilarTab';
 import { PrometheusMetricsFinder } from './PrometheusMetricsFinder';
 import type { useLabelValues, useMetricMetadata } from './utils';
 
-vi.mock('@perses-dev/plugin-system', () => ({ useDatasourceClient: vi.fn() }));
+const store = vi.hoisted(() => ({ getDatasourceClient: vi.fn() }));
+vi.mock('@perses-dev/plugin-system', () => ({
+  useDatasourceClient: vi.fn(),
+  useDatasourceStore: (): typeof store => store,
+}));
 vi.mock('@perses-dev/explore', () => ({ useExplorerQueryParams: vi.fn().mockReturnValue('') }));
 vi.mock('./filter/FinderFilters', () => ({ FinderFilters: (): null => null }));
 vi.mock('./overview/MetricOverview', () => ({ MetricOverview: (): null => null }));
@@ -69,10 +75,72 @@ function provider(): MetricUsageProvider {
 
 beforeEach(() => {
   localStorage.clear();
+  store.getDatasourceClient.mockReset();
   vi.mocked(useDatasourceClient).mockReturnValue({ data: {} } as ReturnType<typeof useDatasourceClient>);
 });
 
 describe('Metric Finder usage integration', () => {
+  it('resolves a separate datasource and sends usage requests through its own proxy', async () => {
+    const usageFetch = vi.fn().mockResolvedValue({
+      up: { usage: { dashboards: [{ title: 'Overview', url: 'https://dash.example/overview' }] } },
+    });
+    const prometheusFetch = vi.fn();
+    const selector = { kind: 'MetricsUsageDatasource' as const, name: 'usage' };
+    const promClient = PrometheusDatasource.createClient(
+      {
+        proxy: {
+          kind: 'HTTPProxy',
+          spec: { url: 'http://prometheus:9090', headers: { Authorization: 'prom-secret' } },
+        },
+        queryParams: { tenant: 'prom-tenant' },
+        metricsUsage: { enable: true, datasource: selector },
+      },
+      { proxyUrl: '/proxy/prometheus', fetchJson: prometheusFetch },
+    );
+    const usageClient = MetricsUsageDatasource.createClient(
+      {
+        proxy: { kind: 'HTTPProxy', spec: { url: 'http://metrics-usage:8080' } },
+      },
+      { proxyUrl: '/proxy/usage', fetchJson: usageFetch },
+    );
+    store.getDatasourceClient.mockResolvedValue(usageClient);
+    vi.mocked(useDatasourceClient).mockReturnValue({ data: promClient } as ReturnType<typeof useDatasourceClient>);
+    renderFinder();
+    expect(await screen.findByRole('button', { name: 'Dashboards: 1 for up' })).toBeInTheDocument();
+    expect(store.getDatasourceClient).toHaveBeenCalledTimes(1);
+    expect(store.getDatasourceClient).toHaveBeenCalledWith(selector);
+    expect(usageFetch).toHaveBeenCalledWith(
+      '/proxy/usage/api/v1/metrics?metric_name=up&mode=exact&merge_partial_metrics=true',
+      expect.objectContaining({ headers: undefined }),
+    );
+    expect(prometheusFetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['host', 'settings', 'custom'])(
+    'does not resolve the referenced datasource when disabled or overridden: %s',
+    async (mode) => {
+      vi.mocked(useDatasourceClient).mockReturnValue({
+        data: { metricUsageDatasource: { kind: 'MetricsUsageDatasource', name: 'usage' } },
+      } as ReturnType<typeof useDatasourceClient>);
+      if (mode === 'settings')
+        localStorage.setItem('PERSES_METRICS_FINDER_SETTINGS', JSON.stringify({ isMetricUsageEnabled: false }));
+      const override = mode === 'custom' ? provider() : undefined;
+      renderFinder(mode === 'host' ? false : override);
+      if (mode === 'custom') await screen.findByRole('button', { name: 'Alerts: 1 for up' });
+      expect(store.getDatasourceClient).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps metric exploration available when the referenced datasource is missing', async () => {
+    store.getDatasourceClient.mockRejectedValue(new Error('Datasource not found'));
+    vi.mocked(useDatasourceClient).mockReturnValue({
+      data: { metricUsageDatasource: { kind: 'MetricsUsageDatasource', name: 'missing' } },
+    } as ReturnType<typeof useDatasourceClient>);
+    renderFinder();
+    expect((await screen.findAllByText('Usage unavailable')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: 'explore metric up' })).toBeInTheDocument();
+  });
+
   it('keeps existing behavior when no provider is configured', () => {
     renderFinder();
     expect(screen.getByText('up')).toBeInTheDocument();
@@ -91,7 +159,7 @@ describe('Metric Finder usage integration', () => {
     expect(await screen.findByRole('button', { name: 'Alerts: 1 for process_cpu_seconds_total' })).toBeInTheDocument();
     userEvent.click(screen.getByRole('button', { name: 'settings' }));
     userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Enable Metric Usage' }));
-    await waitFor(() => expect(screen.queryByText('Alerts: 1')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Alerts: 1 for up' })).not.toBeInTheDocument());
     expect(JSON.parse(localStorage.getItem('PERSES_METRICS_FINDER_SETTINGS') ?? '{}').isMetricUsageEnabled).toBe(false);
     screen.getByRole('menuitemcheckbox', { name: 'Enable Metric Usage' }).focus();
     userEvent.keyboard('{Enter}');

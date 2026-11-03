@@ -27,9 +27,11 @@ spec:
   # Optional, disabled when absent. Used by Metric Finder.
   metricsUsage:
     enable: <boolean>
-    # Browser-accessible service base URL, including any reverse-proxy prefix.
-    # Required and non-empty when enabled.
-    url: <string>
+    datasource:
+      kind: MetricsUsageDatasource
+      name: <string> # Optional; omit to use the default datasource of this kind.
+    # Deprecated compatibility fallback when datasource is absent.
+    url: <string> # Optional; non-empty when enabled without a datasource reference.
 ```
 
 ### HTTP Proxy specification
@@ -84,6 +86,28 @@ spec:
               method: "GET"
           secret: "prometheus_secret_config"
 ```
+
+## MetricsUsageDatasource
+
+A separate connection to the Perses Metrics Usage service, supplied by the Prometheus plugin package.
+Configure exactly one of `directUrl` or `proxy`. It does not inherit any Prometheus connection settings.
+
+```yaml
+kind: MetricsUsageDatasource
+spec:
+  directUrl: https://metrics-usage.example.com # Browser access; optional if proxy is configured.
+  # Alternatively:
+  # proxy:
+  #   kind: HTTPProxy
+  #   spec:
+  #     url: http://metrics-usage:8080
+  #     allowedEndpoints:
+  #       - endpointPattern: /api/v1/metrics
+  #         method: GET
+```
+
+Use the standard [HTTP proxy specification](https://perses.dev/perses/docs/plugins/common/#http-proxy-specification)
+for authentication and secrets. See [Metric usage in Finder](README.md#metric-usage-in-finder) for a complete reference example.
 
 ## PrometheusTimeSeriesQuery
 

@@ -25,8 +25,13 @@ spec: {
 	queryParams?: {[string]: string}
 	metricsUsage?: {
 		enable: bool
-		url:    string
-		if enable {
+		datasource?: {
+			kind:  "MetricsUsageDatasource"
+			name?: string
+		}
+		// Deprecated: use a separate MetricsUsageDatasource.
+		url?: string
+		if enable && datasource == _|_ {
 			url: =~"[^[:space:]]"
 		}
 	}

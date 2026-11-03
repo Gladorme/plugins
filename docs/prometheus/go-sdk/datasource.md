@@ -74,15 +74,31 @@ the requirements (exemplar storage enabled on the Prometheus side, etc.).
 #### Metric Usage
 
 ```golang
+import (
+    persesDatasource "github.com/perses/perses/go-sdk/datasource"
+    "github.com/perses/plugins/prometheus/sdk/go/datasource"
+    "github.com/perses/plugins/prometheus/sdk/go/metricsusage"
+)
+
+// Configure a separate datasource named "metrics-usage" with this plugin:
+metricsusage.MetricsUsage(metricsusage.HTTPProxy("http://metrics-usage:8080"))
+// Or use metricsusage.DirectURL("https://metrics-usage.example.com") for browser access.
+
+// Reference it from the Prometheus datasource:
 datasource.WithMetricsUsage(datasource.MetricsUsage{
     Enable: true,
-    URL: "/metrics-usage",
+    Datasource: &persesDatasource.StaticSelector{
+        Kind: "MetricsUsageDatasource",
+        Name: "metrics-usage",
+    },
 })
 ```
 
-Enable Metric Finder usage statistics using a browser-accessible Metrics Usage service base URL.
-Set `Enable: false` to keep the endpoint configured while disabling requests. The feature is disabled
-when omitted. See [Metric usage in Finder](../README.md#metric-usage-in-finder).
+The Metrics Usage SDK provides `MetricsUsage`, `DirectURL`, `HTTPProxy` (with standard HTTP proxy options),
+and `Selector` builders. Its datasource connection is independent of Prometheus. Omit the selector's
+`Name` to use the default Metrics Usage datasource. Set `Enable: false` to retain the reference while
+disabling usage. The deprecated `MetricsUsage.URL` field remains supported for existing configurations;
+`Datasource` takes precedence. See [Metric usage in Finder](../README.md#metric-usage-in-finder).
 
 ## Examples
 

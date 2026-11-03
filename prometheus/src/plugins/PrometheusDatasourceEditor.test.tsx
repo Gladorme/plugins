@@ -18,25 +18,45 @@ import { PrometheusDatasourceEditor } from './PrometheusDatasourceEditor';
 
 vi.mock('@perses-dev/plugin-system', () => ({ HTTPSettingsEditor: (): null => null }));
 
-const configured = { directUrl: '/prom', metricsUsage: { enable: true, url: '/usage' } };
+const selector = { kind: 'MetricsUsageDatasource' as const, name: 'usage' };
+const configured = { directUrl: '/prom', metricsUsage: { enable: true, datasource: selector } };
 
-describe('Metrics Usage datasource editor', () => {
-  it('is opt-in and enables an editable endpoint', () => {
+describe('Metrics Usage datasource reference editor', () => {
+  it('is opt-in and saves a datasource reference', () => {
     const onChange = vi.fn();
     const { rerender } = render(<PrometheusDatasourceEditor value={{ directUrl: '/prom' }} onChange={onChange} />);
     expect(screen.getByRole('checkbox', { name: 'Enable metric usage' })).not.toBeChecked();
-    expect(screen.queryByLabelText(/Metrics Usage URL/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Metrics Usage datasource')).not.toBeInTheDocument();
     userEvent.click(screen.getByRole('checkbox', { name: 'Enable metric usage' }));
-    expect(onChange).toHaveBeenCalledWith({ directUrl: '/prom', metricsUsage: { enable: true, url: '' } });
+    expect(onChange).toHaveBeenCalledWith({
+      directUrl: '/prom',
+      metricsUsage: { enable: true, datasource: { kind: 'MetricsUsageDatasource' } },
+    });
     rerender(<PrometheusDatasourceEditor value={configured} onChange={onChange} />);
-    expect(screen.getByLabelText(/Metrics Usage URL/)).toHaveValue('/usage');
+    expect(screen.getByLabelText('Metrics Usage datasource')).toHaveValue('usage');
     userEvent.click(screen.getByRole('checkbox', { name: 'Enable metric usage' }));
-    expect(onChange).toHaveBeenLastCalledWith({ directUrl: '/prom', metricsUsage: { enable: false, url: '/usage' } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      directUrl: '/prom',
+      metricsUsage: { enable: false, datasource: selector },
+    });
+  });
+
+  it('replaces the deprecated URL when a datasource is selected', () => {
+    const onChange = vi.fn();
+    render(
+      <PrometheusDatasourceEditor
+        value={{ directUrl: '/prom', metricsUsage: { enable: true, url: '/legacy' } }}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByText(/Using legacy URL: \/legacy/)).toBeInTheDocument();
+    userEvent.paste(screen.getByLabelText('Metrics Usage datasource'), 'usage');
+    expect(onChange).toHaveBeenLastCalledWith(configured);
   });
 
   it('respects read-only datasource permissions', () => {
     render(<PrometheusDatasourceEditor value={configured} onChange={vi.fn()} isReadonly />);
     expect(screen.getByRole('checkbox', { name: 'Enable metric usage' })).toBeDisabled();
-    expect(screen.getByLabelText(/Metrics Usage URL/)).toBeDisabled();
+    expect(screen.getByLabelText('Metrics Usage datasource')).toBeDisabled();
   });
 });

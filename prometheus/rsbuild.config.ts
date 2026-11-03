@@ -20,6 +20,7 @@ export default createConfigForPlugin({
   },
   moduleFederation: {
     exposes: {
+      './MetricsUsageDatasource': './src/plugins/metrics-usage-datasource.tsx',
       './PrometheusDatasource': './src/plugins/prometheus-datasource.tsx',
       './PrometheusTimeSeriesQuery': './src/plugins/prometheus-time-series-query/PrometheusTimeSeriesQuery.ts',
       './PrometheusLabelValuesVariable': './src/plugins/PrometheusLabelValuesVariable.tsx',

@@ -77,6 +77,15 @@
         }
       },
       {
+        "kind": "Datasource",
+        "spec": {
+          "display": {
+            "name": "Metrics Usage Datasource"
+          },
+          "name": "MetricsUsageDatasource"
+        }
+      },
+      {
         "kind": "TimeSeriesQuery",
         "spec": {
           "display": {

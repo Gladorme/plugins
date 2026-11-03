@@ -15,7 +15,10 @@ package datasource
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
+
+	"github.com/perses/perses/go-sdk/datasource"
 )
 
 func TestPrometheusDatasourceBuilder(t *testing.T) {
@@ -93,5 +96,32 @@ func TestMetricsUsageRequiresURLWhenEnabled(t *testing.T) {
 	}
 	if _, err := create(WithMetricsUsage(MetricsUsage{Enable: false})); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestMetricsUsageDatasourceReference(t *testing.T) {
+	config := MetricsUsage{Enable: true, Datasource: &datasource.StaticSelector{Kind: "MetricsUsageDatasource", Name: "usage"}}
+	builder, err := create(DirectURL("http://prometheus:9090"), WithMetricsUsage(config))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(builder.PluginSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result PluginSpec
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(result.MetricsUsage, &config) {
+		t.Fatalf("unexpected reference: %+v", result.MetricsUsage)
+	}
+	for _, kind := range []string{"PrometheusDatasource", ""} {
+		if _, err := create(WithMetricsUsage(MetricsUsage{Enable: true, Datasource: &datasource.StaticSelector{Kind: kind}})); err == nil {
+			t.Fatalf("accepted invalid kind %q", kind)
+		}
+	}
+	if err := json.Unmarshal([]byte(`{"directUrl":"http://prometheus:9090","metricsUsage":{"enable":true,"datasource":{"kind":"PrometheusDatasource"}}}`), &result); err == nil {
+		t.Fatal("accepted invalid persisted datasource reference")
 	}
 }

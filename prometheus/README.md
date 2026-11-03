@@ -44,5 +44,6 @@ npm run build
 ## Metric Finder usage statistics
 
 Metric Finder optionally displays dashboard, alert and recording-rule usage from Perses Metrics Usage.
-Configure it per datasource, or supply a custom provider when embedding the explorer. See
+Create a `MetricsUsageDatasource` with its own URL/proxy settings, then reference it from a Prometheus
+datasource. Both kinds are included in this package. Custom providers are also supported when embedding the explorer. See
 [Metric usage in Finder](../docs/prometheus/README.md#metric-usage-in-finder) for configuration and examples.

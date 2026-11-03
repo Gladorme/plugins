@@ -1,0 +1,12 @@
+{
+  "kind": "MetricsUsageDatasource",
+  "spec": {
+    "directUrl": "http://usage:8080",
+    "proxy": {
+      "kind": "HTTPProxy",
+      "spec": {
+        "url": "http://usage:8080"
+      }
+    }
+  }
+}

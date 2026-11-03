@@ -14,9 +14,7 @@
 package datasource
 
 import (
-	"fmt"
 	"github.com/perses/perses/go-sdk/http"
-	"strings"
 )
 
 func DirectURL(url string) Option {
@@ -66,8 +64,8 @@ func EnableExemplars() Option {
 // WithMetricsUsage configures metric usage statistics in Metric Finder.
 func WithMetricsUsage(config MetricsUsage) Option {
 	return func(builder *Builder) error {
-		if config.Enable && strings.TrimSpace(config.URL) == "" {
-			return fmt.Errorf("metricsUsage.url cannot be empty when enabled")
+		if err := config.validate(); err != nil {
+			return err
 		}
 		builder.MetricsUsage = &config
 		return nil

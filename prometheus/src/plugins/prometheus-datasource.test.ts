@@ -149,6 +149,20 @@ describe('PrometheusDatasource custom fetch injection', () => {
 });
 
 describe('PrometheusDatasource metric usage', () => {
+  it('exposes the reference instead of creating a client with Prometheus transport', () => {
+    const datasource = { kind: 'MetricsUsageDatasource' as const, name: 'usage' };
+    const client = PrometheusDatasource.createClient(
+      { directUrl: '/prom', metricsUsage: { enable: true, datasource, url: '/legacy' } },
+      {},
+    );
+    expect(client.metricUsageDatasource).toEqual(datasource);
+    expect(client.metricUsage).toBeUndefined();
+    const disabled = PrometheusDatasource.createClient(
+      { directUrl: '/prom', metricsUsage: { enable: false, datasource } },
+      {},
+    );
+    expect(disabled.metricUsageDatasource).toBeUndefined();
+  });
   it.each([undefined, { enable: false, url: '/usage' }])('is disabled unless configured: %j', (metricsUsage) => {
     const client = PrometheusDatasource.createClient({ directUrl: '/prom', metricsUsage }, {});
     expect(client.metricUsage).toBeUndefined();

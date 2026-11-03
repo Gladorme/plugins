@@ -21,6 +21,7 @@ import PlusIcon from 'mdi-material-ui/Plus';
 import type { ReactElement } from 'react';
 import { useRef, useState } from 'react';
 
+import { METRICS_USAGE_DATASOURCE_KIND } from '../model';
 import type { PrometheusDatasourceSpec } from './types';
 import { DEFAULT_SCRAPE_INTERVAL } from './types';
 
@@ -199,24 +200,44 @@ export function PrometheusDatasourceEditor(props: PrometheusDatasourceEditorProp
             onChange={(_, enable) =>
               onChange({
                 ...value,
-                metricsUsage: { url: value.metricsUsage?.url ?? '', enable },
+                metricsUsage: {
+                  ...value.metricsUsage,
+                  enable,
+                  datasource:
+                    value.metricsUsage?.datasource ??
+                    (value.metricsUsage?.url ? undefined : { kind: METRICS_USAGE_DATASOURCE_KIND }),
+                },
               })
             }
           />
         }
       />
       {value.metricsUsage?.enable && (
-        <TextField
-          size="small"
-          fullWidth
-          required
-          label="Metrics Usage URL"
-          value={value.metricsUsage.url}
-          disabled={isReadonly}
-          error={!value.metricsUsage.url.trim()}
-          helperText="Browser-accessible Metrics Usage service URL, including any reverse-proxy prefix."
-          onChange={(e) => onChange({ ...value, metricsUsage: { enable: true, url: e.target.value } })}
-        />
+        <>
+          <TextField
+            size="small"
+            fullWidth
+            label="Metrics Usage datasource"
+            value={value.metricsUsage.datasource?.name ?? ''}
+            placeholder="Default Metrics Usage datasource"
+            disabled={isReadonly}
+            helperText="Name of a MetricsUsageDatasource available in this project or globally. Leave empty to use the default. Configure its URL, proxy, and authentication separately."
+            onChange={(event) =>
+              onChange({
+                ...value,
+                metricsUsage: {
+                  enable: true,
+                  datasource: { kind: METRICS_USAGE_DATASOURCE_KIND, name: event.target.value || undefined },
+                },
+              })
+            }
+          />
+          {!value.metricsUsage.datasource && value.metricsUsage.url && (
+            <Typography variant="body2" color="text.secondary">
+              Using legacy URL: {value.metricsUsage.url}. Enter a datasource name to replace it.
+            </Typography>
+          )}
+        </>
       )}
       <HTTPSettingsEditor
         value={value}

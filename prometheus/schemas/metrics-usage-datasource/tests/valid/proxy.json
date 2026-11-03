@@ -1,0 +1,17 @@
+{
+  "kind": "MetricsUsageDatasource",
+  "spec": {
+    "proxy": {
+      "kind": "HTTPProxy",
+      "spec": {
+        "url": "http://usage:8080",
+        "allowedEndpoints": [
+          {
+            "endpointPattern": "/api/v1/metrics",
+            "method": "GET"
+          }
+        ]
+      }
+    }
+  }
+}

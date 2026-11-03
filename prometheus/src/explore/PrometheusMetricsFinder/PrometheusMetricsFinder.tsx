@@ -44,6 +44,7 @@ import { MetricList } from './display/list/MetricList';
 import { FinderFilters } from './filter/FinderFilters';
 import { MetricOverview } from './overview/MetricOverview';
 import type { LabelFilter, Settings } from './types';
+import { useMetricUsageProvider } from './useMetricUsageProvider';
 import { useLabelValues } from './utils';
 
 const PERSES_METRICS_FINDER_SETTINGS = 'PERSES_METRICS_FINDER_SETTINGS';
@@ -222,7 +223,7 @@ export function PrometheusMetricsFinder({
   ...props
 }: PrometheusMetricsFinderProps): ReactElement {
   const { data: client } = useDatasourceClient<PrometheusClient>(datasource);
-  const metricUsage = metricUsageOverride === false ? undefined : (metricUsageOverride ?? client?.metricUsage);
+  const metricUsage = useMetricUsageProvider(client, metricUsageOverride);
   const [settings, setSettings] = useState<Settings>(readSettings);
 
   function handleSettingsUpdate(value: Settings): void {

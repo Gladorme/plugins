@@ -13,6 +13,8 @@
 
 export * from './MatcherEditor';
 export * from './prometheus-datasource';
+export * from './metrics-usage-datasource';
+export * from './MetricsUsageDatasourceEditor';
 export * from './prometheus-time-series-query';
 export * from './prometheus-variables';
 export * from './PrometheusDatasourceEditor';

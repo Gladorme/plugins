@@ -1,0 +1,6 @@
+{
+  "kind": "MetricsUsageDatasource",
+  "spec": {
+    "directUrl": "https://usage.example.com"
+  }
+}

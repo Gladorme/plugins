@@ -37,10 +37,17 @@ export interface MetricUsageProvider {
   }) => Promise<MetricUsageCategory[] | undefined>;
 }
 
+export const METRICS_USAGE_DATASOURCE_KIND = 'MetricsUsageDatasource';
+
+export interface MetricsUsageDatasourceSelector extends DatasourceSelector {
+  kind: typeof METRICS_USAGE_DATASOURCE_KIND;
+}
+
 export interface MetricsUsageSpec {
   enable: boolean;
-  /** Browser-accessible service base URL, including any reverse-proxy prefix. */
-  url: string;
+  datasource?: MetricsUsageDatasourceSelector;
+  /** @deprecated Configure a MetricsUsageDatasource and reference it with datasource instead. */
+  url?: string;
 }
 
 function object(value: unknown): Record<string, unknown> {
