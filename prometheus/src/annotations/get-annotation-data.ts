@@ -19,6 +19,7 @@ import { milliseconds } from 'date-fns';
 
 import type { PrometheusClient } from '../model';
 import { DEFAULT_PROM, getPrometheusTimeRange, getRangeStep, PROM_DATASOURCE_KIND } from '../model';
+import { assertSuccessResponse } from '../model/api-response';
 import type { PrometheusDatasourceSpec, PrometheusPromQLAnnotationOptions } from '../plugins';
 import { DEFAULT_SCRAPE_INTERVAL } from '../plugins';
 import { interpolateDatasourceProxyParams } from '../plugins/interpolation';
@@ -72,7 +73,7 @@ export const getAnnotationData = async (
     console.warn(`Step (${step}) was larger than the time range! end of time range was set accordingly.`);
   }
 
-  const { data } = await client.rangeQuery(
+  const response = await client.rangeQuery(
     {
       query: replaceVariables(spec.expr, context.variableState),
       start: alignedStart,
@@ -81,6 +82,8 @@ export const getAnnotationData = async (
     },
     { ...interpolatedOptions, signal: abortSignal },
   );
+  assertSuccessResponse(response);
+  const { data } = response;
 
   const result: AnnotationData[] = [];
   for (const series of data?.result ?? []) {

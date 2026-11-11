@@ -20,6 +20,7 @@ import {
 } from '@perses-dev/plugin-system';
 
 import { DEFAULT_PROM, PROM_DATASOURCE_KIND } from '../model';
+import { assertSuccessResponse } from '../model/api-response';
 import { resolvePrometheusDatasource } from './interpolation';
 import {
   capturingMatrix,
@@ -43,10 +44,9 @@ export const PrometheusPromQLVariable: VariablePlugin<PrometheusPromQLVariableOp
       ctx.variables,
     );
     // TODO we may want to manage a range query as well.
-    const { data: options } = await client.instantQuery(
-      { query: replaceVariables(spec.expr, ctx.variables) },
-      requestOptions,
-    );
+    const response = await client.instantQuery({ query: replaceVariables(spec.expr, ctx.variables) }, requestOptions);
+    assertSuccessResponse(response);
+    const options = response.data;
     const labelName = replaceVariables(spec.labelName, ctx.variables);
     let values: string[] = [];
     if (options?.resultType === 'matrix') {

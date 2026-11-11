@@ -103,4 +103,12 @@ describe('PrometheusLabelValuesVariable', () => {
 
     expect(sentMatchers()).toEqual([]);
   });
+
+  it('should throw the error of a request answered with an error body', async () => {
+    fetchJson.mockResolvedValue({ status: 'error', errorType: 'bad_data', error: 'invalid parameter "match[]"' });
+
+    await expect(
+      PrometheusLabelValuesVariable.getVariableOptions({ labelName: 'job' }, createContext()),
+    ).rejects.toThrow('invalid parameter "match[]"');
+  });
 });

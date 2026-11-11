@@ -21,6 +21,7 @@ import {
 import type { DatasourceSelector, DatasourceSpec } from '@perses-dev/spec';
 
 import { DEFAULT_PROM, getPrometheusTimeRange, PROM_DATASOURCE_KIND } from '../model';
+import { assertSuccessResponse } from '../model/api-response';
 import { interpolateMatchers, resolvePrometheusDatasource } from './interpolation';
 import { stringArrayToVariableOptions, PrometheusLabelValuesVariableEditor } from './prometheus-variables';
 import type { PrometheusLabelValuesVariableOptions, PrometheusDatasourceSpec } from './types';
@@ -113,7 +114,7 @@ export const PrometheusLabelValuesVariable: VariablePlugin<PrometheusLabelValues
 
     const timeRange = getPrometheusTimeRange(ctx.timeRange);
 
-    const { data: options } = await client.labelValues(
+    const response = await client.labelValues(
       {
         labelName: replaceVariables(pluginDef.labelName, ctx.variables),
         'match[]': match,
@@ -121,8 +122,9 @@ export const PrometheusLabelValuesVariable: VariablePlugin<PrometheusLabelValues
       },
       requestOptions,
     );
+    assertSuccessResponse(response);
     return {
-      data: stringArrayToVariableOptions(options),
+      data: stringArrayToVariableOptions(response.data),
     };
   },
   dependsOn: (spec: PrometheusLabelValuesVariableOptions, ctx?: GetVariableOptionsContext) => {
